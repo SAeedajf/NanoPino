@@ -26,5 +26,5 @@ coverage/
 *.tar.xz
 
 # Local release output
-output/
-release/
+/output/
+/release/

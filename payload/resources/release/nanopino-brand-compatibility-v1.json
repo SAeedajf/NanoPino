@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "product_name": "NanoPino",
+  "rename_from": "Pinoox CMS Core",
+  "release_version": "0.23.24",
+  "release_version_code": 2324,
+  "breaking": false,
+  "compatibility": {
+    "package": "com_pinoox_cms",
+    "php_namespace": "App\\com_pinoox_cms",
+    "api_base": "/api/v1/cms",
+    "database_prefix": "cms_",
+    "theme_id": "cms-admin",
+    "publisher": "pinoox-cms-project"
+  },
+  "renamed_now": [
+    "PINX display name",
+    "Pinoox app title",
+    "release metadata",
+    "release gate title",
+    "theme metadata",
+    "SDK generated human-facing copy",
+    "JSON Schema display titles"
+  ],
+  "deferred_until_reproducible_frontend_build": [
+    "compiled Luma shell brand text",
+    "frontend npm package name",
+    "internal cms event names"
+  ],
+  "rule": "Technical identifiers remain stable until a versioned migration/deprecation plan exists."
+}

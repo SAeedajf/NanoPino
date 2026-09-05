@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "name": "NanoPino Production Release Gate",
+  "version": "v1",
+  "required": {
+    "frontend_mode": "manifest",
+    "frontend_entry": "src/main.js",
+    "frontend_manifest": "dist/.vite/manifest.json",
+    "documentation_audit": true,
+    "release_metadata_match": true,
+    "documentation_distribution_evidence": true,
+    "declared_release_blockers_empty": true
+  },
+  "blocked_modes": [
+    "missing",
+    "invalid",
+    "dev"
+  ],
+  "stable_rule": "NanoPino production-ready requires verified Admin dist/source parity, valid documentation source-audit evidence, matching Pinoox app release metadata, and zero declared release blockers.",
+  "metadata_evidence": "resources/release/release-metadata-v1.json"
+}

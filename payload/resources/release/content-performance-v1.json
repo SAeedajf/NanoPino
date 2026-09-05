@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "product": "NanoPino",
+  "release_version": "0.23.24",
+  "release_version_code": 2324,
+  "status": "static_contract_pass",
+  "scope": "repository query-plan and source-contract evidence; target-runtime database profiling remains required",
+  "content_repository": {
+    "detail_or_editor_collection_queries": {
+      "target": 4,
+      "limit": 4,
+      "plan": [
+        "contents",
+        "content_fields WHERE IN",
+        "content_relations WHERE IN",
+        "content_terms WHERE IN"
+      ]
+    },
+    "list_collection_queries": {
+      "target": 1,
+      "limit": 1,
+      "plan": [
+        "contents scalar columns only"
+      ]
+    },
+    "per_item_hydration_queries": 0,
+    "relation_validation": "ContentRepositoryInterface::findMany",
+    "taxonomy_validation": "TermRepositoryInterface::findMany",
+    "deep_pagination": "optional before_id cursor with offset disabled when cursor is present"
+  },
+  "indexes": [
+    "cms_content_site_cursor_index",
+    "cms_content_relation_hydration_index",
+    "cms_content_term_hydration_index"
+  ],
+  "target_runtime_required": true,
+  "generated_at": "2026-09-05T15:28:25Z",
+  "query_telemetry": {
+    "implementation": "Cms/Performance/Query/PinooxQueryProbe.php",
+    "connection": "CmsDatabase::connection()",
+    "event": "Illuminate\\Database\\Events\\QueryExecuted",
+    "bind_on_runtime_boot": true,
+    "retry_on_performance_api": true,
+    "max_observations": 1000,
+    "failure_contract": "Performance API reports queries.bound=false and binding_error without breaking NanoPino boot"
+  }
+}

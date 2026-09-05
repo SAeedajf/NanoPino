@@ -10,14 +10,14 @@
     "description": {}
   },
   "developer": "NanoPino Project",
-  "version_name": "0.23.26",
-  "version_code": 2326,
+  "version_name": "0.23.27",
+  "version_code": 2327,
   "minpin": 205,
   "depends": {},
   "target_app": null,
   "theme_name": null,
   "theme_meta": null,
-  "built_at": "2026-09-05T19:34:06Z",
+  "built_at": "2026-09-05T23:02:28Z",
   "pinoox_version_name": "3.8.15-compatible",
   "pinoox_version_code": 205,
   "cms": {

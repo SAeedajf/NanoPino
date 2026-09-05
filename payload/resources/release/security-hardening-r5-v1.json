@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "release_version": "0.23.24",
+  "release_version_code": 2324,
+  "status": "source_verified_target_runtime_pending",
+  "controls": {
+    "content_ownership": {
+      "status": "pass",
+      "capabilities": [
+        "content.manage_others",
+        "content.assign_author"
+      ]
+    },
+    "cross_owner_revisions": {
+      "status": "pass"
+    },
+    "global_search_owner_leak": {
+      "status": "fail_closed",
+      "note": "requires content.manage_others until owner-filterable search contract is introduced"
+    },
+    "csrf_same_origin": {
+      "status": "pass",
+      "same_site_trusted": false
+    },
+    "package_preflight": {
+      "status": "pass"
+    },
+    "csp": {
+      "status": "report_only",
+      "reason": "production Luma/Vite browser CSP E2E remains open"
+    },
+    "ssrf_remote_transport": {
+      "status": "unbound",
+      "reason": "remote search transport is intentionally unconfigured; future transport must bind SsrfGuard with connect-time address pinning/revalidation"
+    },
+    "safe_mode_boot_order": {
+      "status": "framework_integration_required",
+      "reason": "AppRegister exposes registration/watches after package boot and no pre-package boot veto hook was found in the reviewed official API"
+    },
+    "pinoox_platform_super": {
+      "status": "compatibility_risk_review_required",
+      "reason": "app.php keeps access.platform_super=true for installer/backward compatibility. Official Pincore treats platform-scoped accounts as super users, so disabling it requires target-runtime account/role migration evidence to avoid lockout."
+    }
+  },
+  "remaining_release_blockers": [
+    "production security verification",
+    "Safe Mode real boot-order integration",
+    "production Luma/Vite dist build and browser WCAG E2E"
+  ]
+}

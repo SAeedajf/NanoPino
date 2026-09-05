@@ -9,9 +9,9 @@ It intentionally does **not** store packaged `.pinx` artifacts.
 
 - Product: NanoPino
 - Package ID: `com_pinoox_cms`
-- Version: `0.23.26`
-- Version code: `2326`
-- Release baseline: `RC10`
+- Version: `0.23.27`
+- Version code: `2327`
+- Release baseline: `RC11`
 - Minimum Pinoox kernel: `205`
 
 ## Repository layout
@@ -82,11 +82,14 @@ Pincore and vendor code must not be modified for NanoPino business logic.
 - Vite
 - RTL/LTR-aware i18n
 
-## RC10 validation baseline
+## RC11 validation baseline
 
-- Native Pinoox fresh install: PASS
+- Native Pinoox update RC10 → RC11: PASS
+- Native Pinoox fresh-install baseline: PASS
 - Migrations: 18/18 PASS
 - Required CMS tables: 16/16
+- Update DB table-set preservation: PASS
+- Update row-count preservation: PASS
 - PHP lint: 782/782 PASS
 - Frontend tests: 66/66 PASS
 - i18n contract: 732/732
@@ -94,4 +97,4 @@ Pincore and vendor code must not be modified for NanoPino business logic.
 - Forced RTL / hard-coded fa-IR: 0
 - Source/dist parity: PASS
 
-RC10 is still a release candidate and is not Stable 1.0.
+RC11 is still a release candidate and is not Stable 1.0.

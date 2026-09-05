@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "product": "NanoPino",
+  "release_version": "0.23.24",
+  "release_version_code": 2324,
+  "runtime_manifest": "Cms/Runtime/CmsRuntimeApiManifest.php",
+  "runtime_manifest_sha256": "a76a86855a6d072e3585535808af57146d079873892a823aba8479e60ae489b3",
+  "api_contract_files": 14,
+  "api_contracts_sha256": "5e93780a9c0331fba683b21b3a6c779f57f05fd777f5d4faac1d5ab6caa4f1d9",
+  "declared_routes": 66,
+  "runtime_routes": 66,
+  "matched_routes": 66,
+  "missing_routes": 0,
+  "permission_rate_mismatches": 0,
+  "status": "pass",
+  "scope": "bidirectional static contract-to-runtime coverage; target-runtime HTTP E2E remains required",
+  "generated_at": "2026-09-05T15:28:25Z",
+  "api_contracts_sha256_algorithm": "sha256(sorted filename + NUL + raw bytes + NUL)",
+  "uncontracted_runtime_routes": 0
+}

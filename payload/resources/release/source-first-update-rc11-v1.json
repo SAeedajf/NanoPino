@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "product": "NanoPino",
+  "package": "com_pinoox_cms",
+  "release": "RC11",
+  "version_name": "0.23.27",
+  "version_code": 2327,
+  "model": "source-first",
+  "repository_policy": {
+    "source_tree": "extracted",
+    "package_artifacts_committed": false,
+    "node_modules_committed": false,
+    "installable_source": "payload/"
+  },
+  "build_contract": {
+    "native_command": "pinx:build",
+    "dedicated_build_root_required": true,
+    "overwrite_installed_app": false,
+    "signing_required_for_stable": true
+  },
+  "update_contract": {
+    "previous_version": "0.23.26",
+    "previous_version_code": 2326,
+    "native_installer": "pinx:install",
+    "database_preservation_required": true,
+    "migration_preservation_required": true
+  },
+  "runtime_evidence": "external_local_update_validation_required",
+  "stable": false
+}

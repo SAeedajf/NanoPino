@@ -1,0 +1,240 @@
+<?php
+
+return [
+    'brand' => [
+        'name' => 'NanoPino',
+        'subtitle' => 'Site and extension management',
+        'admin_title' => 'NanoPino Admin',
+    ],
+    'sections' => [
+        'overview' => 'Overview', 'content' => 'Content', 'manage' => 'Manage', 'system' => 'System', 'main' => 'Manage',
+    ],
+    'nav' => [
+        'dashboard' => 'Dashboard', 'content' => 'Content', 'revisions' => 'Revisions', 'media' => 'Media',
+        'extensions' => 'Extensions', 'updates' => 'Updates', 'users' => 'Users', 'settings' => 'Settings',
+        'system' => 'System', 'recovery' => 'Recovery & Safe Mode', 'infrastructure' => 'Infrastructure',
+        'security' => 'Security', 'performance' => 'Performance', 'logs' => 'System Logs', 'audit' => 'Audit Log',
+    ],
+    'routes' => [
+        'dashboard' => ['title' => 'Dashboard', 'lead' => 'NanoPino overview and system status'],
+        'content' => ['title' => 'Content', 'lead' => 'Content types, fields, taxonomies and workflow'],
+        'revisions' => ['title' => 'Revisions & Autosave', 'lead' => 'Immutable history, compare and restore'],
+        'media' => ['title' => 'Media', 'lead' => 'Media library on native Pinoox File/Storage'],
+        'extensions' => ['title' => 'Extensions', 'lead' => 'Manage plugins, modules, themes and block packages'],
+        'updates' => ['title' => 'Updates', 'lead' => 'Update policy, history, snapshots and extension rollback'],
+        'users' => ['title' => 'Users & Roles', 'lead' => 'Pinoox identity, roles and NanoPino capabilities'],
+        'settings' => ['title' => 'Settings', 'lead' => 'Schema-driven and scope-aware NanoPino settings'],
+        'system' => ['title' => 'System Status', 'lead' => 'Health of Pinoox, NanoPino and runtime services'],
+        'recovery' => ['title' => 'Recovery', 'lead' => 'Recovery points, rollback and Safe Mode'],
+        'infrastructure' => ['title' => 'Infrastructure', 'lead' => 'Search, Cache, Queue, Storage and Scheduler'],
+        'security' => ['title' => 'Security', 'lead' => 'Security posture, XSS, CSRF, SSRF, rate limits and supply chain'],
+        'performance' => ['title' => 'Performance', 'lead' => 'Performance budgets, queries, memory, cache, extensions and benchmarks'],
+        'logs' => ['title' => 'System Logs', 'lead' => 'Structured logs, correlation IDs and diagnostic context'],
+        'audit' => ['title' => 'Audit Log', 'lead' => 'Sensitive NanoPino security and operational events'],
+        'appearance' => ['title' => 'Themes & Design', 'lead' => 'Theme stack, template hierarchy, global design and preview'],
+        'blocks' => ['title' => 'Block Engine', 'lead' => 'Registry, schema, migration and server renderer'],
+        'builder' => ['title' => 'Visual Site Builder', 'lead' => 'Canvas, layers, inspector, responsive controls and history'],
+        'site_editor' => ['title' => 'Full Site Editor', 'lead' => 'Templates, template parts, global styles and patterns'],
+        'developer_sdk' => ['title' => 'Developer SDK', 'lead' => 'Plugins, modules, themes, blocks and admin extensions without core changes'],
+    ],
+    'state' => [
+        'loading_title' => 'Loading', 'loading_message' => 'Fetching information.',
+        'denied_title' => 'Access denied', 'denied_message' => 'Your account does not have permission to view this section.',
+        'error_title' => 'Loading failed', 'error_message' => 'There was a problem receiving the information.',
+        'retry' => 'Try again', 'empty_title' => 'No information available',
+    ],
+    'safe_mode' => [
+        'title' => 'Safe Mode is active', 'default_reason' => 'An extension was quarantined to prevent further disruption.', 'quarantined' => 'quarantined',
+    ],
+    'shell' => [
+        'booting_title' => 'Starting NanoPino Admin…',
+        'booting_message' => 'The server-side build has been validated; Vue/Luma and the router are now starting in the browser.',
+        'javascript_disabled_title' => 'JavaScript is disabled',
+        'javascript_disabled_message' => 'The Luma dashboard requires JavaScript.',
+        'frontend_unavailable_title' => 'NanoPino Admin is unavailable',
+        'frontend_unavailable_message' => 'The PHP kernel is running, but the Vue/Luma production output is not valid. NanoPino returns HTTP 503 instead of a blank 200 response.',
+        'build_hint' => 'Run these native Pinoox commands on the build system:',
+        'shared_hosting_hint' => 'On shared hosting without Node/npm, build on a development machine or CI and include the complete dist directory in the final PINX.',
+        'retry' => 'Check again', 'unknown' => 'unknown',
+    ],
+    'a11y' => [
+        'content_status' => 'Filter content status',
+        'content_search' => 'Search content',
+        'content_type' => 'Filter content type',
+        'content_locale' => 'Filter content locale',
+        'select_all_content' => 'Select all content on this page',
+        'select_content' => 'Select content',
+        'bulk_action' => 'Select bulk action',
+        'settings_search' => 'Search settings',
+        'settings_groups' => 'Settings groups',
+        'settings_group_mobile' => 'Select settings group',
+        'extension_package' => 'Select extension package',
+        'extension_search' => 'Search extensions',
+        'extension_status' => 'Filter extension status',
+        'extension_type' => 'Filter extension type',
+        'media_upload' => 'Select media files',
+        'media_search' => 'Search media',
+        'media_kind' => 'Filter media kind',
+        'builder_block_search' => 'Search blocks',
+        'builder_move_up' => 'Move block up',
+        'builder_move_down' => 'Move block down',
+        'builder_viewport' => 'Responsive viewport',
+    ],
+
+    'dashboard' => [
+        'summary_aria'=>'NanoPino status summary',
+        'content'=>'Content',
+        'media'=>'Media',
+        'extensions'=>'Extensions',
+        'problems'=>'Needs review',
+        'attention'=>'Attention',
+        'quick_actions'=>'Quick actions',
+        'manage_content'=>'Manage content',
+        'builder'=>'Builder',
+        'theme'=>'Theme & design',
+        'users'=>'Users',
+        'settings'=>'Settings',
+        'control_plane_hint'=>'Administrative operations go through NanoPino APIs and capabilities.',
+        'system_health'=>'System health',
+        'monitoring_hint'=>'Health and runtime status are read from the live control plane.',
+        'extension_attention'=>'Extensions needing attention',
+        'all_stable'=>'All extensions are stable',
+        'no_problem_extensions'=>'There are currently no extensions in a problem or action-required state.',
+        'manage'=>'Manage',
+    ],
+
+    'system_page' => [
+        'refresh_health'=>'Refresh health','logs'=>'System logs','recovery'=>'Recovery & Safe Mode','technical_details'=>'Technical details',
+        'operational_status'=>'Operational status','active_errors'=>'Active or recent errors','historical_errors'=>'Historical errors','recent_errors'=>':count recent errors','checking'=>'Checking…','active_window_note'=>'Based on the last 15 minutes','historical_note'=>'Retained for audit and historical review','structured_note'=>'Redacted and correlation-aware','health_checks'=>'Health checks',
+    ],    'security_page' => [
+        'posture_note'=>'Implemented policy is not the same as runtime binding; Warning means the control is ready but is not yet bound and E2E-verified on real Pinoox.',
+        'rate_limit_native'=>'429, Retry-After and X-RateLimit headers come from Pincore primitives.','headers_native'=>'Security headers can bind to Pinoox response events.',
+    ],
+    'performance_page' => [
+        'unmeasured_note'=>'A value not measured from the real runtime intentionally remains Unmeasured; the dashboard does not invent estimates.',
+        'query_bound'=>'Query Probe is bound to the real Pinoox runtime and Query Count comes from request telemetry.','query_unbound'=>'Query Probe is not bound in this runtime; no fabricated value is shown.',
+        'benchmark_note'=>'Portable benchmarks run in QA; production runtime results appear only after target binding and benchmarking.',
+    ],
+    'infrastructure_page' => [
+        'cache_note'=>'PSR-16; native File/Redis store','storage_note'=>'Flysystem; Local/FTP/SFTP/S3/custom','scheduler_note'=>'Scheduler only triggers the Queue.','queue_note'=>'Retry, Dead Letter and shared-hosting sync fallback',
+        'remote_provider_note'=>'A remote provider is not enabled without a secure configured transport.','without_worker'=>'Without worker','async_fail_closed'=>'Explicit async is rejected fail-closed without a runner so jobs are not orphaned.',
+        'scheduler_footer'=>'Queue persistence/retry remains in NanoPino; cron only provides cadence and overlap protection.',
+    ],
+    'blocks_page' => [
+        'registered'=>'Registered blocks','has_children'=>'Has children','source_note'=>'JSON is the source of truth; HTML is renderer output only. Extensions can register new blocks without Core edits, and owner definitions, renderers and migrations are removed on deactivate.',
+        'count'=>':count blocks','empty_title'=>'Block Registry is empty','empty_message'=>'Core Blocks or installed Block Packs appear here after bootstrap.','operations'=>'Operations','operations_note'=>'Block definitions are not edited directly; their Registry/Extension owns them. Install or remove Block Packs in Extensions and use/configure blocks in Builder.','open_builder'=>'Open Builder','manage_packs'=>'Manage Block Packs',
+    ],    'site_editor_page' => [
+        'fa'=>'Persian','en'=>'English','ar'=>'Arabic','index'=>'Index','taxonomy'=>'Taxonomy','refresh'=>'Refresh','edit_home'=>'Edit home page','templates'=>'Templates','parts'=>'Template Parts','edit'=>'Edit','create_override'=>'Create Override',
+        'primary_color'=>'Primary color','background'=>'Background','text_color'=>'Text color','body_font'=>'Body font','heading_font'=>'Heading font','base_size'=>'Base size','base_spacing'=>'Base spacing','content_width'=>'Content width','radius_base'=>'Base radius',
+        'save_styles'=>'Save Global Styles','reset_theme'=>'Reset to theme','unsaved'=>'Unsaved','synced'=>'Synced','preview_note'=>'Site overrides merge with Theme Design Tokens; Theme files are not modified.','sample_button'=>'Sample button',
+        'header'=>'Header','footer'=>'Footer','home'=>'Home','page'=>'Page','single'=>'Single','archive'=>'Archive','search'=>'Search','customize_denied'=>'You do not have themes.customize permission.','styles_saved'=>'Global Styles were saved.','overrides_removed'=>'Design overrides were removed.',
+        'reset_confirm'=>'Reset all site design overrides to the theme defaults?','theme_fallback_note'=>'When no override exists, the Theme Template Hierarchy is used.','builder_documents'=>'Builder documents','published'=>'Published','draft'=>'Draft','template_part'=>'Template Part','global_styles'=>'Global Styles','responsive_contract'=>'Responsive Contract','design_preview'=>'Design Token preview',
+    ],    'audit_page' => [
+        'events'=>'Events','failed'=>'Failed','denied'=>'Access denied','count'=>':count events','empty_title'=>'No Audit Event exists','empty_message'=>'Events appear here after migrations and sensitive operations run.',
+    ],
+    'sdk_page' => [
+        'native_note'=>'API, Event, Schedule, Watch and host-app integration use native Pinoox AppRegister.','registry_note'=>'ContentType, Settings, Admin, Block, Driver and Capability are registered without Core edits.',
+        'ownership_note'=>'An Extension cannot register or replace another Extension owner definition through the SDK.','core_note'=>'Pincore and vendor are not modified for Business Logic.',
+        'loader_note'=>'The SDK does not create a parallel Pinoox loader. These methods pass through native AppRegister.','api_note'=>'SdkApiRoute only accepts Extension routes under the package namespace and carries its own version.','pinx_note'=>'CMS semantic profile inside the official Pinoox transport',
+    ],
+    'updates_page' => [
+        'platform_boundary'=>'This path is not Extension rollback and does not modify Pinroll history.','policy_note'=>'Beta/Development, downgrade and permission escalation must pass Policy/Review; direct file or version mutation is forbidden.',
+        'max_per_extension'=>'Maximum per Extension','retention_days'=>'Retention days','minimum_ready'=>'Minimum ready Recovery Points','empty_title'=>'No Update history yet','empty_message'=>'After runtime binding, each Update records before/after versions, Recovery Point and result.','from'=>'From','to'=>'To','result'=>'Result','operations'=>'Update operations','operation_note'=>'Upload the new PINX package in Extension Center. The system detects Install/Update mode automatically and applies Review, Snapshot and Rollback Gate before execution.','open_extensions'=>'Open Extension Center',
+    ],    'revisions_page' => [
+        'autosave_note'=>'Autosave is an immutable snapshot and does not overwrite canonical Content. Duplicate snapshots are not stored again when the checksum matches.',
+        'restore_note'=>'Restore first creates a Pre-Restore snapshot. Current workflow, slug, author, parent and locale do not change without independent Domain operations, and relations/terms are revalidated.',
+        'select_content'=>'Select Content first','history_message'=>'History, Compare and Restore connect from each Content Editor to the Revision API.','restore_confirm'=>'Restore Revision #:id?','restored'=>'Revision #:id was restored.','loading_contents'=>'Loading content…','choose_content'=>'Choose content','untitled'=>'Untitled','content_selector'=>'Select content','refresh_contents'=>'Refresh content','manage_content'=>'Manage content','history'=>'History','choose_history'=>'Choose content above to view its history.','loading'=>'Loading…','empty'=>'No Revision has been recorded for this content yet.','restore'=>'Restore',
+    ],    'extension_unavailable' => [
+        'title'=>'Extension page is unavailable','message'=>'The Admin Route component is not registered in the current build or is incompatible with this NanoPino version.',
+    ],
+
+    'content_page' => [
+        'refresh'=>'Refresh','add'=>'Add content','operation_failed'=>'Operation failed','current_view'=>'Current view','published'=>'Published','draft'=>'Draft',
+        'edit'=>'Edit :type #:id','add_type'=>'Add :type','title'=>'Title','title_placeholder'=>'Content title','excerpt'=>'Excerpt','ids_csv'=>'Separate IDs with commas','multiple'=>'Multiple values','advanced'=>'Advanced settings',
+        'publishing'=>'Publishing','new_is_draft'=>'New content is created as a draft first.','status'=>'Status','saving'=>'Saving…','save_changes'=>'Save changes','save_draft'=>'Save draft','save_published'=>'Save published','save_publish'=>'Save & publish','cancel'=>'Cancel',
+        'schedule_label'=>'Scheduled publish','schedule_action'=>'Schedule publish','properties'=>'Properties','content_type'=>'Content type','slug'=>'Slug','slug_auto'=>'Generated from title','language'=>'Language','parent'=>'Parent','no_parent'=>'No parent','enabled'=>'Enabled','disabled'=>'Off','none'=>'None',
+        'list'=>'Content list','search_placeholder'=>'Title, slug, or excerpt…','all_types'=>'All types','apply_filter'=>'Apply filters','selected'=>':count selected','bulk_action'=>'Bulk action…','restore_draft'=>'Restore to draft','trash'=>'Move to trash','executing'=>'Working…','execute'=>'Run',
+        'empty_title'=>'No content found','empty_message'=>'Change filters or create the first content item.','untitled'=>'Untitled #:id','last_change'=>'Last change: :date','history'=>'History','restore'=>'Restore','trash_short'=>'Trash','items_offset'=>':count items · offset :offset','previous'=>'Previous','next'=>'Next',
+        'all'=>'All','scheduled'=>'Scheduled','scheduled_full'=>'Scheduled','unknown'=>'Unknown','unexpected_error'=>'Unexpected error','json_invalid'=>':field is not valid JSON.','title_required'=>'Content title is required.','metadata_invalid'=>'Metadata JSON is invalid.','saved_published'=>'Published content was saved.','saved_publish'=>'Content was saved and published.','saved'=>'Content was saved.','schedule_required'=>'Select the publish date and time.','scheduled_notice'=>'Content publication was scheduled.','operation_done'=>'Operation completed.','trash_confirm'=>'Move content to trash?','bulk_confirm'=>'Run the operation for :count content items?','processed'=>':count content items processed.','processed_before_error'=>':count items completed.','no_slug'=>'No slug',
+        'json_object_required'=>':field must be a JSON Object.','invalid_value'=>':field is invalid.','type_required'=>'Select a valid Content Type.','bulk_publish'=>'Publish','bulk_trash'=>'Move to trash','bulk_restore'=>'Restore to draft','bulk_action_confirm'=>'Run :action for :count content items?','processed_success'=>':count content items processed successfully.','before_error'=>':count items completed before the error.',
+        'admin_center'=>'Content Admin Center','daily_management'=>'Day-to-day content management without editing raw JSON','published_page'=>'Published on page','draft_page'=>'Drafts on page','active_type'=>'Active Content Types','search'=>'Search','type'=>'Type','current_offset'=>'From offset :offset',
+    ],
+
+
+
+
+
+    'extensions_page' => [
+        'refresh'=>'Refresh','install_package'=>'Install package','installed'=>'Installed','active'=>'Active','attention'=>'Needs attention','operation_failed'=>'Extension operation failed','install_update'=>'Install / update PINX','choose_package'=>'Choose a PINX or ZIP file','inspect_note'=>'Maximum :max · The package is inspected before execution and requires your approval.','review_approve'=>'I reviewed and approve the displayed permissions, dependencies, and risks.','running'=>'Running…','run_update'=>'Run update','cancel'=>'Cancel','search_placeholder'=>'Name, package, or developer…','all_statuses'=>'All statuses','inactive'=>'Inactive','failed'=>'Failed','quarantined'=>'Quarantined','incompatible'=>'Incompatible','updating'=>'Updating','all_types'=>'All types','empty_title'=>'No extension found','empty_message'=>'Change the filters or install a new package.','name'=>'Name','type'=>'Type','version'=>'Version','status'=>'Status','actions'=>'Actions','platform_contract'=>'Extension Platform contract','platform_note'=>'This page is directly connected to the Transactional Extension Center: Inspect → Review → Snapshot/Staging → Install/Update → Health → Activate. Recovery/rollback contracts are preserved on failure.','deactivate'=>'Deactivate','activate'=>'Activate','uninstall_confirm'=>'Uninstall extension :id?','installed_update'=>'Update installed.','installed_extension'=>'Extension installed.','repair'=>'Repair','delete'=>'Delete','action_confirm'=>'Run :action for :id?','operation_done'=>'Operation completed.','inspect'=>'Inspect package','review_package'=>'Approve extension package review','approve_runtime'=>'I reviewed and approve the displayed permissions, compatibility, and risks.','execute_update'=>'Run update','install_activate'=>'Install & activate','select_extension'=>'Select extension package',
+    ],
+
+    'builder_page' => [
+        'open'=>'Open','open_create'=>'Open / create','undo'=>'Undo','redo'=>'Redo','preview'=>'Preview','save'=>'Save','publish'=>'Publish','status'=>'Status','version'=>'Version','blocks'=>'Blocks','state'=>'State','not_open'=>'Not open','unsaved'=>'Unsaved','synced'=>'Synced','target'=>'Design target','type'=>'Type','block_library'=>'Block Library','layers'=>'Layers','inspector'=>'Inspector','block_search'=>'Search blocks…',
+        'canvas_empty'=>'Canvas is empty','add_block'=>'Add a block from the library.','drop_root'=>'Drop at the end of the root level','responsive_styles'=>'Responsive styles · :viewport','text_color'=>'Text color','background'=>'Background','font_size'=>'Font size','padding'=>'Padding','gap'=>'Gap','nest'=>'Nest','move_out'=>'Move out','duplicate'=>'Duplicate','delete'=>'Delete','select_block'=>'Select a block.','preview_title'=>'Preview · :viewport','revision_history'=>'Revision history','autosave'=>'Autosave','load'=>'Load','restore'=>'Restore','advanced_json'=>'Advanced JSON editor','valid'=>'Valid','invalid'=>'Invalid',
+        'edit_denied'=>'You do not have builder.edit permission.','previous_child_denied'=>'The previous block does not allow this child type.','remove_confirm'=>'Delete the selected block?','override_denied'=>'This target has no override and you do not have builder.edit permission to create it.','override_create_denied'=>'builder.edit permission is required to create a new override.','invalid_response'=>'The Builder response is invalid.','opened'=>'Document #:id opened.','edit_permission'=>'You do not have Builder edit permission.','open_first'=>'Open a document first.','saved'=>'Changes saved.','saved_short'=>'Saved.','autosaved'=>'Autosave created.','published'=>'Builder version published.','published_short'=>'Published.','preview_denied'=>'You do not have Preview permission.','preview_updated'=>'Preview updated.','renderer_ran'=>'Renderer executed.','restore_confirm'=>'Restore revision #:id?','restored'=>'Revision restored.',
+        'margin'=>'Margin','display'=>'Display','align_items'=>'Align items','justify'=>'Justify','grid_columns'=>'Grid columns',
+        'color_text'=>'Text color','color_bg'=>'Background color','color_border'=>'Border color','font_weight'=>'Font weight','line_height'=>'Line height','letter_spacing'=>'Letter spacing','text_align'=>'Text align','width'=>'Width','height'=>'Height','min_width'=>'Minimum width','max_width'=>'Maximum width','min_height'=>'Minimum height','max_height'=>'Maximum height','fa'=>'Persian','en'=>'English','ar'=>'Arabic',
+        'default'=>'Default','no_block_selected'=>'No block selected','select_canvas_layer'=>'Select a block from Canvas or Layers.','content_attributes'=>'Content & attributes','move_up'=>'Move block up','move_down'=>'Move block down','drag_hint'=>'Drag to move','child_count'=>':count children','document_empty'=>'Document is empty.','load_history'=>'Load history','viewport'=>'Responsive viewport',
+    ],
+
+    'settings_page' => [
+        'search_placeholder'=>'Search settings…','saving'=>'Saving…','save_all'=>'Save all','refresh'=>'Refresh','search_results'=>'Search results','results_for'=>'Results for “:query”','setting_count'=>':count settings','unsaved_count'=>':count unsaved','all_saved'=>'All saved','registry_description'=>'Setting registered in the Settings Registry','unsaved'=>'Unsaved','design_tokens_note'=>'Design tokens are managed from Appearance.','go_appearance'=>'Go to Appearance','enabled'=>'Enabled','disabled'=>'Disabled','save'=>'Save','reset'=>'Reset','version'=>'Version :version','default_value'=>'Default value','technical_details'=>'Technical details','empty'=>'No setting matches this filter.','loading'=>'Loading settings…','other'=>'Other','core_extension_settings'=>'Core or extension settings',
+        'general'=>'General','general_desc'=>'Site identity and base properties','localization'=>'Language & region','localization_desc'=>'Language, timezone, and date formatting','admin'=>'Administration','admin_desc'=>'Admin environment preferences','diagnostics'=>'Diagnostics','diagnostics_desc'=>'Reporting center and technical detail behavior','api'=>'API','api_desc'=>'API and pagination defaults','appearance'=>'Appearance','appearance_desc'=>'Design tokens and visual settings',
+        'saved_one'=>':label saved.','saved_many'=>':count settings saved.','reset_notice'=>':label restored to its default value.','design_tokens_runtime_note'=>'Design tokens are managed in Appearance with specialized controls.','string_list_placeholder'=>'Separate values with commas','groups_label'=>'Settings categories','group_mobile'=>'Select settings group',
+    ],
+
+    'media_page' => [
+        'uploading'=>'Uploading…','upload_media'=>'Upload media','all_media'=>'All media','image'=>'Image','video'=>'Video','audio'=>'Audio','document'=>'Document','file'=>'File','audio_document'=>'Audio / document','missing_alt'=>'Missing alt','missing_alt_hint'=>'Image without alternative text','registered_space'=>'Registered storage',
+        'secure_upload'=>'Secure media upload','drop_files'=>'Drop files here','max_policy'=>'Maximum :max MB — :extensions','server_policy'=>'Server policy','select_files'=>'Select files','clear_queue'=>'Clear queue','library'=>'Media library','search_placeholder'=>'Search title, filename, alt, caption, or MIME…','all_kinds'=>'All types','list_view'=>'List view','grid_view'=>'Grid view','refresh'=>'Refresh',
+        'loading_library'=>'Loading media library…','not_found'=>'No media found','filtered_empty'=>'Change the filters or upload a new file.','first_upload'=>'Upload the first file through the secure MediaService path.','no_alt'=>'No alt','previous'=>'Previous','next'=>'Next','range'=>'Showing :from to :to of :total',
+        'details'=>'Media details','title'=>'Title','alt'=>'Alternative text (Alt)','alt_placeholder'=>'Describe the purpose and content of the image','caption'=>'Caption','description'=>'Description','save'=>'Save metadata','saving'=>'Saving…','copy_url'=>'Copy URL','close'=>'Close','delete'=>'Delete','deleting'=>'Deleting…','filename'=>'Filename','size'=>'Size','dimensions'=>'Dimensions','created'=>'Created','usage'=>'Usage','focal_x'=>'Focal X (0..1)','focal_y'=>'Focal Y (0..1)',
+        'usages'=>'Usages (:count)','variants'=>'Variants (:count)','no_usages'=>'This media has no registered usage and is free to delete from the CMS perspective.','no_variants'=>'No registered variants.','saved'=>'Media metadata saved.','delete_confirm'=>'Delete media “:title”?','delete_native_confirm'=>'Delete media “:title”? This also deletes the native file.','deleted'=>'Media deleted.','in_use'=>'This media is still used by content or another surface. Remove or replace its usages first.','url_copied'=>'File URL copied.','url_copy_failed'=>'The browser did not allow automatic URL copy.',
+        'extension_rejected'=>'This file extension is not allowed.','size_rejected'=>'File size exceeds :max MB.','uploaded_count'=>':count file(s) uploaded successfully.','status_queued'=>'Queued','status_uploading'=>'Uploading','status_done'=>'Done','status_rejected'=>'Rejected','status_error'=>'Error','upload_input'=>'Select media files',
+    ],
+
+    'users_page' => [
+        'users'=>'Users','roles_caps'=>'Roles & Capabilities','add_user'=>'Add user','refresh'=>'Refresh','total'=>'Total users','active'=>'Active','inactive'=>'Inactive','suspend'=>'Suspended','pending'=>'Pending','error'=>'Error','done'=>'Done',
+        'edit_user'=>'Edit user','new_user'=>'New user','username'=>'Username','first_name'=>'First name','last_name'=>'Last name','email'=>'Email','mobile'=>'Mobile','password'=>'Password','saving'=>'Saving…','save'=>'Save','save_changes'=>'Save changes','create_user'=>'Create user','cancel'=>'Cancel',
+        'search_placeholder'=>'Name, username, email, or mobile…','all_statuses'=>'All statuses','all_roles'=>'All roles','empty'=>'No user matches this filter','current_account'=>'Current account','edit'=>'Edit','revoke_session'=>'Revoke sessions','delete'=>'Delete','previous'=>'Previous','next'=>'Next','count'=>':count users · :range',
+        'access_security'=>'User access & security','no_email'=>'No email','roles'=>'Roles','remove'=>'Remove','add'=>'Add','effective_capabilities'=>'Effective capabilities','rbac_note'=>'Capabilities are calculated by native Pinoox RBAC.','select_user'=>'Select a user to inspect roles, capabilities, and security actions.',
+        'installed_roles'=>'Installed Pinoox roles','no_description'=>'No description','capabilities'=>'Capabilities','role_templates'=>'NanoPino Role Templates','unknown'=>'Unknown','username_required'=>'Username is required.','password_min'=>'Password must be at least 8 characters.','user_updated'=>'User was updated.','user_created'=>'User was created.','self_status_block'=>'The current account cannot be disabled to prevent administrator lockout.','status_changed'=>'User status changed.','self_role_block'=>'The current account role cannot be removed from this Control Plane.','role_removed'=>'Role removed.','role_added'=>'Role added.',
+        'revoke_self_confirm'=>'Revoke current account sessions? You may need to sign in again.','revoke_confirm'=>'Revoke all sessions for this user?','revoked'=>':count sessions revoked.','self_delete_block'=>'The current account cannot be deleted.','delete_confirm'=>'Delete this user? This action cannot be undone.','delete_named_confirm'=>'Delete user “:name”? This action cannot be undone.','user_deleted'=>'User deleted.','all'=>'All','detail'=>'User details','installed_roles_short'=>'Installed roles','view_permissions'=>'View permissions','registry'=>'Capability Registry','list'=>'User list','search'=>'Search','status'=>'Status','loading'=>'Loading…','not_found'=>'No user matches this filter.','rbac_full_note'=>'Capabilities are calculated by native Pinoox RBAC; NanoPino displays them and manages roles only through authorized paths.','remove_role'=>'Remove role','add_role'=>'Add role',
+    ],
+    'appearance_page' => [
+        'builder'=>'Builder','site_editor'=>'Full Site Editor','installed'=>'Installed themes','compatible'=>'Compatible','blocked'=>'Blocked','active'=>'Active','theme_center'=>'Theme Center','search'=>'Search','search_placeholder'=>'Name, package, or description','status'=>'Status','all'=>'All','empty_title'=>'No theme found','empty_message'=>'Change filters or install a new theme.','no_description'=>'No description','requirements'=>'Requirements: :value','active_theme'=>'Active theme','activate'=>'Activate','edit_site'=>'Edit site','activate_denied'=>'You do not have themes.activate permission.','incompatible'=>'This theme cannot be activated because it is incompatible or has a Parent issue.','activate_confirm'=>'Activate theme “:name”?','activated'=>'Theme activated.','design_operations'=>'Design operations','loading'=>'Loading…','empty_filter'=>'No theme matches this filter.','compatibility_ok'=>'Compatibility OK','compatibility_blocked'=>'Compatibility Blocked',
+    ],
+    'recovery_page' => [
+        'restore_confirm'=>'Restore Recovery Point :id?','restored'=>'Recovery completed successfully. The page will reload to read the new state.','disable_confirm'=>'Request exit from Safe Mode? Health Guard must approve the state.','disabled'=>'Safe Mode was disabled.','points'=>'Recovery Points','safe_mode'=>'Safe Mode','on'=>'On','off'=>'Off','restore'=>'Restore','guard_note'=>'Safe Mode can only be exited after Health Guard passes.','exit'=>'Exit Safe Mode','off_badge'=>'Safe Mode is off',
+        'recovery_point'=>'Recovery Point',
+        'quarantine'=>'Quarantine',
+        'enabled'=>'Enabled',
+        'policy'=>'Recovery policy',
+        'update'=>'Update',
+        'snapshot_required'=>'Snapshot required',
+        'update_note'=>'A valid Recovery Point is created before an update.',
+        'uninstall'=>'Uninstall',
+        'optional'=>'Optional',
+        'uninstall_note'=>'Uninstall may require or optionally create a Snapshot according to policy.',
+        'repair'=>'Repair',
+        'repair_note'=>'Repair runs only through a controlled and auditable path.',
+        'empty_title'=>'No Recovery Point',
+        'empty_message'=>'Recovery Points created by sensitive operations appear here.',
+        'safe_mode_target'=>'Safe Mode target',
+        'safe_mode_control'=>'Safe Mode control',
+        'safe_mode_explanation'=>'Safe Mode can be exited only after Health Guard and runtime approval.',
+        'disable_request'=>'Request Safe Mode exit',
+        'safe_mode_off'=>'Safe Mode is off',
+        'api_unbound'=>'Recovery API is not bound in the current runtime; display-only actions are not executed.',
+        'api_title'=>'Recovery API status',
+        'bound'=>'Bound',
+        'contract_only'=>'Contract only',
+        'restore_requested'=>'Restore request sent.',
+        'disable_requested'=>'Safe Mode exit request sent.',
+
+    ],
+    'logs_page' => [
+        'seconds_ago'=>':count seconds ago','minutes_ago'=>':count minutes ago','hours_ago'=>':count hours ago','days_ago'=>':count days ago','bundle_ready'=>'A safe Support Bundle was created.','active_recent'=>'Active / recent errors','active_window'=>'Last :count minutes','historical'=>'Historical errors','history_retained'=>'Retained for historical review','warnings'=>'Warnings','tail_warnings'=>'Warnings present in the tail','health'=>'Health','available_records'=>':count records available','loading'=>'Loading logs…','activity_active'=>'Active / recent','activity_historical'=>'Historical','activity_normal'=>'Normal','close_details'=>'Close details','details'=>'Details','empty'=>'No Structured Log matches the current filters.','no_active'=>'No active/recent error is present in the current tail.','needs_review'=>'Recent errors need review.','exporting'=>'Building…','support_bundle'=>'Download Support Bundle','filters'=>'Log filters','search_placeholder'=>'Error ID, Correlation ID, or text…','all_levels'=>'All levels','all_channels'=>'All channels','apply'=>'Apply','refresh'=>'Refresh','technical_details'=>'Technical details','privacy_no_content'=>'Content/Media bytes and credentials are not included in the Bundle.','privacy_secrets'=>'Password, Token, Authorization, API Key and Private Key are removed before storage.','privacy_correlation'=>'Used to connect Request → Audit → Log → Queue.','privacy_export'=>'Content/Media bytes and credentials are not included in the diagnostic Bundle.','operational_status'=>'Operational Status','privacy_boundary'=>'Diagnostic Privacy Boundary',
+    ],
+    'common' => [
+        'save'=>'Save','cancel'=>'Cancel','delete'=>'Delete','refresh'=>'Refresh','search'=>'Search','active'=>'Active','inactive'=>'Inactive','enabled'=>'Enabled','disabled'=>'Disabled','install'=>'Install','update'=>'Update','unknown'=>'Unknown','site_manager'=>'Site manager','list_separator'=>', ','operation_not_bound'=>'This operation is not yet bound to a real NanoPino API.','operation_failed'=>'Operation failed.','api_error'=>'API error',
+    ],];

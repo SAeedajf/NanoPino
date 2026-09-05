@@ -1,0 +1,8 @@
+{% set cmsBootGuard = vite_asset('admin-boot-guard.js') %}
+{% if cmsBootGuard %}
+<script defer src="{{ cmsBootGuard }}"></script>
+{% endif %}
+{{ pinoox_bootstrap(bootstrap|default({}))|raw }}
+{% if adminFrontend.ready|default(false) %}
+{{ vite_tags(adminFrontend.entry|default('src/main.js'))|raw }}
+{% endif %}

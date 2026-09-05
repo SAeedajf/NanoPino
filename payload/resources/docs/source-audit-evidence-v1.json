@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "not_available",
+  "release_version": "0.23.24",
+  "release_version_code": 2324,
+  "documentation_manifest_sha256": "1f3280295e0b450c36bacdfc8b396ddce995e1fec634bd7edcd24af4e49a6c5d",
+  "required_docs": 30,
+  "machine_contracts": 22,
+  "adr_count": 0,
+  "markdown_files": 0,
+  "internal_links": 0,
+  "source_audit_completed_at": null,
+  "reason": "Source documentation is excluded from the distributable PINX and no passing source-audit evidence was present in the supplied RC artifact."
+}

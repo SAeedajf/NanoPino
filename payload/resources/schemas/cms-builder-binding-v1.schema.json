@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinoox.local/schemas/cms-builder-binding-v1.schema.json",
+  "title": "NanoPino Builder Binding Expression v1",
+  "type": "object",
+  "required": [
+    "source",
+    "path"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]{1,63}$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,189}$"
+    },
+    "arguments": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "integer",
+          "boolean",
+          "null"
+        ]
+      }
+    }
+  }
+}

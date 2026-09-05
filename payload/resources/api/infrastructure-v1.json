@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/system/infrastructure",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/system/infrastructure",
+      "capability": "system.health.view"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/system/infrastructure/cache/invalidate-tag",
+      "capability": "system.cache.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/system/infrastructure/cache/invalidate-layer",
+      "capability": "system.cache.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/system/infrastructure/queue",
+      "capability": "system.health.view"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/system/infrastructure/queue/{id}/retry",
+      "capability": "system.queue.manage"
+    }
+  ]
+}

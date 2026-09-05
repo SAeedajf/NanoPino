@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/recovery",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/recovery/points/{id}/restore",
+      "capability": "system.recovery"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/recovery/safe-mode/disable",
+      "capability": "system.recovery"
+    }
+  ],
+  "errors": [
+    "recovery.invalid_request",
+    "recovery.forbidden",
+    "recovery.not_found",
+    "recovery.health_blocked",
+    "recovery.restore_failed",
+    "recovery.internal_error"
+  ]
+}

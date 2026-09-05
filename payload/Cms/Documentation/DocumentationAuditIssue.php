@@ -1,0 +1,19 @@
+<?php
+declare(strict_types=1);
+
+namespace App\com_pinoox_cms\Cms\Documentation;
+
+final readonly class DocumentationAuditIssue
+{
+    public function __construct(
+        public string $code,
+        public string $message,
+        public ?string $path=null,
+    ) {}
+
+    /** @return array<string,mixed> */
+    public function toArray():array
+    {
+        return ['code'=>$this->code,'message'=>$this->message,'path'=>$this->path];
+    }
+}

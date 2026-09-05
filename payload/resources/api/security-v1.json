@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/system/security",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/system/security",
+      "capability": "system.security.view",
+      "rate_limit": "cms.api.read"
+    }
+  ],
+  "errors": [
+    "security.forbidden",
+    "security.internal_error"
+  ]
+}

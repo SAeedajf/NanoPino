@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/settings",
+  "resource": "settings",
+  "status": "rc",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/settings",
+      "capability": "settings.read",
+      "note": "Registry items are permission-filtered per setting definition."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/settings/{key}",
+      "capability": "settings.read",
+      "query": {"scope_type": "global|site|user|extension|theme", "scope_id": "scope-specific identifier"}
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/settings/{key}",
+      "capability": "settings.manage",
+      "body": ["value", "scope_type", "scope_id", "expected_version"],
+      "concurrency": "expected_version produces SETTING_VERSION_CONFLICT on stale writes"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/cms/settings/{key}",
+      "capability": "settings.manage",
+      "body": ["scope_type", "scope_id", "expected_version"]
+    }
+  ],
+  "runtime_scope_constraints": {
+    "site": "current runtime supports site_id=1",
+    "user": "must target the current authenticated user",
+    "global": "scope_id ignored"
+  },
+  "errors": [
+    "SETTING_NOT_FOUND",
+    "SETTING_VALUE_REQUIRED",
+    "SETTING_VERSION_CONFLICT",
+    "SETTING_VALIDATION_FAILED",
+    "SETTING_READ_INVALID",
+    "SETTING_RESET_INVALID",
+    "FORBIDDEN"
+  ]
+}

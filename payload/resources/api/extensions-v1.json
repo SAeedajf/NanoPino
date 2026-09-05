@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/extensions",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/extensions",
+      "capability": "extensions.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/inspect",
+      "capability": "extensions.install"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/review-ticket",
+      "capability": "extensions.install"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/install",
+      "capability": "extensions.install"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/{id}/activate",
+      "capability": "extensions.activate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/{id}/deactivate",
+      "capability": "extensions.deactivate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/{id}/update",
+      "capability": "extensions.update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/{id}/rollback",
+      "capability": "extensions.repair"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/extensions/{id}/repair",
+      "capability": "extensions.repair"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/cms/extensions/{id}",
+      "capability": "extensions.uninstall"
+    }
+  ],
+  "operation_statuses": [
+    "pending",
+    "running",
+    "succeeded",
+    "failed",
+    "recovery_required"
+  ],
+  "errors": [
+    "extension.invalid_request",
+    "extension.forbidden",
+    "extension.not_found",
+    "extension.conflict",
+    "extension.dependency_failed",
+    "extension.permission_review_required",
+    "extension.trust_failed",
+    "extension.operation_failed",
+    "extension.recovery_required",
+    "extension.internal_error"
+  ]
+}

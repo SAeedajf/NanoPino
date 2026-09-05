@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/media",
+  "resource": "media",
+  "status": "rc",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/media",
+      "permission": "media.read",
+      "query": [
+        "site_id",
+        "kind",
+        "q",
+        "limit",
+        "offset"
+      ],
+      "response": [
+        "items",
+        "site_id",
+        "summary",
+        "pagination",
+        "upload_policy",
+        "kinds"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/media",
+      "permission": "media.upload",
+      "multipart": [
+        "file",
+        "site_id",
+        "public",
+        "title",
+        "alt",
+        "caption",
+        "description"
+      ],
+      "rate_limit": "cms.upload.media"
+    },
+    {
+      "method": "GET",
+      "path": "/media/{id}",
+      "permission": "media.read",
+      "response": [
+        "asset fields",
+        "usages",
+        "variants",
+        "in_use",
+        "usage_count",
+        "variant_count"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/media/{id}",
+      "permission": "media.update",
+      "body": [
+        "title",
+        "alt",
+        "caption",
+        "description",
+        "focal_x",
+        "focal_y",
+        "metadata"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/media/{id}",
+      "permission": "media.delete",
+      "conflict": "MEDIA_IN_USE"
+    }
+  ],
+  "upload_policy": {
+    "server_mime": true,
+    "extension_match": true,
+    "image_decode": true,
+    "symlink_rejected": true,
+    "executables_rejected": true,
+    "archives_rejected": true,
+    "max_bytes": 20971520
+  },
+  "deletion": {
+    "metadata_soft_delete_before_native_remove": true,
+    "native_remove_failure_compensated": true,
+    "usage_blocks_delete": true
+  },
+  "pagination": {
+    "default_limit": 50,
+    "max_limit": 100,
+    "offset": true,
+    "has_more": "limit+1 overfetch",
+    "total": true
+  }
+}

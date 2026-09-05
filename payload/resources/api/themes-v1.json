@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/themes",
+  "resource": "themes",
+  "status": "rc",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/themes",
+      "capability": "themes.read",
+      "response": ["items", "active", "summary", "api_bound"]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/themes/activate",
+      "capability": "themes.activate",
+      "body": {
+        "package": "required package identifier",
+        "theme": "required theme name",
+        "context": "optional native Pinoox theme context"
+      }
+    }
+  ],
+  "errors": ["THEME_REFERENCE_INVALID", "THEME_ACTIVATION_FAILED", "FORBIDDEN"]
+}

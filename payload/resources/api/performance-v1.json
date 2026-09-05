@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/system/performance",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/system/performance",
+      "capability": "system.performance.view",
+      "rate_limit": "cms.api.read"
+    }
+  ],
+  "errors": [
+    "performance.forbidden",
+    "performance.internal_error"
+  ],
+  "response": {
+    "budget_evaluations": "registered performance budget results",
+    "metrics": "latest runtime metrics",
+    "queries": [
+      "bound",
+      "binding_error",
+      "count",
+      "total_ms",
+      "n_plus_one",
+      "slow"
+    ],
+    "cache": "cache effectiveness telemetry",
+    "extensions": "extension boot cost telemetry",
+    "recent_samples": "recent recorded performance samples"
+  },
+  "query_probe": {
+    "owner": "Pinoox package database connection",
+    "listener": "Illuminate QueryExecuted via Connection::listen",
+    "retained_observations_max": 1000,
+    "fail_open": true
+  }
+}

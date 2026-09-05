@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/search",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/search",
+      "capability": "content.read"
+    }
+  ],
+  "response": {
+    "fields": [
+      "hits",
+      "total",
+      "driver",
+      "degraded",
+      "limit",
+      "offset"
+    ]
+  },
+  "errors": [
+    "search.invalid_request",
+    "search.forbidden",
+    "search.unavailable",
+    "search.internal_error"
+  ]
+}

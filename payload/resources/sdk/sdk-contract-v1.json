@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "sdk_version": "v1",
+  "minimum": {
+    "php": ">=8.2",
+    "pincore": ">=3.8.15",
+    "kernel_code": 205,
+    "cms": ">=0.21.0",
+    "luma": ">=0.4.10"
+  },
+  "extension_types": [
+    "core-module",
+    "module",
+    "plugin",
+    "integration",
+    "theme",
+    "admin-extension",
+    "block",
+    "block-package",
+    "driver",
+    "language-pack"
+  ],
+  "registries": [
+    "extension",
+    "capability",
+    "settings",
+    "field",
+    "taxonomy",
+    "content_type",
+    "filter",
+    "theme",
+    "template_rule",
+    "block",
+    "block_migration",
+    "block_renderer",
+    "driver",
+    "performance_budget",
+    "extension_permission",
+    "ability",
+    "admin_component",
+    "admin_menu",
+    "admin_route",
+    "admin_widget",
+    "admin_panel"
+  ],
+  "native_registration": [
+    "apiRoute",
+    "action",
+    "listen",
+    "schedule",
+    "when",
+    "onRoute",
+    "onApi",
+    "onPath",
+    "onAction",
+    "onController",
+    "onModel",
+    "onTheme"
+  ],
+  "api_base": "/api/v1/extensions/{package}",
+  "ownership": "Extension definitions must be owned by the registering Extension.",
+  "core_edits": false,
+  "admin_runtime": {
+    "module_endpoint": "/__cms/extensions/{package}/admin/{module}.mjs",
+    "module_format": "ESM",
+    "default_export_contract": "createComponent(host)",
+    "host_api_version": "v1",
+    "host_primitives": [
+      "h",
+      "LPage",
+      "LPanel",
+      "LBadge",
+      "LButton",
+      "LStatCard"
+    ],
+    "same_origin_only": true,
+    "permission": "cms.admin"
+  },
+  "pinoox_runtime": {
+    "transport": "app",
+    "extends": [
+      "com_pinoox_cms"
+    ],
+    "boot_global": false,
+    "native_dependency": {
+      "com_pinoox_cms": {
+        "min_code": 2100
+      }
+    },
+    "reason": "Pinoox AppBootstrap boots extenders for the CMS package before target boot."
+  }
+}

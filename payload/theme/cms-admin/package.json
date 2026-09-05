@@ -1,0 +1,30 @@
+{
+  "name": "@pinoox-cms/admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node source-fingerprint.mjs --write-build-evidence && node runtime-fingerprint.mjs && node source-fingerprint.mjs && node verify-dist.mjs",
+    "preview": "vite preview",
+    "test": "node run-tests.mjs"
+  },
+  "dependencies": {
+    "@pinooxhq/luma": "0.4.12",
+    "@pinooxhq/auth": "0.1.2",
+    "@primeuix/themes": "2.0.0",
+    "@vue/devtools-api": "8.1.5",
+    "axios": "1.19.0",
+    "lucide-vue-next": "1.0.0",
+    "pinia": "4.0.2",
+    "primevue": "4.5.0",
+    "vue": "3.5.41",
+    "vue-router": "5.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.7",
+    "sass": "1.102.0",
+    "vite": "8.0.16"
+  },
+  "packageManager": "npm@10.9.2"
+}

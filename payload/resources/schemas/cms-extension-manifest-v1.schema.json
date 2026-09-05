@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinoox.local/schemas/cms-extension-manifest-v1.schema.json",
+  "title": "NanoPino Extension Manifest Profile v1",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "type",
+    "package",
+    "version_name",
+    "version_code",
+    "cms"
+  ],
+  "properties": {
+    "format": {
+      "const": "pinx"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "type": {
+      "enum": [
+        "app",
+        "theme"
+      ]
+    },
+    "package": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_code": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "target_app": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "theme_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cms": {
+      "type": "object",
+      "required": [
+        "schema",
+        "extension_type",
+        "publisher"
+      ],
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "extension_type": {
+          "enum": [
+            "plugin",
+            "module",
+            "theme",
+            "block-package"
+          ]
+        },
+        "publisher": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,126}$"
+        },
+        "requires": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "php",
+              "pinoox",
+              "pincore",
+              "cms",
+              "luma"
+            ]
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "dependencies": {
+          "type": "object"
+        },
+        "optional_dependencies": {
+          "type": "object"
+        },
+        "conflicts": {
+          "type": "object"
+        },
+        "provides": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "replaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "admin": {
+          "type": "object"
+        },
+        "api": {
+          "type": "object"
+        },
+        "frontend": {
+          "type": "object"
+        },
+        "blocks": {
+          "type": "object",
+          "properties": {
+            "directory": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 190,
+              "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_./-]+$"
+            },
+            "max_blocks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 512
+            }
+          },
+          "required": [
+            "directory"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "theme"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "target_app",
+          "theme_name"
+        ],
+        "properties": {
+          "cms": {
+            "properties": {
+              "extension_type": {
+                "const": "theme"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "app"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cms": {
+            "properties": {
+              "extension_type": {
+                "enum": [
+                  "plugin",
+                  "module",
+                  "block-package"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cms": {
+            "properties": {
+              "extension_type": {
+                "const": "block-package"
+              }
+            },
+            "required": [
+              "extension_type"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cms": {
+            "required": [
+              "blocks"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": true
+}

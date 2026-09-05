@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinoox.local/schemas/cms-block-document-v1.schema.json",
+  "title": "NanoPino Block Document v1",
+  "type": "object",
+  "required": [
+    "version",
+    "blocks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "blocks": {
+      "type": "array",
+      "maxItems": 5000,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,63}/[a-z0-9][a-z0-9._-]{1,63}$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "attributes": {
+          "type": "object"
+        },
+        "styles": {
+          "type": "object"
+        },
+        "responsive": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+          },
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "slot": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "children": {
+          "type": "array",
+          "maxItems": 5000,
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
+      }
+    }
+  }
+}

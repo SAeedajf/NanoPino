@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinoox.local/schemas/cms-style-variation-v1.schema.json",
+  "title": "NanoPino Style Variation v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "tokens"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colors": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "typography": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "fontFamilies": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "fontSizes": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "spacing": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "containers": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "breakpoints": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "grid": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "radius": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "shadows": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "buttons": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "forms": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "links": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "motion": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "icons": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "darkMode": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "rtl": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        },
+        "accessibility": {
+          "$ref": "cms-design-v1.schema.json#/$defs/tokenNode"
+        }
+      }
+    }
+  }
+}

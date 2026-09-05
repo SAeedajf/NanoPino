@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/content",
+  "resource": "content",
+  "status": "rc",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/content",
+      "capability": "content.read",
+      "query": {
+        "site_id": "integer >= 1, default 1",
+        "type": "optional registered content type",
+        "status": "optional content status",
+        "locale": "optional locale",
+        "search": "optional title/excerpt/slug substring",
+        "limit": "1..100, default 50",
+        "offset": "0..100000; ignored when before_id is present",
+        "before_id": "optional positive content id cursor",
+        "projection": "list|detail|editor, default detail"
+      },
+      "projection_contract": {
+        "list": "scalar content columns only; document, metadata, fields, relations and terms are empty arrays",
+        "detail": "complete content record",
+        "editor": "complete content record; reserved as editor-specific expansion boundary"
+      },
+      "response": [
+        "items",
+        "types",
+        "projection",
+        "pagination"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content",
+      "capability": "content.create"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/content/{id}",
+      "capability": "content.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/content/{id}",
+      "capability": "content.update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content/{id}/publish",
+      "capability": "content.publish"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content/{id}/schedule",
+      "capability": "content.publish"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/cms/content/{id}",
+      "capability": "content.delete"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content/{id}/restore",
+      "capability": "content.update"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/content/{id}/revisions",
+      "capability": "content.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content/{id}/revisions/{revisionId}/restore",
+      "capability": "content.update"
+    }
+  ],
+  "pagination": {
+    "default_limit": 50,
+    "max_limit": 100,
+    "offset": true,
+    "cursor": "before_id",
+    "has_more": "limit+1 overfetch"
+  },
+  "repository_query_budget": {
+    "list_projection": {
+      "target": 1,
+      "limit": 1,
+      "scope": "repository SELECTs"
+    },
+    "detail_or_editor_projection": {
+      "target": 4,
+      "limit": 4,
+      "scope": "repository SELECTs"
+    }
+  },
+  "errors": [
+    "CONTENT_STATUS_INVALID",
+    "CONTENT_PROJECTION_INVALID",
+    "CONTENT_CURSOR_INVALID",
+    "CONTENT_QUERY_INVALID",
+    "CONTENT_NOT_FOUND",
+    "CONTENT_ID_INVALID",
+    "FORBIDDEN",
+    "CONTENT_LIST_FAILED",
+    "CONTENT_READ_FAILED",
+    "CONTENT_MUTATION_FAILED"
+  ],
+  "authorization": {
+    "base": "Each route requires the declared content capability.",
+    "ownership": "When actorId differs from content.author_id, content.manage_others is additionally required.",
+    "create_assignment": "POST create with author_id different from the current actor additionally requires content.assign_author and the target user must exist.",
+    "collection": "Actors without content.manage_others are forced to their own author_id in list queries.",
+    "global_search": "Search API requires content.manage_others until SearchDriver exposes a safe owner filter."
+  }
+}

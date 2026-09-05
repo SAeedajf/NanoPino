@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinoox.local/schemas/cms-block-manifest-v1.schema.json",
+  "title": "NanoPino Block Manifest v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "name",
+    "version",
+    "package_version",
+    "title",
+    "category",
+    "attributes",
+    "supports",
+    "children",
+    "editor",
+    "renderer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,63}/[a-z0-9][a-z0-9._-]{1,63}$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "package_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "icon": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "category": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "attributes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-zA-Z0-9_]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "string",
+              "integer",
+              "number",
+              "boolean",
+              "array",
+              "object",
+              "richtext",
+              "url",
+              "media"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "default": {},
+          "rules": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "supports": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "align": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "color": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "typography": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "spacing": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "dimensions": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "responsive": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "visibility": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "className": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "html": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        },
+        "reusable": {
+          "type": [
+            "boolean",
+            "object",
+            "array",
+            "string",
+            "number"
+          ]
+        }
+      }
+    },
+    "children": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:\\*|[a-z0-9][a-z0-9._-]{1,63}/[a-z0-9][a-z0-9._-]{1,63})$"
+          }
+        }
+      ]
+    },
+    "slots": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "allowed"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "allowed": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^(?:\\*|[a-z0-9][a-z0-9._-]{1,63}/[a-z0-9][a-z0-9._-]{1,63})$"
+            }
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9._:/-]{1,190}$"
+      }
+    },
+    "editor": {
+      "type": "object",
+      "required": [
+        "component"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "component": {
+          "type": "string",
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_./-]+\\.(?:vue|js|ts)$"
+        }
+      }
+    },
+    "renderer": {
+      "type": "object",
+      "required": [
+        "class"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "class": {
+          "type": "string",
+          "pattern": "^[A-Za-z_\\\\][A-Za-z0-9_\\\\]{0,254}$"
+        }
+      }
+    },
+    "migrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "class"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "to": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "class": {
+            "type": "string",
+            "pattern": "^[A-Za-z_\\\\][A-Za-z0-9_\\\\]{0,254}$"
+          }
+        }
+      }
+    }
+  }
+}

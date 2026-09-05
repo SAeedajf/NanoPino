@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/updates",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/updates/{id}/policy",
+      "capability": "extensions.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/updates/{id}/policy",
+      "capability": "extensions.update"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/updates/{id}/history",
+      "capability": "extensions.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/updates/{id}/recovery-points",
+      "capability": "system.recovery"
+    }
+  ],
+  "channels": [
+    "stable",
+    "beta",
+    "development"
+  ],
+  "auto_update_modes": [
+    "disabled",
+    "security_only",
+    "patch_only",
+    "enabled"
+  ],
+  "errors": [
+    "update.invalid_request",
+    "update.forbidden",
+    "update.not_found",
+    "update.conflict",
+    "update.policy_rejected",
+    "update.recovery_required",
+    "update.internal_error"
+  ]
+}

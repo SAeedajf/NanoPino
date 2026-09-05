@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinoox.local/schemas/cms-design-v1.schema.json",
+  "title": "NanoPino Design Document v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "tokens"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colors": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "typography": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "fontFamilies": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "fontSizes": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "spacing": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "containers": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "breakpoints": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "grid": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "radius": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "shadows": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "buttons": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "forms": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "links": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "motion": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "icons": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "darkMode": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "rtl": {
+          "$ref": "#/$defs/tokenNode"
+        },
+        "accessibility": {
+          "$ref": "#/$defs/tokenNode"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "tokenNode": {
+      "oneOf": [
+        {
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,95}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/tokenNode"
+          }
+        },
+        {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "integer",
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

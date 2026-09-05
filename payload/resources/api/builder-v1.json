@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/builder",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/builder",
+      "capability": "builder.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder/open",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/builder/{id}",
+      "capability": "builder.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/builder/{id}",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder/{id}/autosave",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder/{id}/publish",
+      "capability": "builder.publish"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/builder/{id}/revisions",
+      "capability": "builder.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder/{id}/revisions/{revisionId}/restore",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder/preview",
+      "capability": "builder.preview"
+    }
+  ],
+  "conflict": {
+    "status": 409,
+    "code": "builder.version_conflict"
+  }
+}

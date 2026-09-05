@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "generated_from": "Phase 22 source",
+  "capability_count": 57,
+  "extension_types": [
+    "core-module",
+    "module",
+    "plugin",
+    "integration",
+    "theme",
+    "admin-extension",
+    "block",
+    "block-package",
+    "driver",
+    "language-pack"
+  ],
+  "registry_counts": {
+    "extensions": 0,
+    "capabilities": 57,
+    "policies": 0,
+    "role_templates": 4,
+    "abilities": 0,
+    "settings": 6,
+    "fields": 4,
+    "taxonomies": 2,
+    "content_types": 2,
+    "themes": 0,
+    "template_rules": 8,
+    "blocks": 5,
+    "block_migrations": 1,
+    "block_renderers": 4,
+    "builder_data_sources": 8,
+    "filters": 0,
+    "health_checks": 0,
+    "extension_permissions": 27,
+    "drivers": 6,
+    "queue_jobs": 0,
+    "performance_budgets": 10,
+    "admin": 5
+  },
+  "admin": {
+    "navigation": 20,
+    "routes": 20,
+    "components": 0
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/system",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/system/health",
+      "capability": "system.health.view",
+      "rate_limit": "cms.api.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/system/logs",
+      "capability": "system.logs.view",
+      "rate_limit": "cms.api.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/system/support-bundle",
+      "capability": "system.support.export",
+      "rate_limit": "cms.recovery"
+    }
+  ],
+  "errors": [
+    "system.forbidden",
+    "system.internal_error"
+  ]
+}

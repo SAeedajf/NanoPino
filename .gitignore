@@ -1,0 +1,30 @@
+# Dependencies
+payload/theme/cms-admin/node_modules/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs / caches
+*.log
+.cache/
+.tmp/
+coverage/
+
+# Package artifacts
+*.pinx
+*.zip
+*.tar
+*.tar.gz
+*.tar.xz
+
+# Local release output
+output/
+release/

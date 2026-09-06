@@ -58,6 +58,12 @@ export const builderApi={
   restore:(id,revisionId,payload={})=>cmsRequest(`/builder/${id}/revisions/${revisionId}/restore`,{method:'POST',body:payload}),
   preview:payload=>cmsRequest('/builder/preview',{method:'POST',body:payload}),
 }
+export const globalBlockApi={
+  list:(siteId=1)=>cmsRequest(`/builder/global-blocks?site_id=${encodeURIComponent(siteId)}`),
+  read:id=>cmsRequest(`/builder/global-blocks/${encodeURIComponent(id)}`),
+  create:payload=>cmsRequest('/builder/global-blocks',{method:'POST',body:payload}),
+  update:(id,payload)=>cmsRequest(`/builder/global-blocks/${encodeURIComponent(id)}`,{method:'PUT',body:payload}),
+}
 export const extensionApi={
   list:()=>cmsRequest('/extensions'),
   inspect:form=>cmsRequest('/extensions/inspect',{method:'POST',body:form}),

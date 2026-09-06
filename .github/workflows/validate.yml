@@ -1,23 +1,43 @@
-name: Validate NanoPino Source
+name: Validate source
 
 on:
   push:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: read
-
 jobs:
-  validate:
+  verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate source, tests and dist parity
+          cache: npm
+          cache-dependency-path: payload/theme/cms-admin/package-lock.json
+
+      - name: Install locked admin dependencies
+        working-directory: payload/theme/cms-admin
+        run: npm ci
+
+      - name: Build production admin
+        working-directory: payload/theme/cms-admin
+        run: npm run build
+
+      - name: Verify NanoPino source and generated runtime
         run: tools/release/verify-source.sh
+
+      - name: Upload verified production admin
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanopino-admin-dist
+          path: payload/theme/cms-admin/dist
+          if-no-files-found: error
+          retention-days: 7

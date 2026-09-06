@@ -133,6 +133,7 @@ return [
     ],
 
     'system_page' => [
+        'health_history'=>'تاریخچه سلامت','health_history_empty'=>'هنوز snapshot تاریخی سلامت ثبت نشده است.',
         'refresh_health'=>'بازخوانی سلامت','logs'=>'گزارش‌های سیستم','recovery'=>'بازیابی و حالت امن','technical_details'=>'جزئیات فنی',
         'operational_status'=>'وضعیت عملیاتی','active_errors'=>'خطاهای فعال یا اخیر','historical_errors'=>'خطاهای تاریخی','recent_errors'=>':count خطای اخیر','checking'=>'در حال بررسی…','active_window_note'=>'بر اساس بازه ۱۵ دقیقه اخیر','historical_note'=>'برای Audit و بررسی سابقه نگه‌داری شده','structured_note'=>'Redacted و Correlation-aware','health_checks'=>'Health Checks',
     ],    'security_page' => [

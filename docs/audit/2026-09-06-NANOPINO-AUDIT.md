@@ -151,3 +151,9 @@ Subsequent merged hardening closed or materially reduced several original items:
 - **O06 PHP tests:** R13 adds executable PHP domain tests and a PHP 8.2–8.5 CI matrix. Controlled Pinoox/database/API integration remains open.
 
 Stable 1.0 remains blocked by the target-runtime and browser/database evidence documented in the release gate.
+
+
+### R14 continuation
+R14 adds a pinned, ephemeral Pinoox + MySQL integration gate to repository CI. It uses the native CLI installer and PINX build/install/uninstall pipeline rather than source emulation. Fresh install must create at least the manifest-declared CMS table count, force-update must not change that count, and uninstall must remove the NanoPino app directory and CMS tables.
+
+This upgrades the evidence for the original O06/PINX lifecycle gap, but does not claim signed-package verification, browser E2E or injected failure recovery.

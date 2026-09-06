@@ -60,4 +60,85 @@ jobs:
           name: nanopino-admin-dist
           path: payload/theme/cms-admin/dist
           if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
+
+  pinoox-lifecycle:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: pinoox
+          MYSQL_USER: pinoox_ci
+          MYSQL_PASSWORD: pinoox_ci
+          MYSQL_ROOT_PASSWORD: root_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: pinoox
+      DB_USERNAME: pinoox_ci
+      DB_PASSWORD: pinoox_ci
+      PINOOX_E2E_REF: 5e7d65bb4c6c71edbf0e0b47735479f620640d07
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure ephemeral lifecycle environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "NANOPINO_CI_ADMIN_PASSWORD=NanoPino-${GITHUB_RUN_ID}-CI" >> "$GITHUB_ENV"
+          echo "NANOPINO_PINX_OUTPUT=${RUNNER_TEMP}/NanoPino-e2e.pinx" >> "$GITHUB_ENV"
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, zip, mbstring, xml, ctype, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore verified production admin
+        uses: actions/download-artifact@v4
+        with:
+          name: nanopino-admin-dist
+          path: payload/theme/cms-admin/dist
+
+      - name: Prepare pinned Pinoox runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          PINOX_ROOT="${RUNNER_TEMP}/pinoox"
+          git clone --filter=blob:none https://github.com/pinoox/pinoox.git "$PINOX_ROOT"
+          git -C "$PINOX_ROOT" checkout --detach "$PINOOX_E2E_REF"
+          (
+            cd "$PINOX_ROOT"
+            composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+            composer show pinoox/pincore
+          )
+          echo "PINOX_ROOT=$PINOX_ROOT" >> "$GITHUB_ENV"
+
+      - name: Build install update and uninstall NanoPino PINX
+        run: bash tools/ci/pinoox-lifecycle.sh
+
+      - name: Upload verified PINX lifecycle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanopino-pinx-e2e
+          path: ${{ runner.temp }}/NanoPino-e2e.pinx
+          if-no-files-found: error
           retention-days: 7

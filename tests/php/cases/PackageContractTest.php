@@ -52,6 +52,38 @@ return [
         }
     },
 
+    'NanoPino native uninstall lifecycle rolls back every owned migration batch and fails closed' => static function (): void {
+        $lifecycle = (string)file_get_contents(NANOPINO_ROOT . '/payload/lifecycle.php');
+
+        np_assert_contains("'uninstall'", $lifecycle);
+        np_assert_contains("new Migrator(", $lifecycle);
+        np_assert_contains("->rollback(0)", $lifecycle);
+        np_assert_contains("DB::connectionNameForPackage(\$package)", $lifecycle);
+        np_assert_contains("Refusing to delete application files", $lifecycle);
+        np_assert_contains("'com_pinoox_cms'", $lifecycle);
+        np_assert_false(str_contains($lifecycle, 'dropIfExists('), 'Lifecycle must not blindly drop adopted/legacy tables.');
+    },
+
+    'CI release gate includes pinned real Pinoox MySQL lifecycle' => static function (): void {
+        $workflow = (string)file_get_contents(NANOPINO_ROOT . '/.github/workflows/validate.yml');
+        $lifecycle = (string)file_get_contents(NANOPINO_ROOT . '/tools/ci/pinoox-lifecycle.sh');
+
+        np_assert_contains('pinoox-lifecycle:', $workflow);
+        np_assert_contains('mysql:8.4', $workflow);
+        np_assert_contains('PINOOX_E2E_REF:', $workflow);
+        np_assert_contains('actions/download-artifact@v4', $workflow);
+        np_assert_contains('include-hidden-files: true', $workflow);
+        np_assert_contains('tools/ci/pinoox-lifecycle.sh', $workflow);
+
+        np_assert_contains('install-platform run', $lifecycle);
+        np_assert_contains('tools/release/build-pinx.sh', $lifecycle);
+        np_assert_contains('pinx:install', $lifecycle);
+        np_assert_contains('pinx:uninstall', $lifecycle);
+        np_assert_contains('information_schema.tables', $lifecycle);
+        np_assert_contains('force_update_tables=', $lifecycle);
+        np_assert_contains('uninstall_tables=', $lifecycle);
+    },
+
     'Release tooling verifies source before invoking native Pinoox PINX build' => static function (): void {
         $script = (string)file_get_contents(NANOPINO_ROOT . '/tools/release/build-pinx.sh');
         $verify = strpos($script, 'verify-source.sh');

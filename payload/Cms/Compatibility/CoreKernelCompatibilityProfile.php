@@ -5,8 +5,8 @@ namespace App\com_pinoox_cms\Cms\Compatibility;
 
 final class CoreKernelCompatibilityProfile
 {
-    public const MIN_VERSION_NAME='3.8.15';
-    public const MIN_VERSION_CODE=205;
+    public const MIN_VERSION_NAME='3.10.0';
+    public const MIN_VERSION_CODE=216;
 
     /** @return list<KernelPrimitiveRequirement> */
     public static function requirements(): array

@@ -20,6 +20,8 @@ use App\com_pinoox_cms\Cms\Authorization\PinooxAccessGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityRepository;
 use App\com_pinoox_cms\Cms\Audit\PinooxAuditRepository;
 use Pinoox\Component\Kernel\Controller\Controller;
+use Pinoox\Component\Http\Request;
+use Pinoox\Component\Helpers\PinooxScriptHelper;
 use Pinoox\Portal\View;
 use App\com_pinoox_cms\Cms\Api\V1\Builder\BuilderApiContract;
 use App\com_pinoox_cms\Cms\Api\V1\Extension\ExtensionApiContract;
@@ -41,6 +43,8 @@ use App\com_pinoox_cms\Cms\Performance\PerformanceBudgetDefinition;
 use App\com_pinoox_cms\Cms\Security\Posture\SecurityPostureService;
 use App\com_pinoox_cms\Cms\Security\Posture\SecurityRuntimeState;
 use App\com_pinoox_cms\Cms\Security\Http\PinooxSessionCsrfTokenManager;
+use App\com_pinoox_cms\Cms\Security\Http\CspPolicy;
+use App\com_pinoox_cms\Cms\Security\Access\PlatformSuperTransitionReadiness;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Runtime\RuntimeBindingState;
 use App\com_pinoox_cms\Cms\Security\RateLimit\CoreRateLimitProfiles;
@@ -49,7 +53,7 @@ use App\com_pinoox_cms\Cms\Driver\DriverDefinition;
 
 final class AdminController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $adminThemePath = dirname(__DIR__) . '/theme/cms-admin';
         $adminProbe = new AdminFrontendAssetProbe();
@@ -61,6 +65,11 @@ final class AdminController extends Controller
         if (!$adminFrontend->ready) {
             return $adminResponses->failure($adminFrontend);
         }
+
+        $cspPolicy = new CspPolicy();
+        $cspNonce = $cspPolicy->nonce();
+        $request->attributes->set('cms_csp_nonce', $cspNonce);
+        RuntimeBindingState::setCsp(false);
 
         $kernel = CmsKernel::instance();
 
@@ -382,6 +391,8 @@ final class AdminController extends Controller
         $safeModeManager = new SafeModeManager($cmsStoragePath . '/recovery/safe-mode.json');
         $safeModeState = $safeModeManager->state()->toArray();
 
+        $platformSuperReadiness = (new PlatformSuperTransitionReadiness())->inspect();
+
         $securityRuntimeState=new SecurityRuntimeState(
             csrfVerifierBound:RuntimeBindingState::csrf()&&$csrfToken!==null,
             rateLimitsRegistered:RuntimeBindingState::rateLimits(),
@@ -389,6 +400,8 @@ final class AdminController extends Controller
             ssrfTransportBound:(CmsRuntimeServices::searchDriver() && RuntimeBindingState::ssrf()),
             publicApiSecurityBound:RuntimeBindingState::api(),
             cspEnforced:RuntimeBindingState::csp(),
+            implicitPlatformSuperEnabled:(bool)$platformSuperReadiness['platform_super'],
+            explicitPlatformSuperReady:(bool)$platformSuperReadiness['ready'],
         );
         $securityPosture=(new SecurityPostureService($securityRuntimeState))->report()->toArray();
         $securityRateLimits = array_map(
@@ -657,6 +670,7 @@ final class AdminController extends Controller
                             'ssrfTransportBound' => $securityRuntimeState->ssrfTransportBound,
                             'rateLimits' => $securityRateLimits,
                             'apiMatrix' => $apiSecurityMatrix,
+                            'platformSuperTransition' => $platformSuperReadiness,
                             'native' => [
                                 'rateLimiter' => 'Pinoox RateLimiter + ThrottleFlow',
                                 'responseEvent' => 'Pinoox AppResponseEvent',
@@ -751,6 +765,18 @@ final class AdminController extends Controller
                 ],
             ],
         ];
+
+        $viewData['cspNonce'] = $cspNonce;
+        $viewData['pinooxBootstrapJson'] = json_encode(
+            PinooxScriptHelper::bootstrap($viewData['bootstrap']),
+            JSON_UNESCAPED_UNICODE
+                | JSON_UNESCAPED_SLASHES
+                | JSON_HEX_TAG
+                | JSON_HEX_AMP
+                | JSON_HEX_APOS
+                | JSON_HEX_QUOT
+                | JSON_THROW_ON_ERROR,
+        );
 
         $response = View::response('main', $viewData, 'text/html', 'UTF-8');
 

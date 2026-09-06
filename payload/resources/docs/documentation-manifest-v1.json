@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "documentation_version": "0.23.28",
+  "documentation_version": "0.23.29",
   "freeze_state": "candidate",
   "authoritative_entry": "docs/index.md",
   "policy": "docs/documentation/freeze-policy.md",
@@ -26,6 +26,7 @@
     "docs/testing/strategy.md",
     "docs/deployment/production.md",
     "docs/deployment/shared-hosting.md",
+    "docs/deployment/installability.md",
     "docs/migration/upgrade-rollback.md",
     "docs/recovery/safe-mode.md",
     "docs/performance/performance-budgets.md",
@@ -73,7 +74,7 @@
     "breaking_change_requires_migration_docs": true
   },
   "release_blockers": [
-    "target-runtime Pinoox integration E2E",
+    "target shared-hosting Pinoox integration E2E",
     "production Luma/Vite dist build and browser WCAG E2E",
     "signed PINX lifecycle E2E",
     "target database migration evidence",
@@ -94,6 +95,8 @@
     "public HTTP binding/API completeness decision",
     "bidirectional public API machine-contract coverage",
     "content collection N+1 remediation",
-    "required documentation path completeness"
+    "required documentation path completeness",
+    "controlled Pinoox/MySQL native PINX lifecycle CI",
+    "versioned 0.23.28 to 0.23.29 native update path"
   ]
 }

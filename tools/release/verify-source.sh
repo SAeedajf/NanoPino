@@ -48,6 +48,8 @@ for p,e in bad[:20]: print(p,e,file=sys.stderr)
 sys.exit(1 if bad else 0)
 PY
 
+"$PHP_BIN" "$ROOT/tests/php/run.php"
+
 cd "$ADMIN"
 node run-tests.mjs
 node source-fingerprint.mjs

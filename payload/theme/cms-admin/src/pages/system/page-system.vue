@@ -9,6 +9,7 @@
     <div class="cms-system-actions"><LButton @click="load">{{ t('system_page.refresh_health') }}</LButton><LButton severity="secondary" @click="go('/system/logs')">{{ t('system_page.logs') }}</LButton><LButton severity="secondary" @click="go('/system/recovery')">{{ t('system_page.recovery') }}</LButton></div>
     <LPanel><template #header>Health Checks</template><div class="cms-check-grid"><article v-for="row in health.checks || []" :key="row.id" class="cms-check"><div><strong>{{ labels[row.id] || row.id }}</strong><LBadge :severity="severity(row.status)">{{ row.status }}</LBadge></div><p>{{ row.message }}</p><small>{{ Number.isFinite(Number(row.durationMs)) ? `${Number(row.durationMs).toFixed(2)} ms` : '—' }}</small><details v-if="row.details && Object.keys(row.details).length"><summary>{{ t('system_page.technical_details') }}</summary><pre>{{ JSON.stringify(row.details, null, 2) }}</pre></details></article></div></LPanel>
     <LPanel><template #header>{{ t('system_page.operational_status') }}</template><div class="cms-contract-list"><div class="cms-contract-row"><strong>{{ t('system_page.active_errors') }}</strong><LBadge :severity="Number(logs.active_errors || 0) ? 'danger' : 'success'">{{ logs.active_errors ?? 0 }}</LBadge></div><div class="cms-contract-row"><strong>{{ t('system_page.historical_errors') }}</strong><span>{{ logs.historical_errors ?? 0 }}</span></div><div class="cms-contract-row"><strong>Structured Logs</strong><span>{{ logs.available_records ?? 0 }}</span></div></div></LPanel>
+    <LPanel><template #header>{{ t('system_page.health_history') }}</template><div v-if="historyRows.length" class="cms-contract-list"><div v-for="row in historyRows" :key="row.recorded_at" class="cms-contract-row"><strong>{{ formatHistoryTime(row.recorded_at) }}</strong><LBadge :severity="severity(row.overall)">{{ row.overall }}</LBadge><span>{{ row.results?.length || 0 }} checks</span></div></div><p v-else class="cms-muted">{{ t('system_page.health_history_empty') }}</p></LPanel>
   </LPage>
 </template>
 <script setup>
@@ -17,10 +18,11 @@ import { LBadge, LButton, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import { readAdminBootData } from '../../services/admin-provider.js'
 import { systemApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
-const runtime=readAdminBootData().runtime||{},health=ref({overall:'unknown',checks:[]}),logs=ref({})
+const runtime=readAdminBootData().runtime||{},health=ref({overall:'unknown',checks:[]}),logs=ref({}),historyRows=ref([])
 const labels={'system.php':'PHP','system.memory':'Memory','system.disk':'Disk','system.database':'Database','system.cache':'Cache','system.storage':'Storage','system.scheduler':'Scheduler','system.queue':'Queue','system.extensions':'Extensions','system.kernel_compatibility':'Kernel Compatibility','security.posture':'Security Posture'}
 const severity=s=>s==='ok'?'success':s==='error'?'danger':s==='warning'?'warning':'secondary'
-async function load(){const [h,l]=await Promise.all([systemApi.health(),systemApi.logs({limit:20,active_window:900})]);health.value=h.data||health.value;logs.value=l.data?.summary||{}}
+async function load(){const [h,l,history]=await Promise.all([systemApi.health(),systemApi.logs({limit:20,active_window:900}),systemApi.healthHistory(20)]);health.value=h.data||health.value;logs.value=l.data?.summary||{};historyRows.value=history.data?.items||[]}
+function formatHistoryTime(value){const n=Number(value);return Number.isFinite(n)?new Date(n*1000).toLocaleString():'—'}
 function go(path){history.pushState({},'',path);dispatchEvent(new PopStateEvent('popstate'))}
 onMounted(load)
 </script>

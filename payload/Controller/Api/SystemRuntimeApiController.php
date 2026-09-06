@@ -15,6 +15,17 @@ final class SystemRuntimeApiController extends ApiController
         return $this->respond(CmsRuntimeServices::systemHealthApi()->health(CmsRuntimeServices::actorId()));
     }
 
+    public function healthHistory(Request $request): JsonResponse
+    {
+        $limit = max(1, min(200, (int)$request->query->get('limit', 20)));
+        return $this->respond(
+            CmsRuntimeServices::systemHealthApi()->history(
+                CmsRuntimeServices::actorId(),
+                $limit,
+            ),
+        );
+    }
+
     public function logs(Request $request): JsonResponse
     {
         $limit = max(1, min(500, (int)$request->query->get('limit', 100)));

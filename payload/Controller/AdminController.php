@@ -386,9 +386,9 @@ final class AdminController extends Controller
             csrfVerifierBound:RuntimeBindingState::csrf()&&$csrfToken!==null,
             rateLimitsRegistered:RuntimeBindingState::rateLimits(),
             securityHeadersBound:RuntimeBindingState::headers(),
-            ssrfTransportBound:false,
+            ssrfTransportBound:(CmsRuntimeServices::searchDriver() && RuntimeBindingState::ssrf()),
             publicApiSecurityBound:RuntimeBindingState::api(),
-            cspEnforced:false,
+            cspEnforced:RuntimeBindingState::csp(),
         );
         $securityPosture=(new SecurityPostureService($securityRuntimeState))->report()->toArray();
         $securityRateLimits = array_map(
@@ -543,7 +543,9 @@ final class AdminController extends Controller
                             'drivers' => $driverDefinitions,
                             'cacheLayers' => ['object','query','page','api','builder_render'],
                             'search' => [
-                                'active' => 'search.database',
+                                'active' => (($remoteSearch = CmsRuntimeServices::remoteSearchConfiguration()) !== null && function_exists('curl_init'))
+                                    ? 'search.' . $remoteSearch->driver
+                                    : 'search.database',
                                 'fallback' => 'search.database',
                                 'remote' => ['search.meilisearch','search.typesense'],
                                 'api' => SearchApiContract::routes(),
@@ -648,11 +650,11 @@ final class AdminController extends Controller
                             'api' => SecurityApiContract::routes(),
                             'apiBound' => RuntimeBindingState::api(),
                             'posture' => $securityPosture,
-                            'cspMode' => 'report-only',
+                            'cspMode' => $securityRuntimeState->cspEnforced ? 'enforce' : 'report-only',
                             'headersBound' => $securityRuntimeState->securityHeadersBound,
                             'csrfBound' => $securityRuntimeState->csrfVerifierBound,
                             'rateLimitsRegistered' => $securityRuntimeState->rateLimitsRegistered,
-                            'ssrfTransportBound' => false,
+                            'ssrfTransportBound' => $securityRuntimeState->ssrfTransportBound,
                             'rateLimits' => $securityRateLimits,
                             'apiMatrix' => $apiSecurityMatrix,
                             'native' => [

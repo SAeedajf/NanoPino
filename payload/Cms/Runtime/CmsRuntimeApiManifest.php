@@ -66,6 +66,7 @@ final class CmsRuntimeApiManifest
 
                 // Themes
                 self::route('GET','/themes',[ThemeRuntimeApiController::class,'index'],'cms.themes.index','themes.read','cms.api.read'),
+                self::route('GET','/themes/{package}/{theme}/patterns',[ThemeRuntimeApiController::class,'patterns'],'cms.themes.patterns','themes.read','cms.api.read',false,['package'=>'[a-z0-9][a-z0-9._-]{1,127}','theme'=>'[a-z0-9][a-z0-9._-]{0,127}']),
                 self::route('POST','/themes/activate',[ThemeRuntimeApiController::class,'activate'],'cms.themes.activate','themes.activate','cms.api.write',true),
 
                 // Builder / FSE

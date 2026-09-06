@@ -30,5 +30,6 @@ rsync -a --delete --exclude 'node_modules/' "$ROOT/payload/" "$PINOX_ROOT/apps/$
 cd "$PINOX_ROOT"
 "$PHP_BIN" pinoox pinx:build "$PACKAGE" --output="$OUTPUT" --no-sign --yes
 "$PHP_BIN" pinoox pinx:info "$OUTPUT"
+"$PHP_BIN" "$ROOT/tools/release/verify-pinx-installability.php" "$OUTPUT"
 sha256sum "$OUTPUT"
 printf "pinx=%s\n" "$OUTPUT"

@@ -22,6 +22,9 @@ use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentValidator;
 use App\com_pinoox_cms\Cms\Block\Migration\BlockMigrationEngine;
 use App\com_pinoox_cms\Cms\Block\Render\BlockDocumentRenderer;
 use App\com_pinoox_cms\Cms\Builder\BuilderService;
+use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockReferenceExpander;
+use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockService;
+use App\com_pinoox_cms\Cms\Builder\GlobalBlock\PinooxGlobalBlockRepository;
 use App\com_pinoox_cms\Cms\Builder\PinooxBuilderDocumentRepository;
 use App\com_pinoox_cms\Cms\Builder\Preview\BuilderPreviewService;
 use App\com_pinoox_cms\Cms\Builder\Revision\PinooxBuilderRevisionRepository;
@@ -118,6 +121,8 @@ final class CmsRuntimeServices
     private static ?BuilderService $builder = null;
     private static ?BuilderPreviewService $builderPreview = null;
     private static ?BuilderApiFacade $builderApi = null;
+    private static ?PinooxGlobalBlockRepository $globalBlockRepository = null;
+    private static ?GlobalBlockService $globalBlocks = null;
     private static ?ContentService $content = null;
     private static ?RevisionService $revisions = null;
     private static ?PinooxInstalledExtensionDiscovery $extensionDiscovery = null;
@@ -224,6 +229,26 @@ final class CmsRuntimeServices
                 $validator,
                 self::kernel()->blockRenderers,
             ),
+            self::authorization(),
+            new GlobalBlockReferenceExpander(
+                self::globalBlockRepository(),
+                self::blockLoader(),
+                $validator,
+            ),
+        );
+    }
+
+    public static function globalBlockRepository(): PinooxGlobalBlockRepository
+    {
+        return self::$globalBlockRepository ??= new PinooxGlobalBlockRepository();
+    }
+
+    public static function globalBlocks(): GlobalBlockService
+    {
+        return self::$globalBlocks ??= new GlobalBlockService(
+            self::globalBlockRepository(),
+            self::blockLoader(),
+            new BlockDocumentSerializer(),
             self::authorization(),
         );
     }

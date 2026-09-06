@@ -478,7 +478,7 @@ final class CmsRuntimeServices
     public static function searchApi(): SearchApiFacade
     {
         self::actorId();
-        return self::$searchApi ??= new SearchApiFacade(
+        return new SearchApiFacade(
             new SearchService(
                 self::authorization(),
                 new SearchManager(
@@ -493,6 +493,7 @@ final class CmsRuntimeServices
     {
         $configuration = RemoteSearchConfiguration::fromRepository(new PinooxSettingsRepository());
         if ($configuration === null || !function_exists('curl_init')) {
+            RuntimeBindingState::setSsrf(false);
             return new PinooxDatabaseSearchDriver();
         }
 
@@ -500,7 +501,7 @@ final class CmsRuntimeServices
             $configuration,
             new SsrfGuard(new NativeHostResolver()),
         );
-        RuntimeBindingState::markSsrf();
+        RuntimeBindingState::setSsrf(true);
 
         return $configuration->driver === 'meilisearch'
             ? new MeilisearchSearchDriver($transport)
@@ -560,7 +561,7 @@ final class CmsRuntimeServices
     public static function infrastructureApi(): InfrastructureApiFacade
     {
         self::actorId();
-        return self::$infrastructureApi ??= new InfrastructureApiFacade(
+        return new InfrastructureApiFacade(
             self::authorization(),
             new InfrastructureSnapshotService(
                 self::kernel()->drivers,

@@ -15,6 +15,7 @@ Start here:
 - [Testing](testing/strategy.md)
 - [Production deployment](deployment/production.md)
 - [Shared hosting](deployment/shared-hosting.md)
+- [Installation readiness and recovery](deployment/installability.md)
 - [Recovery](recovery/safe-mode.md)
 - [Release gate](deployment/release-gate.md)
 

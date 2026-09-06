@@ -63,10 +63,14 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
-
   pinoox-lifecycle:
+    name: PINX lifecycle / Pincore ${{ matrix.pincore }}
     needs: verify
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pincore: ['3.10.0', '3.14.4']
     permissions:
       contents: read
     services:
@@ -90,15 +94,20 @@ jobs:
       DB_DATABASE: pinoox
       DB_USERNAME: pinoox_ci
       DB_PASSWORD: pinoox_ci
+      DB_PREFIX: pinx_
       PINOOX_E2E_REF: 5e7d65bb4c6c71edbf0e0b47735479f620640d07
+      PINCORE_E2E_VERSION: ${{ matrix.pincore }}
+      NANOPINO_UPGRADE_BASE_REF: 6f251890a503fa9968dcbe36c6d8e8604f00618b
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configure ephemeral lifecycle environment
         shell: bash
         run: |
           set -euo pipefail
-          echo "NANOPINO_CI_ADMIN_PASSWORD=NanoPino-${GITHUB_RUN_ID}-CI" >> "$GITHUB_ENV"
+          echo "NANOPINO_CI_ADMIN_PASSWORD=NanoPino-${GITHUB_RUN_ID}-${PINCORE_E2E_VERSION}-CI" >> "$GITHUB_ENV"
           echo "NANOPINO_PINX_OUTPUT=${RUNNER_TEMP}/NanoPino-e2e.pinx" >> "$GITHUB_ENV"
 
       - uses: shivammathur/setup-php@v2
@@ -127,18 +136,28 @@ jobs:
           git -C "$PINOX_ROOT" checkout --detach "$PINOOX_E2E_REF"
           (
             cd "$PINOX_ROOT"
-            composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+            composer require "pinoox/pincore:${PINCORE_E2E_VERSION}"               --no-dev               --with-all-dependencies               --prefer-dist               --no-interaction               --no-progress               --optimize-autoloader
+            php -r '
+              $config=require "vendor/pinoox/pincore/config/pincore.config.php";
+              $expected=getenv("PINCORE_E2E_VERSION");
+              $actual=(string)($config["version_name"]??"");
+              if ($actual!==$expected) {
+                  fwrite(STDERR,"Resolved Pincore version mismatch: expected=$expected actual=$actual\n");
+                  exit(1);
+              }
+              printf("pincore_version=%s code=%d\n",$actual,(int)($config["version_code"]??0));
+            '
             composer show pinoox/pincore
           )
           echo "PINOX_ROOT=$PINOX_ROOT" >> "$GITHUB_ENV"
 
-      - name: Build install update and uninstall NanoPino PINX
+      - name: Build upgrade fresh-install and uninstall NanoPino PINX
         run: bash tools/ci/pinoox-lifecycle.sh
 
       - name: Upload verified PINX lifecycle artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nanopino-pinx-e2e
+          name: nanopino-pinx-e2e-pincore-${{ matrix.pincore }}
           path: ${{ runner.temp }}/NanoPino-e2e.pinx
           if-no-files-found: error
           retention-days: 7

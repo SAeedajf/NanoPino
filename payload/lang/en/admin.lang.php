@@ -104,6 +104,7 @@ return [
     ],
 
     'system_page' => [
+        'health_history'=>'Health history','health_history_empty'=>'No historical health snapshot has been recorded yet.',
         'refresh_health'=>'Refresh health','logs'=>'System logs','recovery'=>'Recovery & Safe Mode','technical_details'=>'Technical details',
         'operational_status'=>'Operational status','active_errors'=>'Active or recent errors','historical_errors'=>'Historical errors','recent_errors'=>':count recent errors','checking'=>'Checking…','active_window_note'=>'Based on the last 15 minutes','historical_note'=>'Retained for audit and historical review','structured_note'=>'Redacted and correlation-aware','health_checks'=>'Health checks',
     ],    'security_page' => [

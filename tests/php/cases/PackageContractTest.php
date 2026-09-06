@@ -52,6 +52,18 @@ return [
         }
     },
 
+    'NanoPino native uninstall lifecycle rolls back every owned migration batch and fails closed' => static function (): void {
+        $lifecycle = (string)file_get_contents(NANOPINO_ROOT . '/payload/lifecycle.php');
+
+        np_assert_contains("'uninstall'", $lifecycle);
+        np_assert_contains("new Migrator(", $lifecycle);
+        np_assert_contains("->rollback(0)", $lifecycle);
+        np_assert_contains("DB::connectionNameForPackage(\$package)", $lifecycle);
+        np_assert_contains("Refusing to delete application files", $lifecycle);
+        np_assert_contains("'com_pinoox_cms'", $lifecycle);
+        np_assert_false(str_contains($lifecycle, 'dropIfExists('), 'Lifecycle must not blindly drop adopted/legacy tables.');
+    },
+
     'CI release gate includes pinned real Pinoox MySQL lifecycle' => static function (): void {
         $workflow = (string)file_get_contents(NANOPINO_ROOT . '/.github/workflows/validate.yml');
         $lifecycle = (string)file_get_contents(NANOPINO_ROOT . '/tools/ci/pinoox-lifecycle.sh');

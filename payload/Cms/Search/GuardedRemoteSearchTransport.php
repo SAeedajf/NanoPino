@@ -59,7 +59,7 @@ final readonly class GuardedRemoteSearchTransport implements RemoteSearchTranspo
 
         return match ($operation) {
             'health' => ['GET', $base . '/health', null, $headers],
-            'index' => ['POST', $base . '/indexes/' . $index . '/documents?primaryKey=id', [$payload], $headers],
+            'index' => ['POST', $base . '/indexes/' . $index . '/documents?primaryKey=id', [$this->indexDocument($payload)], $headers],
             'delete' => ['DELETE', $base . '/indexes/' . $index . '/documents/' . rawurlencode($this->documentKey($payload)), null, $headers],
             'search' => ['POST', $base . '/indexes/' . $index . '/search', [
                 'q' => (string)($payload['text'] ?? ''),
@@ -79,7 +79,7 @@ final readonly class GuardedRemoteSearchTransport implements RemoteSearchTranspo
 
         return match ($operation) {
             'health' => ['GET', $base . '/health', null, $headers],
-            'index' => ['POST', $base . '/collections/' . $collection . '/documents?action=upsert', $payload, $headers],
+            'index' => ['POST', $base . '/collections/' . $collection . '/documents?action=upsert', $this->indexDocument($payload), $headers],
             'delete' => ['DELETE', $base . '/collections/' . $collection . '/documents/' . rawurlencode($this->documentKey($payload)), null, $headers],
             'search' => ['GET', $base . '/collections/' . $collection . '/documents/search?' . http_build_query([
                 'q' => (string)($payload['text'] ?? '*'),
@@ -175,6 +175,13 @@ final readonly class GuardedRemoteSearchTransport implements RemoteSearchTranspo
             $rows[] = $this->hit($document, (float)($entry['text_match'] ?? 0));
         }
         return ['hits' => $rows, 'total' => (int)($response['found'] ?? count($rows))];
+    }
+
+    private function indexDocument(array $payload): array
+    {
+        return $payload + [
+            'source_id' => (string)($payload['id'] ?? ''),
+        ] + ['id' => $this->documentKey($payload)];
     }
 
     private function hit(array $document, float $score): array

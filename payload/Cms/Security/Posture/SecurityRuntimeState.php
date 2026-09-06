@@ -12,5 +12,7 @@ final readonly class SecurityRuntimeState
         public bool $ssrfTransportBound = false,
         public bool $publicApiSecurityBound = false,
         public bool $cspEnforced = false,
+        public bool $implicitPlatformSuperEnabled = true,
+        public bool $explicitPlatformSuperReady = false,
     ) {}
 }

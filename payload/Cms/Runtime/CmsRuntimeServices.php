@@ -90,6 +90,13 @@ use App\com_pinoox_cms\Cms\Identity\UserAdministrationService;
 use App\com_pinoox_cms\Cms\Search\SearchService;
 use App\com_pinoox_cms\Cms\Search\SearchManager;
 use App\com_pinoox_cms\Cms\Search\PinooxDatabaseSearchDriver;
+use App\com_pinoox_cms\Cms\Search\SearchDriverInterface;
+use App\com_pinoox_cms\Cms\Search\RemoteSearchConfiguration;
+use App\com_pinoox_cms\Cms\Search\GuardedRemoteSearchTransport;
+use App\com_pinoox_cms\Cms\Search\MeilisearchSearchDriver;
+use App\com_pinoox_cms\Cms\Search\TypesenseSearchDriver;
+use App\com_pinoox_cms\Cms\Security\Network\NativeHostResolver;
+use App\com_pinoox_cms\Cms\Security\Network\SsrfGuard;
 use App\com_pinoox_cms\Cms\Infrastructure\InfrastructureSnapshotService;
 use App\com_pinoox_cms\Cms\Cache\PinooxCacheStore;
 use App\com_pinoox_cms\Cms\Cache\FileCacheTagClock;
@@ -474,9 +481,35 @@ final class CmsRuntimeServices
         return self::$searchApi ??= new SearchApiFacade(
             new SearchService(
                 self::authorization(),
-                new SearchManager(new PinooxDatabaseSearchDriver()),
+                new SearchManager(
+                    self::searchDriver(),
+                    new PinooxDatabaseSearchDriver(),
+                ),
             ),
         );
+    }
+
+    public static function searchDriver(): SearchDriverInterface
+    {
+        $configuration = RemoteSearchConfiguration::fromRepository(new PinooxSettingsRepository());
+        if ($configuration === null || !function_exists('curl_init')) {
+            return new PinooxDatabaseSearchDriver();
+        }
+
+        $transport = new GuardedRemoteSearchTransport(
+            $configuration,
+            new SsrfGuard(new NativeHostResolver()),
+        );
+        RuntimeBindingState::markSsrf();
+
+        return $configuration->driver === 'meilisearch'
+            ? new MeilisearchSearchDriver($transport)
+            : new TypesenseSearchDriver($transport);
+    }
+
+    public static function remoteSearchConfiguration(): ?RemoteSearchConfiguration
+    {
+        return RemoteSearchConfiguration::fromRepository(new PinooxSettingsRepository());
     }
 
     private static function cacheStore(): PinooxCacheStore
@@ -531,7 +564,7 @@ final class CmsRuntimeServices
             self::authorization(),
             new InfrastructureSnapshotService(
                 self::kernel()->drivers,
-                new PinooxDatabaseSearchDriver(),
+                self::searchDriver(),
                 self::cacheStore(),
                 self::queueRepository(),
                 self::storageDriver(),

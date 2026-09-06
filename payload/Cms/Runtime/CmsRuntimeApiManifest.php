@@ -115,6 +115,7 @@ final class CmsRuntimeApiManifest
                 self::route('POST','/recovery/points/{id}/restore',[RecoveryRuntimeApiController::class,'restore'],'cms.recovery.restore','system.recovery','cms.recovery',true,['id'=>'rp-[A-Za-z0-9._-]+']),
                 self::route('POST','/recovery/safe-mode/disable',[RecoveryRuntimeApiController::class,'disableSafeMode'],'cms.recovery.safe-mode.disable','system.recovery','cms.recovery',true),
                 self::route('GET','/system/health',[SystemRuntimeApiController::class,'health'],'cms.system.health','system.health.view','cms.api.read'),
+                self::route('GET','/system/health/history',[SystemRuntimeApiController::class,'healthHistory'],'cms.system.health.history','system.health.view','cms.api.read'),
                 self::route('GET','/system/logs',[SystemRuntimeApiController::class,'logs'],'cms.system.logs','system.logs.view','cms.api.read'),
                 self::route('POST','/system/support-bundle',[SystemRuntimeApiController::class,'supportBundle'],'cms.system.support-bundle','system.support.export','cms.recovery',true),
 

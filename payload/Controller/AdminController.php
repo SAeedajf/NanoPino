@@ -543,7 +543,7 @@ final class AdminController extends Controller
                             'drivers' => $driverDefinitions,
                             'cacheLayers' => ['object','query','page','api','builder_render'],
                             'search' => [
-                                'active' => null,
+                                'active' => 'search.database',
                                 'fallback' => 'search.database',
                                 'remote' => ['search.meilisearch','search.typesense'],
                                 'api' => SearchApiContract::routes(),

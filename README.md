@@ -9,10 +9,11 @@ It intentionally does **not** store packaged `.pinx` artifacts.
 
 - Product: NanoPino
 - Package ID: `com_pinoox_cms`
-- Version: `0.23.27`
-- Version code: `2327`
-- Release baseline: `RC11`
-- Minimum Pinoox kernel: `205`
+- Version: `0.23.29`
+- Version code: `2329`
+- Release hardening baseline: `R15`
+- Minimum Pincore: `3.10.0`
+- Native minimum kernel code: `216`
 
 ## Repository layout
 
@@ -81,6 +82,23 @@ Pincore and vendor code must not be modified for NanoPino business logic.
 - Vue Router
 - Vite
 - RTL/LTR-aware i18n
+
+
+
+## Current installability gates
+
+NanoPino 0.23.29 adds release-grade installability checks around the native Pinoox PINX lifecycle:
+
+- PHP runtime suite on 8.2–8.5;
+- native PINX structure/version/minpin/artifact audit;
+- read-only environment preflight before CMS schema creation;
+- Pincore 3.10.0 and 3.14.4 lifecycle matrix;
+- native 0.23.28 → 0.23.29 update without force;
+- separate clean 0.23.29 fresh install/uninstall;
+- MySQL table-count and uninstall-cleanup invariants;
+- development-only Admin source/build files excluded from the distributable PINX.
+
+See [Installation Readiness and Recovery](docs/deployment/installability.md) for shared-hosting requirements and failure recovery.
 
 ## Historical RC11 validation baseline
 

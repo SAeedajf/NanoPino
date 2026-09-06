@@ -109,6 +109,7 @@ export const searchApi={
 }
 export const systemApi={
   health:()=>cmsRequest('/system/health'),
+  healthHistory:(limit=20)=>cmsRequest(`/system/health/history?limit=${encodeURIComponent(limit)}`),
   logs:(params={})=>{const q=new URLSearchParams();Object.entries(params).forEach(([k,v])=>v!==''&&v!=null&&q.set(k,String(v)));return cmsRequest(`/system/logs${q.size?`?${q}`:''}`)},
   supportBundle:()=>cmsRequest('/system/support-bundle',{method:'POST',body:{}}),
 }

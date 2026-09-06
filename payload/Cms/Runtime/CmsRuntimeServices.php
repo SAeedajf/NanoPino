@@ -22,6 +22,9 @@ use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentValidator;
 use App\com_pinoox_cms\Cms\Block\Migration\BlockMigrationEngine;
 use App\com_pinoox_cms\Cms\Block\Render\BlockDocumentRenderer;
 use App\com_pinoox_cms\Cms\Builder\BuilderService;
+use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockReferenceExpander;
+use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockService;
+use App\com_pinoox_cms\Cms\Builder\GlobalBlock\PinooxGlobalBlockRepository;
 use App\com_pinoox_cms\Cms\Builder\PinooxBuilderDocumentRepository;
 use App\com_pinoox_cms\Cms\Builder\Preview\BuilderPreviewService;
 use App\com_pinoox_cms\Cms\Builder\Revision\PinooxBuilderRevisionRepository;
@@ -49,6 +52,7 @@ use App\com_pinoox_cms\Cms\ExtensionCenter\Review\ExtensionReviewTicketService;
 use App\com_pinoox_cms\Cms\ExtensionCenter\Review\FileExtensionReviewTicketRepository;
 use App\com_pinoox_cms\Cms\Field\FieldEngine;
 use App\com_pinoox_cms\Cms\Health\HealthRunner;
+use App\com_pinoox_cms\Cms\Health\FileHealthHistoryRepository;
 use App\com_pinoox_cms\Cms\Health\SystemHealthRegistrar;
 use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
 use App\com_pinoox_cms\Cms\Logging\CmsLoggerInterface;
@@ -117,6 +121,8 @@ final class CmsRuntimeServices
     private static ?BuilderService $builder = null;
     private static ?BuilderPreviewService $builderPreview = null;
     private static ?BuilderApiFacade $builderApi = null;
+    private static ?PinooxGlobalBlockRepository $globalBlockRepository = null;
+    private static ?GlobalBlockService $globalBlocks = null;
     private static ?ContentService $content = null;
     private static ?RevisionService $revisions = null;
     private static ?PinooxInstalledExtensionDiscovery $extensionDiscovery = null;
@@ -132,9 +138,17 @@ final class CmsRuntimeServices
     private static ?CacheEffectivenessTracker $cacheTracker = null;
     private static ?ExtensionCostTracker $extensionCostTracker = null;
     private static ?PinooxQueryProbe $queryProbe = null;
+    private static bool $actorContextInitialized = false;
+    private static ?int $actorContextId = null;
 
     public static function kernel(): CmsKernel { return CmsKernel::instance(); }
-    public static function actorId(): ?int { return RuntimeActor::id(); }
+
+    public static function actorId(): ?int
+    {
+        $actorId = RuntimeActor::id();
+        self::synchronizeActorContext($actorId);
+        return $actorId;
+    }
 
     public static function authorization(): AuthorizationManager
     {
@@ -158,6 +172,7 @@ final class CmsRuntimeServices
 
     public static function settings(): SettingsService
     {
+        self::actorId();
         return self::$settings ??= new SettingsService(
             self::kernel()->settings,
             self::settingsRepository(),
@@ -168,6 +183,7 @@ final class CmsRuntimeServices
 
     public static function media(): MediaService
     {
+        self::actorId();
         return self::$media ??= new MediaService(
             new PinooxMediaRepository(),
             new PinooxNativeFileGateway(),
@@ -199,6 +215,7 @@ final class CmsRuntimeServices
 
     public static function builder(): BuilderService
     {
+        self::actorId();
         if (self::$builder !== null) return self::$builder;
         return self::$builder = new BuilderService(
             new PinooxBuilderDocumentRepository(),
@@ -213,6 +230,7 @@ final class CmsRuntimeServices
 
     public static function builderPreview(): BuilderPreviewService
     {
+        self::actorId();
         if (self::$builderPreview !== null) return self::$builderPreview;
         $validator = self::blockValidator();
         return self::$builderPreview = new BuilderPreviewService(
@@ -224,16 +242,39 @@ final class CmsRuntimeServices
                 self::kernel()->blockRenderers,
             ),
             self::authorization(),
+            new GlobalBlockReferenceExpander(
+                self::globalBlockRepository(),
+                self::blockLoader(),
+                $validator,
+            ),
+        );
+    }
+
+    public static function globalBlockRepository(): PinooxGlobalBlockRepository
+    {
+        return self::$globalBlockRepository ??= new PinooxGlobalBlockRepository();
+    }
+
+    public static function globalBlocks(): GlobalBlockService
+    {
+        self::actorId();
+        return self::$globalBlocks ??= new GlobalBlockService(
+            self::globalBlockRepository(),
+            self::blockLoader(),
+            new BlockDocumentSerializer(),
+            self::authorization(),
         );
     }
 
     public static function builderApi(): BuilderApiFacade
     {
+        self::actorId();
         return self::$builderApi ??= new BuilderApiFacade(self::builder(), self::builderPreview());
     }
 
     public static function revisions(): RevisionService
     {
+        self::actorId();
         if (self::$revisions !== null) return self::$revisions;
         $contentRepository = new PinooxContentRepository();
         return self::$revisions = new RevisionService(
@@ -250,6 +291,7 @@ final class CmsRuntimeServices
 
     public static function content(): ContentService
     {
+        self::actorId();
         if (self::$content !== null) return self::$content;
         return self::$content = new ContentService(
             self::kernel()->contentTypes,
@@ -267,6 +309,7 @@ final class CmsRuntimeServices
 
     public static function userAdministration(): UserAdministrationService
     {
+        self::actorId();
         return self::$userAdministration ??= new UserAdministrationService(
             self::authorization(),
             new PinooxIdentityMutationGateway(),
@@ -414,6 +457,7 @@ final class CmsRuntimeServices
         return new SystemHealthApiFacade(
             self::authorization(),
             self::healthRunner(),
+            new FileHealthHistoryRepository(self::storageRoot() . '/health/history.jsonl'),
             self::logger(),
             new SupportBundleBuilder(
                 self::healthRunner(),
@@ -426,6 +470,7 @@ final class CmsRuntimeServices
 
     public static function searchApi(): SearchApiFacade
     {
+        self::actorId();
         return self::$searchApi ??= new SearchApiFacade(
             new SearchService(
                 self::authorization(),
@@ -481,6 +526,7 @@ final class CmsRuntimeServices
 
     public static function infrastructureApi(): InfrastructureApiFacade
     {
+        self::actorId();
         return self::$infrastructureApi ??= new InfrastructureApiFacade(
             self::authorization(),
             new InfrastructureSnapshotService(
@@ -497,6 +543,7 @@ final class CmsRuntimeServices
 
     public static function performanceApi(): PerformanceApiFacade
     {
+        self::actorId();
         self::bindQueryProbe();
 
         return self::$performanceApi ??= new PerformanceApiFacade(
@@ -513,6 +560,7 @@ final class CmsRuntimeServices
 
     public static function updateApi(): UpdateApiFacade
     {
+        self::actorId();
         $root = self::storageRoot();
         return self::$updateApi ??= new UpdateApiFacade(
             new UpdateCenterService(
@@ -554,6 +602,34 @@ final class CmsRuntimeServices
                 new RuntimeHealthSafeModeExitGuard(self::healthRunner()),
             ),
         );
+    }
+
+    private static function synchronizeActorContext(?int $actorId): void
+    {
+        if (
+            self::$actorContextInitialized
+            && self::$actorContextId === $actorId
+        ) {
+            return;
+        }
+
+        self::$actorContextInitialized = true;
+        self::$actorContextId = $actorId;
+
+        self::$authorization = null;
+        self::$settings = null;
+        self::$media = null;
+        self::$builder = null;
+        self::$builderPreview = null;
+        self::$builderApi = null;
+        self::$globalBlocks = null;
+        self::$content = null;
+        self::$revisions = null;
+        self::$userAdministration = null;
+        self::$searchApi = null;
+        self::$infrastructureApi = null;
+        self::$performanceApi = null;
+        self::$updateApi = null;
     }
 
     /** @return list<array<string,mixed>> */

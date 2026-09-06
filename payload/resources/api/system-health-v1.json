@@ -10,6 +10,12 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/cms/system/health/history",
+      "capability": "system.health.view",
+      "rate_limit": "cms.api.read"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/cms/system/logs",
       "capability": "system.logs.view",
       "rate_limit": "cms.api.read"

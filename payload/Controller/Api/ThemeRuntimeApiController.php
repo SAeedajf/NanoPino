@@ -2,6 +2,12 @@
 declare(strict_types=1);
 namespace App\com_pinoox_cms\Controller\Api;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
+use App\com_pinoox_cms\Cms\Authorization\AuthorizationRequest;
+use App\com_pinoox_cms\Cms\Authorization\ScopeType;
+use App\com_pinoox_cms\Cms\Theme\CmsThemeProfileFactory;
+use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePattern;
+use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePatternLoader;
+use App\com_pinoox_cms\Cms\Theme\PinooxNativeThemeGateway;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
@@ -42,6 +48,60 @@ final class ThemeRuntimeApiController extends ApiController
             return CmsApiResponse::error('FORBIDDEN','Theme access is not permitted.',403);
         } catch(\Throwable $e) {
             return CmsRuntimeErrorReporter::response($e,'THEME_LIST_FAILED','Themes could not be loaded.',500,['operation'=>'themes.list']);
+        }
+    }
+
+    public function patterns(string $package, string $theme): JsonResponse
+    {
+        try {
+            CmsRuntimeServices::authorization()->authorize(new AuthorizationRequest(
+                'themes.read',
+                CmsRuntimeServices::actorId(),
+                ScopeType::Site,
+                1,
+                'theme',
+                $package . ':' . $theme,
+            ));
+
+            CmsRuntimeServices::discoverThemes();
+            $definition = CmsRuntimeServices::kernel()->themes->byReference($package, $theme);
+            if ($definition === null) {
+                return CmsApiResponse::error('THEME_NOT_FOUND', 'Theme not found.', 404);
+            }
+
+            $native = new PinooxNativeThemeGateway();
+            $stack = $native->stack($package);
+            $profile = (new CmsThemeProfileFactory())->fromNativeMeta($definition->raw);
+            $patterns = (new ThemePatternLoader())->discover(
+                $stack->paths,
+                $profile->patternDirectory,
+            );
+
+            return CmsApiResponse::ok([
+                'items' => array_values(array_map(
+                    static fn (ThemePattern $pattern): array => [
+                        'id' => $pattern->id,
+                        'title' => $pattern->title,
+                        'categories' => $pattern->categories,
+                        'document' => $pattern->document,
+                    ],
+                    $patterns,
+                )),
+                'total' => count($patterns),
+                'theme' => ['package' => $package, 'name' => $theme],
+            ]);
+        } catch (AuthorizationDeniedException) {
+            return CmsApiResponse::error('FORBIDDEN', 'Theme patterns are not permitted.', 403);
+        } catch (\InvalidArgumentException $e) {
+            return CmsApiResponse::error('THEME_PATTERN_INVALID', $e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return CmsRuntimeErrorReporter::response(
+                $e,
+                'THEME_PATTERN_LIST_FAILED',
+                'Theme patterns could not be loaded.',
+                500,
+                ['operation' => 'themes.patterns'],
+            );
         }
     }
 

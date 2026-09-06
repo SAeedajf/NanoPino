@@ -135,6 +135,30 @@ final class PinooxContentRepository implements ContentRepositoryInterface
         return $this->hydrateMany($models, $query->projection);
     }
 
+    public function count(ContentQuery $query): int
+    {
+        $builder = ContentModel::query()->where('site_id', $query->siteId);
+
+        if ($query->type !== null) $builder->where('type', $query->type);
+        if ($query->status !== null) $builder->where('status', $query->status->value);
+        if ($query->locale !== null) $builder->where('locale', $query->locale);
+        if ($query->authorId !== null) $builder->where('author_id', $query->authorId);
+        if ($query->parentId !== null) $builder->where('parent_id', $query->parentId);
+        if ($query->beforeId !== null) $builder->where('id', '<', $query->beforeId);
+
+        if ($query->search !== null && trim($query->search) !== '') {
+            $search = '%' . trim($query->search) . '%';
+            $builder->where(function ($nested) use ($search): void {
+                $nested
+                    ->where('title', 'like', $search)
+                    ->orWhere('excerpt', 'like', $search)
+                    ->orWhere('slug', 'like', $search);
+            });
+        }
+
+        return (int) $builder->count();
+    }
+
     public function slugExists(
         int $siteId,
         string $type,

@@ -58,6 +58,12 @@ export const builderApi={
   restore:(id,revisionId,payload={})=>cmsRequest(`/builder/${id}/revisions/${revisionId}/restore`,{method:'POST',body:payload}),
   preview:payload=>cmsRequest('/builder/preview',{method:'POST',body:payload}),
 }
+export const globalBlockApi={
+  list:(siteId=1)=>cmsRequest(`/builder/global-blocks?site_id=${encodeURIComponent(siteId)}`),
+  read:id=>cmsRequest(`/builder/global-blocks/${encodeURIComponent(id)}`),
+  create:payload=>cmsRequest('/builder/global-blocks',{method:'POST',body:payload}),
+  update:(id,payload)=>cmsRequest(`/builder/global-blocks/${encodeURIComponent(id)}`,{method:'PUT',body:payload}),
+}
 export const extensionApi={
   list:()=>cmsRequest('/extensions'),
   inspect:form=>cmsRequest('/extensions/inspect',{method:'POST',body:form}),
@@ -84,14 +90,33 @@ export const userApi={
 
 export const themeApi={
   list:()=>cmsRequest('/themes'),
+  patterns:(packageName,themeName)=>cmsRequest(`/themes/${encodeURIComponent(packageName)}/${encodeURIComponent(themeName)}/patterns`),
   activate:(packageName,themeName,context=null)=>cmsRequest('/themes/activate',{method:'POST',body:{package:packageName,theme:themeName,context}}),
 }
 export const recoveryApi={
   restore:id=>cmsRequest(`/recovery/points/${encodeURIComponent(id)}/restore`,{method:'POST',body:{}}),
   disableSafeMode:()=>cmsRequest('/recovery/safe-mode/disable',{method:'POST',body:{}}),
 }
+export const updateApi={
+  policy:id=>cmsRequest(`/updates/${encodeURIComponent(id)}/policy`),
+  savePolicy:(id,payload)=>cmsRequest(`/updates/${encodeURIComponent(id)}/policy`,{method:'PUT',body:payload}),
+  history:(id,limit=100)=>cmsRequest(`/updates/${encodeURIComponent(id)}/history?limit=${encodeURIComponent(limit)}`),
+  recoveryPoints:id=>cmsRequest(`/updates/${encodeURIComponent(id)}/recovery-points`),
+}
+export const infrastructureApi={
+  status:()=>cmsRequest('/system/infrastructure'),
+  queue:()=>cmsRequest('/system/infrastructure/queue'),
+  retryQueue:id=>cmsRequest(`/system/infrastructure/queue/${encodeURIComponent(id)}/retry`,{method:'POST',body:{}}),
+  invalidateTag:tag=>cmsRequest('/system/infrastructure/cache/invalidate-tag',{method:'POST',body:{tag}}),
+  invalidateLayer:layer=>cmsRequest('/system/infrastructure/cache/invalidate-layer',{method:'POST',body:{layer}}),
+}
+export const performanceApi={status:()=>cmsRequest('/system/performance')}
+export const searchApi={
+  search:(params={})=>{const q=new URLSearchParams();Object.entries(params).forEach(([k,v])=>{if(v===undefined||v===null||v==='')return;if(Array.isArray(v))q.set(k,v.join(','));else q.set(k,String(v))});return cmsRequest(`/search${q.size?`?${q}`:''}`)},
+}
 export const systemApi={
   health:()=>cmsRequest('/system/health'),
+  healthHistory:(limit=20)=>cmsRequest(`/system/health/history?limit=${encodeURIComponent(limit)}`),
   logs:(params={})=>{const q=new URLSearchParams();Object.entries(params).forEach(([k,v])=>v!==''&&v!=null&&q.set(k,String(v)));return cmsRequest(`/system/logs${q.size?`?${q}`:''}`)},
   supportBundle:()=>cmsRequest('/system/support-bundle',{method:'POST',body:{}}),
 }

@@ -430,6 +430,55 @@ final class ContentService
         return $this->repository->search($query);
     }
 
+    public function count(ContentQuery $query, ?int $actorId = null): int
+    {
+        $permission = $query->type !== null
+            ? $this->type($query->type)->permissions['read']
+            : 'content.read';
+
+        $this->authorization->authorize(new AuthorizationRequest(
+            $permission,
+            $actorId,
+            ScopeType::Site,
+            $query->siteId,
+            'content_collection',
+        ));
+
+        if (!$this->mayManageOthers($actorId, $query->siteId)) {
+            if ($actorId === null || $actorId < 1) {
+                throw new AuthorizationDeniedException(new \App\com_pinoox_cms\Cms\Authorization\AuthorizationResult(
+                    false,
+                    'OWNER_SCOPE_REQUIRES_SUBJECT',
+                    true,
+                    true,
+                ));
+            }
+            if ($query->authorId !== null && $query->authorId !== $actorId) {
+                throw new AuthorizationDeniedException(new \App\com_pinoox_cms\Cms\Authorization\AuthorizationResult(
+                    false,
+                    'RESOURCE_OWNER_DENIED',
+                    true,
+                    true,
+                ));
+            }
+            $query = new ContentQuery(
+                siteId: $query->siteId,
+                type: $query->type,
+                status: $query->status,
+                locale: $query->locale,
+                authorId: $actorId,
+                parentId: $query->parentId,
+                search: $query->search,
+                limit: $query->limit,
+                offset: $query->offset,
+                projection: $query->projection,
+                beforeId: $query->beforeId,
+            );
+        }
+
+        return $this->repository->count($query);
+    }
+
     private function transition(
         int $id,
         ContentStatus $to,

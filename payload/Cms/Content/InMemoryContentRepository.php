@@ -89,6 +89,31 @@ final class InMemoryContentRepository implements ContentRepositoryInterface
         );
     }
 
+    public function count(ContentQuery $query): int
+    {
+        return count(array_filter(
+            $this->records,
+            static function (ContentRecord $record) use ($query): bool {
+                if ($record->siteId !== $query->siteId) return false;
+                if ($query->type !== null && $record->type !== $query->type) return false;
+                if ($query->status !== null && $record->status !== $query->status) return false;
+                if ($query->locale !== null && $record->locale !== $query->locale) return false;
+                if ($query->authorId !== null && $record->authorId !== $query->authorId) return false;
+                if ($query->parentId !== null && $record->parentId !== $query->parentId) return false;
+                if ($query->beforeId !== null && $record->id >= $query->beforeId) return false;
+                if ($query->search !== null && trim($query->search) !== '') {
+                    $needle = strtolower(trim($query->search));
+                    if (
+                        !str_contains(strtolower($record->title), $needle)
+                        && !str_contains(strtolower($record->excerpt), $needle)
+                        && !str_contains(strtolower($record->slug), $needle)
+                    ) return false;
+                }
+                return true;
+            },
+        ));
+    }
+
     public function slugExists(
         int $siteId,
         string $type,

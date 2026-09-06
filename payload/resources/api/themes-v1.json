@@ -9,7 +9,22 @@
       "method": "GET",
       "path": "/api/v1/cms/themes",
       "capability": "themes.read",
-      "response": ["items", "active", "summary", "api_bound"]
+      "response": [
+        "items",
+        "active",
+        "summary",
+        "api_bound"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/themes/{package}/{theme}/patterns",
+      "capability": "themes.read",
+      "response": [
+        "items",
+        "total",
+        "theme"
+      ]
     },
     {
       "method": "POST",
@@ -22,5 +37,11 @@
       }
     }
   ],
-  "errors": ["THEME_REFERENCE_INVALID", "THEME_ACTIVATION_FAILED", "FORBIDDEN"]
+  "errors": [
+    "THEME_REFERENCE_INVALID",
+    "THEME_ACTIVATION_FAILED",
+    "FORBIDDEN",
+    "THEME_PATTERN_INVALID",
+    "THEME_PATTERN_LIST_FAILED"
+  ]
 }

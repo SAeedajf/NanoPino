@@ -7,6 +7,7 @@ use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationManager;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationRequest;
 use App\com_pinoox_cms\Cms\Health\HealthRunner;
+use App\com_pinoox_cms\Cms\Health\HealthHistoryRepositoryInterface;
 use App\com_pinoox_cms\Cms\Logging\CmsLoggerInterface;
 use App\com_pinoox_cms\Cms\Logging\StructuredLogRecord;
 use App\com_pinoox_cms\Cms\Support\SupportBundleBuilder;
@@ -16,6 +17,7 @@ final readonly class SystemHealthApiFacade
     public function __construct(
         private AuthorizationManager $auth,
         private HealthRunner $health,
+        private HealthHistoryRepositoryInterface $history,
         private CmsLoggerInterface $logs,
         private SupportBundleBuilder $support,
     ) {}
@@ -24,12 +26,21 @@ final readonly class SystemHealthApiFacade
     {
         return $this->guard('system.health.view', $actorId, function (): array {
             $results = $this->health->runAll();
+            $overall = $this->health->overall($results);
+            $this->history->append($overall, $results);
             return [
                 'generated_at' => time(),
-                'overall' => $this->health->overall($results)->value,
+                'overall' => $overall->value,
                 'checks' => array_map(static fn ($item): array => $item->toArray(), $results),
             ];
         });
+    }
+
+    public function history(?int $actorId = null, int $limit = 20): SystemHealthApiResponse
+    {
+        return $this->guard('system.health.view', $actorId, fn (): array => [
+            'items' => $this->history->recent(max(1, min(200, $limit))),
+        ]);
     }
 
     public function logs(

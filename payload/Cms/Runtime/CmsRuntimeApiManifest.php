@@ -6,6 +6,7 @@ namespace App\com_pinoox_cms\Cms\Runtime;
 use App\com_pinoox_cms\Controller\Api\BuilderRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ContentRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ExtensionRuntimeApiController;
+use App\com_pinoox_cms\Controller\Api\GlobalBlockRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\MediaApiController;
 use App\com_pinoox_cms\Controller\Api\SearchRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\InfrastructureRuntimeApiController;
@@ -65,9 +66,14 @@ final class CmsRuntimeApiManifest
 
                 // Themes
                 self::route('GET','/themes',[ThemeRuntimeApiController::class,'index'],'cms.themes.index','themes.read','cms.api.read'),
+                self::route('GET','/themes/{package}/{theme}/patterns',[ThemeRuntimeApiController::class,'patterns'],'cms.themes.patterns','themes.read','cms.api.read',false,['package'=>'[a-z0-9][a-z0-9._-]{1,127}','theme'=>'[a-z0-9][a-z0-9._-]{0,127}']),
                 self::route('POST','/themes/activate',[ThemeRuntimeApiController::class,'activate'],'cms.themes.activate','themes.activate','cms.api.write',true),
 
                 // Builder / FSE
+                self::route('GET','/builder/global-blocks',[GlobalBlockRuntimeApiController::class,'index'],'cms.builder.global-blocks.index','builder.read','cms.api.read'),
+                self::route('POST','/builder/global-blocks',[GlobalBlockRuntimeApiController::class,'create'],'cms.builder.global-blocks.create','builder.edit','cms.api.write',true),
+                self::route('GET','/builder/global-blocks/{id}',[GlobalBlockRuntimeApiController::class,'show'],'cms.builder.global-blocks.show','builder.read','cms.api.read',false,['id'=>'\d+']),
+                self::route('PUT','/builder/global-blocks/{id}',[GlobalBlockRuntimeApiController::class,'update'],'cms.builder.global-blocks.update','builder.edit','cms.api.write',true,['id'=>'\d+']),
                 self::route('GET','/builder',[BuilderRuntimeApiController::class,'index'],'cms.builder.index','builder.read','cms.api.read'),
                 self::route('POST','/builder/open',[BuilderRuntimeApiController::class,'open'],'cms.builder.open','builder.edit','cms.api.write',true),
                 self::route('POST','/builder',[BuilderRuntimeApiController::class,'create'],'cms.builder.create','builder.edit','cms.api.write',true),
@@ -115,6 +121,7 @@ final class CmsRuntimeApiManifest
                 self::route('POST','/recovery/points/{id}/restore',[RecoveryRuntimeApiController::class,'restore'],'cms.recovery.restore','system.recovery','cms.recovery',true,['id'=>'rp-[A-Za-z0-9._-]+']),
                 self::route('POST','/recovery/safe-mode/disable',[RecoveryRuntimeApiController::class,'disableSafeMode'],'cms.recovery.safe-mode.disable','system.recovery','cms.recovery',true),
                 self::route('GET','/system/health',[SystemRuntimeApiController::class,'health'],'cms.system.health','system.health.view','cms.api.read'),
+                self::route('GET','/system/health/history',[SystemRuntimeApiController::class,'healthHistory'],'cms.system.health.history','system.health.view','cms.api.read'),
                 self::route('GET','/system/logs',[SystemRuntimeApiController::class,'logs'],'cms.system.logs','system.logs.view','cms.api.read'),
                 self::route('POST','/system/support-bundle',[SystemRuntimeApiController::class,'supportBundle'],'cms.system.support-bundle','system.support.export','cms.recovery',true),
 

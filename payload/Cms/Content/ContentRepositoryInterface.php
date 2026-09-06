@@ -15,6 +15,8 @@ interface ContentRepositoryInterface
     /** @return list<ContentRecord> */
     public function search(ContentQuery $query): array;
 
+    public function count(ContentQuery $query): int;
+
     public function slugExists(
         int $siteId,
         string $type,

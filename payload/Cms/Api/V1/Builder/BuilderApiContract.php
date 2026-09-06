@@ -12,6 +12,10 @@ final class BuilderApiContract
     public static function routes(): array
     {
         return [
+            ['method' => 'GET', 'path' => self::BASE . '/global-blocks', 'capability' => 'builder.read'],
+            ['method' => 'POST', 'path' => self::BASE . '/global-blocks', 'capability' => 'builder.edit'],
+            ['method' => 'GET', 'path' => self::BASE . '/global-blocks/{id}', 'capability' => 'builder.read'],
+            ['method' => 'PUT', 'path' => self::BASE . '/global-blocks/{id}', 'capability' => 'builder.edit'],
             ['method' => 'GET', 'path' => self::BASE, 'capability' => 'builder.read'],
             ['method' => 'POST', 'path' => self::BASE . '/open', 'capability' => 'builder.edit'],
             ['method' => 'POST', 'path' => self::BASE, 'capability' => 'builder.edit'],

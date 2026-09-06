@@ -133,6 +133,7 @@ return [
     ],
 
     'system_page' => [
+        'health_history'=>'تاریخچه سلامت','health_history_empty'=>'هنوز snapshot تاریخی سلامت ثبت نشده است.',
         'refresh_health'=>'بازخوانی سلامت','logs'=>'گزارش‌های سیستم','recovery'=>'بازیابی و حالت امن','technical_details'=>'جزئیات فنی',
         'operational_status'=>'وضعیت عملیاتی','active_errors'=>'خطاهای فعال یا اخیر','historical_errors'=>'خطاهای تاریخی','recent_errors'=>':count خطای اخیر','checking'=>'در حال بررسی…','active_window_note'=>'بر اساس بازه ۱۵ دقیقه اخیر','historical_note'=>'برای Audit و بررسی سابقه نگه‌داری شده','structured_note'=>'Redacted و Correlation-aware','health_checks'=>'Health Checks',
     ],    'security_page' => [
@@ -173,6 +174,7 @@ return [
         'api_note'=>'SdkApiRoute فقط مسیرهای Extension زیر namespace خود package را می‌پذیرد و version مستقل دارد.','pinx_note'=>'CMS semantic profile داخل transport رسمی Pinoox',
     ],
     'updates_page' => [
+        'extension'=>'افزونه','select_extension'=>'انتخاب افزونه','select_extension_hint'=>'برای مشاهده سیاست، تاریخچه و نقاط بازیابی یک افزونه را انتخاب کنید.','saving'=>'در حال ذخیره…','saved'=>'سیاست به‌روزرسانی ذخیره شد.',
         'platform_boundary'=>'این مسیر با Extension rollback یکی نیست و Pinroll history را دست‌کاری نمی‌کند.','policy_note'=>'Beta/Development، Downgrade و permission escalation باید از Policy/Review عبور کنند؛ تغییر مستقیم فایل یا نسخه مجاز نیست.',
         'max_per_extension'=>'حداکثر برای هر Extension','retention_days'=>'روز نگهداری','minimum_ready'=>'حداقل Recovery Point آماده','empty_title'=>'تاریخچه Update هنوز وجود ندارد','empty_message'=>'پس از اتصال Runtime، هر Update با نسخه قبل/بعد، Recovery Point و نتیجه ثبت می‌شود.','from'=>'از','to'=>'به','result'=>'نتیجه','operations'=>'عملیات Update','operation_note'=>'بسته PINX جدید را در Extension Center بارگذاری کنید. سیستم به‌صورت خودکار Install/Update mode را تشخیص می‌دهد و قبل از اجرا Review، Snapshot و Rollback Gate را اعمال می‌کند.','open_extensions'=>'باز کردن Extension Center',
     ],    'revisions_page' => [
@@ -204,6 +206,7 @@ return [
     ],
 
     'builder_page' => [
+        'reusable_blocks'=>'بلوک‌های قابل استفاده مجدد','reusable_name'=>'نام بلوک','reusable_name_placeholder'=>'مثلاً هدر تماس','reusable_save'=>'ذخیره انتخاب به‌عنوان بلوک مجدد','reusable_saving'=>'در حال ذخیره…','reusable_saved'=>'بلوک قابل استفاده مجدد ذخیره شد.','reusable_definition_missing'=>'تعریف core/global-reference در Registry موجود نیست.','patterns'=>'الگوها','pattern_empty'=>'این الگو سند قابل درج ندارد.',
         'open'=>'بازکردن','open_create'=>'باز کردن / ایجاد','undo'=>'Undo','redo'=>'Redo','preview'=>'Preview','save'=>'ذخیره','publish'=>'انتشار','status'=>'وضعیت','version'=>'نسخه','blocks'=>'بلوک','state'=>'حالت','not_open'=>'بازنشده','unsaved'=>'ذخیره‌نشده','synced'=>'همگام','target'=>'هدف طراحی','type'=>'نوع','block_library'=>'Block Library','layers'=>'Layers','inspector'=>'Inspector','block_search'=>'جستجوی بلوک…',
         'canvas_empty'=>'Canvas خالی است','add_block'=>'یک بلوک از Library اضافه کنید.','drop_root'=>'رها کردن در انتهای سطح اصلی','responsive_styles'=>'Responsive Styles · :viewport','text_color'=>'Text color','background'=>'Background','font_size'=>'Font size','padding'=>'Padding','gap'=>'Gap','nest'=>'تو در تو','move_out'=>'خارج','duplicate'=>'تکثیر','delete'=>'حذف','select_block'=>'یک Block را انتخاب کنید.','preview_title'=>'Preview · :viewport','revision_history'=>'Revision History','autosave'=>'Autosave','load'=>'بارگذاری','restore'=>'Restore','advanced_json'=>'ویرایش پیشرفته JSON','valid'=>'Valid','invalid'=>'Invalid',
         'edit_denied'=>'دسترسی builder.edit را ندارید.','previous_child_denied'=>'بلوک قبلی این نوع فرزند را قبول نمی‌کند.','remove_confirm'=>'بلوک انتخاب‌شده حذف شود؟','override_denied'=>'این Target هنوز Override ندارد و شما دسترسی builder.edit برای ساخت آن ندارید.','override_create_denied'=>'برای ساخت Override جدید به دسترسی builder.edit نیاز دارید.','invalid_response'=>'پاسخ Builder نامعتبر است.','opened'=>'سند #:id باز شد.','edit_permission'=>'دسترسی ویرایش Builder را ندارید.','open_first'=>'ابتدا سند را باز کنید.','saved'=>'تغییرات ذخیره شد.','saved_short'=>'ذخیره شد.','autosaved'=>'Autosave ثبت شد.','published'=>'نسخه Builder منتشر شد.','published_short'=>'منتشر شد.','preview_denied'=>'دسترسی Preview را ندارید.','preview_updated'=>'Preview بروزرسانی شد.','renderer_ran'=>'Renderer اجرا شد.','restore_confirm'=>'Revision #:id بازگردانی شود؟','restored'=>'Revision بازگردانی شد.',

@@ -24,6 +24,18 @@ final readonly class SecurityPostureService
             $this->runtimeControl('network.ssrf','Outbound SSRF guard',$this->runtime->ssrfTransportBound,'Allowlist/DNS/IP guard exists; remote transports must bind it before network calls.'),
             $this->runtimeControl('api.security','Public API security pipeline',$this->runtime->publicApiSecurityBound,'Public HTTP routes must bind auth, request integrity and native throttle flows.'),
             new SecurityControl(
+                'authorization.platform_super',
+                'Implicit platform super access',
+                !$this->runtime->implicitPlatformSuperEnabled
+                    ? SecurityControlStatus::Pass
+                    : SecurityControlStatus::Warning,
+                !$this->runtime->implicitPlatformSuperEnabled
+                    ? 'Implicit platform-wide super access is disabled; explicit super roles are required.'
+                    : ($this->runtime->explicitPlatformSuperReady
+                        ? 'All detected platform accounts have an explicit super role/group. The configuration is ready for a controlled platform_super disable and target-session verification.'
+                        : 'Implicit platform-wide super access is still required by at least one detected platform account or readiness could not be proven. Do not disable it yet.'),
+            ),
+            new SecurityControl(
                 'http.csp_mode',
                 'CSP enforcement',
                 $this->runtime->cspEnforced ? SecurityControlStatus::Pass : SecurityControlStatus::Warning,

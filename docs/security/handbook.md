@@ -12,3 +12,14 @@ CSP remains **report-only**. Pinoox bootstrap output currently has no proven non
 
 ## Open access gate
 `platform_super=true` remains unchanged pending a lockout-safe migration to explicit privileged roles.
+
+
+## CSP nonce readiness
+R12 no longer depends on the Pincore `pinoox_bootstrap()` HTML helper for the NanoPino admin shell. The controller obtains the canonical Pinoox bootstrap data through `PinooxScriptHelper::bootstrap()`, JSON-encodes it with HTML-sensitive characters escaped, and renders the inline bootstrap script with the same request nonce used by the response security policy. Shell inline style elements are nonce-tagged as well.
+
+The policy additionally declares `script-src-attr 'none'`. Vue/Luma dynamic style attributes still require `style-src-attr 'unsafe-inline'`.
+
+CSP remains report-only until the production browser path is exercised under the target Pinoox/Luma runtime.
+
+## Platform super transition
+Pincore documents that installer-created platform accounts may omit an explicit `group_key`. NanoPino therefore does not disable `platform_super` automatically. R12 audits every platform-scoped account and reports how many already have an explicit configured super role/group and how many still depend on the implicit platform bypass. A controlled cutover is safe to attempt only when no detected account is implicit-only and an explicit super account exists.

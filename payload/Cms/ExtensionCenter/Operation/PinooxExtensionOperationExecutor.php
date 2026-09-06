@@ -7,10 +7,10 @@ use App\com_pinoox_cms\Cms\Extension\ExtensionType;
 use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
 use App\com_pinoox_cms\Cms\Recovery\FileRecoveryPointRepository;
 use App\com_pinoox_cms\Cms\Recovery\FilesystemSnapshotProvider;
+use App\com_pinoox_cms\Cms\Recovery\PinooxMigrationSnapshotProvider;
 use App\com_pinoox_cms\Cms\Recovery\RecoveryManager;
 use App\com_pinoox_cms\Cms\Recovery\SafeModeManager;
 use App\com_pinoox_cms\Cms\Security\Package\PinooxPinxPackagePreflight;
-use Pinoox\Component\Migration\Migrator;
 use Pinoox\Portal\App\AppEngine;
 use Pinoox\Portal\Pinx;
 
@@ -72,7 +72,8 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         }
 
         $destination = $this->destination($native);
-        $recovery = $this->recoveryFor($destination);
+        $pinooxPackage = $native->isApp() ? $native->package() : null;
+        $recovery = $this->recoveryFor($destination, $pinooxPackage);
         $point = $recovery->create(
             $request->extensionId,
             $request->type->value,
@@ -84,9 +85,9 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
                 'sha256' => $request->inspection->packageSha256,
             ],
         );
-        $progress('snapshot', 'ok', 'Filesystem recovery point created.');
-
-        $before = $native->isApp() ? $this->migrated($native->package()) : [];
+        $progress('snapshot', 'ok', $pinooxPackage !== null
+            ? 'Filesystem and migration recovery point created.'
+            : 'Filesystem recovery point created.');
 
         $installer = Pinx::installer()->onStep(
             static function (string $step, string $status, string $message) use ($progress): void {
@@ -94,60 +95,42 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
             }
         );
 
-        $result = $installer->install(
-            $request->package->localPath,
-            [
-                'force' => false,
-                'skip_verify' => false,
-                'require_signature' => (bool)($request->options['require_signature'] ?? false),
-                'reset_overrides' => false,
-            ],
-        );
+        try {
+            $result = $installer->install(
+                $request->package->localPath,
+                [
+                    'force' => false,
+                    'skip_verify' => false,
+                    'require_signature' => (bool)($request->options['require_signature'] ?? false),
+                    'reset_overrides' => false,
+                ],
+            );
 
-        if ($result->success) {
+            if (!$result->success) {
+                return $this->recoverFailedOperation(
+                    $request,
+                    $recovery,
+                    $point->id,
+                    $pinooxPackage,
+                    $result->message,
+                    $progress,
+                );
+            }
+
             AppEngine::__rebuild();
             $progress('runtime', 'ok', 'Pinoox AppEngine rebuilt after PINX operation.');
             return new ExtensionExecutionResult(true, $point->id, false, null);
-        }
-
-        $rollbackErrors = [];
-        if ($native->isApp()) {
-            try {
-                $after = $this->migrated($native->package());
-                $new = array_values(array_diff($after, $before));
-                if ($new !== []) {
-                    (new Migrator(
-                        $native->package(),
-                        'rollback',
-                        ['force' => true, 'use_transactions' => true],
-                    ))->rollback(count($new));
-                    $progress('migration_rollback', 'ok', count($new) . ' migration(s) rolled back.');
-                }
-            } catch (\Throwable $error) {
-                $rollbackErrors[] = 'migration: ' . $error->getMessage();
-                $progress('migration_rollback', 'error', 'Migration rollback failed.');
-            }
-        }
-
-        try {
-            $recovery->restore($point->id);
-            AppEngine::__rebuild();
-            $progress('filesystem_rollback', 'ok', 'Filesystem recovery point restored.');
         } catch (\Throwable $error) {
-            $rollbackErrors[] = 'filesystem: ' . $error->getMessage();
-            $progress('filesystem_rollback', 'error', 'Filesystem recovery failed.');
-        }
-
-        if ($rollbackErrors !== []) {
-            $this->safeMode()->enable(
-                'PINX extension operation rollback was incomplete.',
-                $request->extensionId,
+            $progress('pinx.failure', 'error', 'PINX operation threw before completion.');
+            return $this->recoverFailedOperation(
+                $request,
+                $recovery,
                 $point->id,
+                $pinooxPackage,
+                $error->getMessage(),
+                $progress,
             );
-            return new ExtensionExecutionResult(false, $point->id, true, $result->message);
         }
-
-        return new ExtensionExecutionResult(false, $point->id, false, $result->message);
     }
 
     private function setActive(
@@ -188,37 +171,44 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         if (!AppEngine::exists($definition->package())) throw new \RuntimeException('Pinoox app is already missing.');
 
         $destination = AppEngine::path($definition->package());
-        $recovery = $this->recoveryFor($destination);
+        $recovery = $this->recoveryFor($destination, $definition->package());
         $point = $recovery->create(
             $request->extensionId,
             'uninstall',
             ['destination' => $destination, 'package' => $definition->package()],
         );
-        $progress('snapshot', 'ok', 'Pre-uninstall recovery point created.');
+        $progress('snapshot', 'ok', 'Pre-uninstall filesystem and migration recovery point created.');
 
         $uninstaller = Pinx::uninstaller()->onStep(
             static function (string $step, string $status, string $message) use ($progress): void {
                 $progress('pinx.' . $step, $status, $message);
             }
         );
-        $result = $uninstaller->uninstallApp($definition->package());
-
-        if ($result->success) {
-            AppEngine::__rebuild();
-            return new ExtensionExecutionResult(true, $point->id);
-        }
 
         try {
-            $recovery->restore($point->id);
+            $result = $uninstaller->uninstallApp($definition->package());
+            if (!$result->success) {
+                return $this->recoverFailedOperation(
+                    $request,
+                    $recovery,
+                    $point->id,
+                    $definition->package(),
+                    $result->message,
+                    $progress,
+                );
+            }
+
             AppEngine::__rebuild();
-            return new ExtensionExecutionResult(false, $point->id, false, $result->message);
-        } catch (\Throwable) {
-            $this->safeMode()->enable(
-                'Extension uninstall failed and filesystem recovery was incomplete.',
-                $request->extensionId,
+            return new ExtensionExecutionResult(true, $point->id);
+        } catch (\Throwable $error) {
+            return $this->recoverFailedOperation(
+                $request,
+                $recovery,
                 $point->id,
+                $definition->package(),
+                $error->getMessage(),
+                $progress,
             );
-            return new ExtensionExecutionResult(false, $point->id, true, $result->message);
         }
     }
 
@@ -239,7 +229,9 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         $source = is_array($receipt) ? (string)($receipt['source'] ?? '') : '';
         if ($source === '') throw new \RuntimeException('Recovery point does not contain filesystem source.');
 
-        $this->recoveryFor($source)->restore($id);
+        $migrationReceipt = $point->providerReceipts['migrations'] ?? null;
+        $package = is_array($migrationReceipt) ? (string)($migrationReceipt['package'] ?? '') : '';
+        $this->recoveryFor($source, $package !== '' ? $package : null)->restore($id);
         AppEngine::__rebuild();
         $progress('rollback', 'ok', 'Extension recovery point restored.');
         return new ExtensionExecutionResult(true, $id);
@@ -270,27 +262,59 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         return Pinx::engine()->packageLoader->path($manifest->package());
     }
 
-    /** @return list<string> */
-    private function migrated(string $package): array
+    private function recoveryFor(string $source, ?string $package = null): RecoveryManager
     {
-        if (!AppEngine::exists($package)) return [];
-        try { $rows = (new Migrator($package, 'status'))->status(); } catch (\Throwable) { return []; }
-
-        $items = [];
-        foreach ($rows as $row) {
-            if (is_array($row) && ($row['status'] ?? null) === 'migrated' && is_string($row['migration'] ?? null)) {
-                $items[] = $row['migration'];
-            }
+        $providers = [
+            new FilesystemSnapshotProvider(
+                $source,
+                rtrim($this->storageRoot, '/\\') . '/recovery/snapshots',
+            ),
+        ];
+        if ($package !== null && preg_match('/^com_[a-z0-9][a-z0-9_]{1,126}$/', $package) === 1) {
+            $providers[] = new PinooxMigrationSnapshotProvider($package);
         }
-        sort($items);
-        return $items;
+
+        return new RecoveryManager($this->recoveryRepository(), $providers);
     }
 
-    private function recoveryFor(string $source): RecoveryManager
-    {
-        return new RecoveryManager(
-            $this->recoveryRepository(),
-            [new FilesystemSnapshotProvider($source, rtrim($this->storageRoot, '/\\') . '/recovery/snapshots')],
+    private function recoverFailedOperation(
+        ExtensionOperationRequest $request,
+        RecoveryManager $recovery,
+        string $recoveryPointId,
+        ?string $package,
+        ?string $message,
+        callable $progress,
+    ): ExtensionExecutionResult {
+        try {
+            $recovery->restore($recoveryPointId);
+            AppEngine::__rebuild();
+            $progress('recovery', 'ok', 'Filesystem/migration recovery completed.');
+            return new ExtensionExecutionResult(false, $recoveryPointId, false, $message);
+        } catch (\Throwable $error) {
+            $progress('recovery', 'error', 'Recovery was incomplete; extension is being quarantined.');
+            $this->quarantineFailedPackage($request, $package, $recoveryPointId);
+            return new ExtensionExecutionResult(false, $recoveryPointId, true, $message ?? $error->getMessage());
+        }
+    }
+
+    private function quarantineFailedPackage(
+        ExtensionOperationRequest $request,
+        ?string $package,
+        string $recoveryPointId,
+    ): void {
+        if ($package !== null && $package !== 'com_pinoox_cms' && AppEngine::exists($package)) {
+            try {
+                AppEngine::config($package)->set('enable', false)->save();
+                AppEngine::__rebuild();
+            } catch (\Throwable) {
+                // Safe Mode remains the final fail-closed boundary if package disable fails.
+            }
+        }
+
+        $this->safeMode()->enable(
+            'Extension operation recovery was incomplete.',
+            $request->extensionId,
+            $recoveryPointId,
         );
     }
 

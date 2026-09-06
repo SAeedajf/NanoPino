@@ -49,6 +49,7 @@ use App\com_pinoox_cms\Cms\ExtensionCenter\Review\ExtensionReviewTicketService;
 use App\com_pinoox_cms\Cms\ExtensionCenter\Review\FileExtensionReviewTicketRepository;
 use App\com_pinoox_cms\Cms\Field\FieldEngine;
 use App\com_pinoox_cms\Cms\Health\HealthRunner;
+use App\com_pinoox_cms\Cms\Health\FileHealthHistoryRepository;
 use App\com_pinoox_cms\Cms\Health\SystemHealthRegistrar;
 use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
 use App\com_pinoox_cms\Cms\Logging\CmsLoggerInterface;
@@ -414,6 +415,7 @@ final class CmsRuntimeServices
         return new SystemHealthApiFacade(
             self::authorization(),
             self::healthRunner(),
+            new FileHealthHistoryRepository(self::storageRoot() . '/health/history.jsonl'),
             self::logger(),
             new SupportBundleBuilder(
                 self::healthRunner(),

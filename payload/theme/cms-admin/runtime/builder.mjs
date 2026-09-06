@@ -45,7 +45,7 @@ export function createComponent(host){
   return {
     name:'CmsVisualSiteBuilderCenter',
     data(){return{
-      record:null,target:{site_id:1,type:'template',key:'home',locale:'fa'},document:{version:1,blocks:[]},blocks:data().blockDefinitions||[],revisions:[],previewHtml:'',viewport:'desktop',selectedPath:null,blockSearch:'',panel:'blocks',error:'',notice:'',busy:false,dirty:false,undoStack:[],redoStack:[],lastAutosave:null,advancedJson:'',jsonValid:true,autosaveTimer:null,autosaveDebounce:null,advancedSyncTimer:null,lastAutosaveSignature:'',lastAutosaveAt:0,lastMutationKey:'',lastSnapshotAt:0,drag:{active:false,sourceId:null,overId:null,mode:null,pointerId:null},
+      record:null,target:{site_id:1,type:'template',key:'home',locale:'fa'},document:{version:1,blocks:[]},blocks:data().blockDefinitions||[],revisions:[],previewHtml:'',viewport:'desktop',selectedPath:null,blockSearch:'',panel:'blocks',error:'',notice:'',busy:false,dirty:false,undoStack:[],redoStack:[],lastAutosave:null,advancedJson:'',jsonValid:true,autosaveInFlight:false,autosaveTimer:null,autosaveDebounce:null,advancedSyncTimer:null,lastAutosaveSignature:'',lastAutosaveAt:0,lastMutationKey:'',lastSnapshotAt:0,drag:{active:false,sourceId:null,overId:null,mode:null,pointerId:null},
     }},
     computed:{
       selectedNode(){return this.nodeAt(this.selectedPath)},
@@ -59,11 +59,11 @@ export function createComponent(host){
       if(!document.getElementById('cms-builder-center-css')){const s=document.createElement('style');s.id='cms-builder-center-css';s.textContent=CSS;document.head.appendChild(s)}
       const params=new URLSearchParams(globalThis.location?.search||'');for(const k of ['type','key','locale'])if(params.get(k))this.target[k]=params.get(k);if(params.get('site_id'))this.target.site_id=Number(params.get('site_id'))||1
       this.syncAdvanced(true);this.autosaveTimer=setInterval(()=>this.backgroundAutosave({silent:true}),30000)
-      this._pointerMove=e=>this.dragMove(e);this._pointerUp=e=>this.dragEnd(e);this._beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue=''}};this._visibility=()=>{if(document.visibilityState==='hidden')this.backgroundAutosave({silent:true,force:true})}
-      globalThis.addEventListener?.('pointermove',this._pointerMove,{passive:false});globalThis.addEventListener?.('pointerup',this._pointerUp);globalThis.addEventListener?.('pointercancel',this._pointerUp);globalThis.addEventListener?.('beforeunload',this._beforeUnload);document.addEventListener?.('visibilitychange',this._visibility)
+      this._pointerMove=e=>this.dragMove(e);this._pointerUp=e=>this.dragEnd(e);this._pointerCancel=e=>this.dragCancel(e);this._beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue=''}};this._visibility=()=>{if(document.visibilityState==='hidden')this.backgroundAutosave({silent:true,force:true})}
+      globalThis.addEventListener?.('pointermove',this._pointerMove,{passive:false});globalThis.addEventListener?.('pointerup',this._pointerUp);globalThis.addEventListener?.('pointercancel',this._pointerCancel);globalThis.addEventListener?.('beforeunload',this._beforeUnload);document.addEventListener?.('visibilitychange',this._visibility)
       if(params.get('open')==='1'||params.get('type')||params.get('key'))this.open()
     },
-    beforeUnmount(){if(this.autosaveTimer)clearInterval(this.autosaveTimer);if(this.autosaveDebounce)clearTimeout(this.autosaveDebounce);if(this.advancedSyncTimer)clearTimeout(this.advancedSyncTimer);globalThis.removeEventListener?.('pointermove',this._pointerMove);globalThis.removeEventListener?.('pointerup',this._pointerUp);globalThis.removeEventListener?.('pointercancel',this._pointerUp);globalThis.removeEventListener?.('beforeunload',this._beforeUnload);document.removeEventListener?.('visibilitychange',this._visibility)},
+    beforeUnmount(){if(this.autosaveTimer)clearInterval(this.autosaveTimer);if(this.autosaveDebounce)clearTimeout(this.autosaveDebounce);if(this.advancedSyncTimer)clearTimeout(this.advancedSyncTimer);globalThis.removeEventListener?.('pointermove',this._pointerMove);globalThis.removeEventListener?.('pointerup',this._pointerUp);globalThis.removeEventListener?.('pointercancel',this._pointerCancel);globalThis.removeEventListener?.('beforeunload',this._beforeUnload);document.removeEventListener?.('visibilitychange',this._visibility)},
     methods:{
       nodeAt(path){if(!Array.isArray(path))return null;let list=this.document.blocks,node=null;for(const index of path){node=list?.[index];if(!node)return null;list=node.children||[]}return node},
       parentList(path){if(!Array.isArray(path)||!path.length)return null;let list=this.document.blocks;for(const index of path.slice(0,-1)){const n=list[index];if(!n)return null;n.children=Array.isArray(n.children)?n.children:[];list=n.children}return list},
@@ -105,11 +105,57 @@ export function createComponent(host){
           this.record=record;this.target={...record.target};this.document=clone(record.document||{version:1,blocks:[]});this.selectedPath=null;this.undoStack=[];this.redoStack=[];this.dirty=false;this.lastAutosaveSignature=this.documentSignature();this.syncAdvanced(true);this.notice=tr('builder_page.opened','',{id:record.id});await this.loadRevisions()
         }catch(e){this.error=e.message}
       },
-      async saveInternal(){if(!this.canEdit)throw new Error(tr('builder_page.edit_permission'));if(!this.record)throw new Error(tr('builder_page.open_first'));const record=await api(`/builder/${this.record.id}`,{method:'PUT',body:{document:this.document,expected_version:this.record.version}});this.record=record;this.document=clone(record.document||this.document);this.dirty=false;this.lastAutosaveSignature=this.documentSignature();this.syncAdvanced(true);return record},
-      async save(){try{await this.run(()=>this.saveInternal());this.notice=tr('builder_page.saved');await this.loadRevisions()}catch{}},
-      async autosave(options={}){const silent=Boolean(options.silent),force=Boolean(options.force);if(!this.canEdit||!this.record||!this.jsonValid)return null;const signature=this.documentSignature();if(!force&&signature===this.lastAutosaveSignature)return null;try{const rev=await api(`/builder/${this.record.id}/autosave`,{method:'POST',body:{document:this.document}});this.lastAutosaveSignature=signature;this.lastAutosaveAt=Date.now();this.lastAutosave=rev?.created_at||new Date().toLocaleTimeString(locale());if(!silent)this.notice=tr('builder_page.autosaved');return rev}catch(e){if(!silent)this.error=e.message;throw e}},
+      // A response acknowledges the submitted snapshot, never edits made while it was pending.
+      acceptSavedRecord(record,submitted,recordId){
+        if(this.record?.id!==recordId)return false
+        const unchanged=this.documentSignature()===JSON.stringify(submitted)
+        const persisted=clone(record.document||submitted)
+        this.record=record
+        if(unchanged)this.document=clone(persisted)
+        this.lastAutosaveSignature=JSON.stringify(persisted)
+        this.dirty=this.documentSignature()!==this.lastAutosaveSignature
+        this.syncAdvanced(true)
+        if(this.dirty)this.scheduleAutosave()
+        return true
+      },
+      async saveInternal(){
+        if(!this.canEdit)throw new Error(tr('builder_page.edit_permission'))
+        if(!this.record)throw new Error(tr('builder_page.open_first'))
+        const recordId=this.record.id,submitted=clone(this.document),version=this.record.version
+        const record=await api(`/builder/${recordId}`,{method:'PUT',body:{document:submitted,expected_version:version}})
+        this.acceptSavedRecord(record,submitted,recordId)
+        return record
+      },
+      async save(){if(this.busy)return;try{await this.run(()=>this.saveInternal());this.notice=tr('builder_page.saved');await this.loadRevisions()}catch{}},
+      async autosave(options={}){
+        const silent=Boolean(options.silent),force=Boolean(options.force)
+        if(this.busy||this.autosaveInFlight||!this.canEdit||!this.record||!this.jsonValid)return null
+        const recordId=this.record.id,submitted=clone(this.document),signature=JSON.stringify(submitted)
+        if(!force&&signature===this.lastAutosaveSignature)return null
+        this.autosaveInFlight=true
+        try{
+          const rev=await api(`/builder/${recordId}/autosave`,{method:'POST',body:{document:submitted}})
+          if(this.record?.id!==recordId)return rev
+          this.lastAutosaveSignature=signature;this.lastAutosaveAt=Date.now();this.lastAutosave=rev?.created_at||new Date().toLocaleTimeString(locale())
+          if(!silent)this.notice=tr('builder_page.autosaved')
+          return rev
+        }catch(e){if(!silent)this.error=e.message;throw e}finally{this.autosaveInFlight=false}
+      },
       async backgroundAutosave(options={}){if(this.busy||!this.record||!this.dirty||!this.jsonValid)return;try{await this.autosave({silent:options.silent!==false,force:Boolean(options.force)})}catch{}},
-      async publish(){if(!this.canPublish||!this.record)return;try{await this.run(async()=>{if(this.dirty)await this.saveInternal();this.record=await api(`/builder/${this.record.id}/publish`,{method:'POST',body:{expected_version:this.record.version}});this.document=clone(this.record.document||this.document);this.dirty=false;this.syncAdvanced()});this.notice=tr('builder_page.published');await this.loadRevisions()}catch{}},
+      async publish(){
+        if(this.busy||!this.canPublish||!this.record)return
+        const recordId=this.record.id
+        try{
+          await this.run(async()=>{
+            if(this.dirty)await this.saveInternal()
+            if(this.record?.id!==recordId)throw new Error(tr('builder_page.open_first'))
+            const submitted=clone(this.record.document||this.document),version=this.record.version
+            const record=await api(`/builder/${recordId}/publish`,{method:'POST',body:{expected_version:version}})
+            this.acceptSavedRecord(record,submitted,recordId)
+          })
+          this.notice=tr('builder_page.published');await this.loadRevisions()
+        }catch{}
+      },
       async preview(){if(!this.canPreview){this.error=tr('builder_page.preview_denied');return}try{const result=await this.run(()=>api('/builder/preview',{method:'POST',body:{site_id:Number(this.target.site_id||1),locale:this.target.locale||'fa',document:this.document}}));this.previewHtml=result?.html||'';this.notice=this.previewHtml?tr('builder_page.preview_updated'):tr('builder_page.renderer_ran')}catch{}},
       async loadRevisions(){if(!this.record)return;try{const r=await api(`/builder/${this.record.id}/revisions?limit=50`);this.revisions=Array.isArray(r)?r:(r?.items||r?.revisions||[])}catch(e){this.error=e.message}},
       async restore(rev){if(!this.record||!confirmFa(tr('builder_page.restore_confirm','',{id:rev.id})))return;try{const record=await this.run(()=>api(`/builder/${this.record.id}/revisions/${rev.id}/restore`,{method:'POST',body:{expected_version:this.record.version}}));this.record=record;this.document=clone(record.document||{version:1,blocks:[]});this.selectedPath=null;this.undoStack=[];this.redoStack=[];this.dirty=false;this.lastAutosaveSignature=this.documentSignature();this.syncAdvanced(true);this.notice=tr('builder_page.restored');await this.loadRevisions()}catch{}},
@@ -118,6 +164,7 @@ export function createComponent(host){
       pathIsPrefix(parent,child){return Array.isArray(parent)&&Array.isArray(child)&&parent.length<=child.length&&parent.every((v,i)=>child[i]===v)},
       dragStart(e,path){if(!this.canEdit||!Array.isArray(path))return;e.preventDefault();e.stopPropagation();const node=this.nodeAt(path);if(!node)return;this.drag={active:true,sourceId:node.id,overId:null,mode:null,pointerId:e.pointerId};try{e.currentTarget?.setPointerCapture?.(e.pointerId)}catch{}},
       dragMove(e){if(!this.drag.active||e.pointerId!==this.drag.pointerId)return;e.preventDefault();const el=document.elementFromPoint?.(e.clientX,e.clientY)?.closest?.('[data-builder-node-id],[data-builder-root-drop]');if(!el){this.drag.overId=null;this.drag.mode=null;return}if(el.hasAttribute('data-builder-root-drop')){this.drag.overId=null;this.drag.mode='root';return}const id=el.getAttribute('data-builder-node-id');if(!id||id===this.drag.sourceId){this.drag.overId=null;this.drag.mode=null;return}const sourcePath=this.findPathById(this.drag.sourceId),targetPath=this.findPathById(id);if(!sourcePath||!targetPath||this.pathIsPrefix(sourcePath,targetPath)){this.drag.overId=null;this.drag.mode=null;return}const rect=el.getBoundingClientRect(),ratio=rect.height?((e.clientY-rect.top)/rect.height):.5;let mode=ratio<.28?'before':ratio>.72?'after':'inside';if(mode==='inside'){const target=this.nodeAt(targetPath),source=this.nodeAt(sourcePath),def=defFor(this.blocks,target?.type);if(!source||!this.canAccept(def,source.type))mode=ratio<.5?'before':'after'}this.drag.overId=id;this.drag.mode=mode},
+      dragCancel(e){if(!this.drag.active||e.pointerId!==this.drag.pointerId)return;this.drag={active:false,sourceId:null,overId:null,mode:null,pointerId:null}},
       dragEnd(e){if(!this.drag.active||e.pointerId!==this.drag.pointerId)return;const state={...this.drag};this.drag={active:false,sourceId:null,overId:null,mode:null,pointerId:null};if(!state.mode)return;this.moveByDrop(state.sourceId,state.overId,state.mode)},
       moveByDrop(sourceId,targetId,mode){const sourcePath=this.findPathById(sourceId);if(!sourcePath)return;const source=this.nodeAt(sourcePath);if(!source)return;this.mutation(()=>{let currentSourcePath=this.findPathById(sourceId),sourceList=this.parentList(currentSourcePath);if(!sourceList)return;const sourceIndex=currentSourcePath.at(-1),node=sourceList.splice(sourceIndex,1)[0];if(mode==='root'||targetId===null){this.document.blocks.push(node);this.selectedPath=[this.document.blocks.length-1];return}const targetPath=this.findPathById(targetId);if(!targetPath){sourceList.splice(Math.min(sourceIndex,sourceList.length),0,node);return}const target=this.nodeAt(targetPath);if(mode==='inside'){const def=defFor(this.blocks,target?.type);if(target&&this.canAccept(def,node.type)){target.children=Array.isArray(target.children)?target.children:[];target.children.push(node);this.selectedPath=[...targetPath,target.children.length-1];return}}const list=this.parentList(targetPath);if(!list){this.document.blocks.push(node);this.selectedPath=[this.document.blocks.length-1];return}const ti=targetPath.at(-1),at=mode==='after'?ti+1:ti;list.splice(at,0,node);this.selectedPath=[...targetPath.slice(0,-1),at]},'structural')},
       dropClass(id){if(!this.drag.active||this.drag.overId!==id)return'';return this.drag.mode?` drop-${this.drag.mode}`:''},

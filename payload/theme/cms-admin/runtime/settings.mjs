@@ -1,4 +1,4 @@
-import { api, ui, input, textarea, select, message, safeJson, navigate, tr} from './common.mjs'
+import { api, ui, input, textarea, select, message, navigate, tr} from './common.mjs'
 
 const GROUPS = {
   general: { label: () => tr('settings_page.general'), icon: 'settings-2', description: () => tr('settings_page.general_desc') },
@@ -46,7 +46,7 @@ function cloneDraft(item) {
 }
 
 function comparable(item, value) {
-  if (item.type === 'json') return JSON.stringify(safeJson(value, {}))
+  if (item.type === 'json') { try { return JSON.stringify(JSON.parse(value)) } catch { return `invalid:${String(value)}` } }
   if (item.type === 'string_list') return JSON.stringify(String(value ?? '').split(',').map(v => v.trim()).filter(Boolean))
   if (item.type === 'boolean') return Boolean(value) ? '1' : '0'
   if (item.type === 'integer' || item.type === 'number' || item.type === 'float') return String(Number(value))
@@ -66,7 +66,7 @@ export function createComponent(host) {
   return {
     name: 'CmsSettingsCenter',
     data() {
-      return { items: [], drafts: {}, originals: {}, activeGroup: 'general', search: '', loading: false, savingAll: false, error: '', notice: '' }
+      return { items: [], drafts: {}, originals: {}, activeGroup: 'general', search: '', loading: false, savingAll: false, mutating: false, error: '', notice: '' }
     },
     computed: {
       groups() {
@@ -88,14 +88,20 @@ export function createComponent(host) {
     mounted() { this.load() },
     methods: {
       async load() {
-        this.loading = true; this.error = ''; this.notice = ''
+        if (this.loading || this.mutating || this.savingAll) return
+        this.loading = true; this.error = ''
         try {
           const data = await api('/settings')
+          // Reconcile at response time so edits made during the request survive.
+          const retained = new Map(this.items.filter(item => this.isDirty(item)).map(item => [item.key, this.drafts[item.key]]))
           this.items = (data.items || []).slice().sort((a,b) => (a.group || '').localeCompare(b.group || '') || Number(a.ui?.order || 999) - Number(b.ui?.order || 999))
-          this.drafts = {}; this.originals = {}
+          const drafts = {}, originals = {}
           for (const item of this.items) {
-            const value = cloneDraft(item); this.drafts[item.key] = value; this.originals[item.key] = comparable(item, value)
+            const value = cloneDraft(item)
+            drafts[item.key] = retained.has(item.key) ? retained.get(item.key) : value
+            originals[item.key] = comparable(item, value)
           }
+          this.drafts = drafts; this.originals = originals
           if (!this.groups.some(g => g.id === this.activeGroup)) this.activeGroup = this.groups[0]?.id || 'general'
         } catch (e) { this.error = e.message } finally { this.loading = false }
       },
@@ -104,57 +110,82 @@ export function createComponent(host) {
         const value = this.drafts[item.key]
         if (item.type === 'boolean') return value === true || value === 'true' || value === 1 || value === '1'
         if (item.type === 'number' || item.type === 'integer' || item.type === 'float') return Number(value)
-        if (item.type === 'json') return safeJson(value, {})
+        if (item.type === 'json') {
+          try { return JSON.parse(value) } catch { throw new Error(tr('content_page.json_invalid', 'Invalid JSON: :field', {field: item.label || item.key})) }
+        }
         if (item.type === 'string_list') return String(value ?? '').split(',').map(v => v.trim()).filter(Boolean)
         return value
       },
-      async save(item, quiet = false) {
-        const scope = item.scope || {}
-        await api(`/settings/${encodeURIComponent(item.key)}`, { method: 'PUT', body: { value: this.valueOf(item), scope_type: scope.type || 'site', scope_id: scope.id ?? 1, expected_version: item.version || null } })
-        if (!quiet) this.notice = tr('settings_page.saved_one','',{label:item.label||item.key})
+      reconcile(item, response, submitted) {
+        const unchanged = comparable(item, this.drafts[item.key]) === submitted
+        Object.assign(item, response)
+        const saved = cloneDraft(item)
+        this.originals[item.key] = comparable(item, saved)
+        if (unchanged) this.drafts[item.key] = saved
+      },
+      async save(item) {
+        const scope = item.scope || {}, submitted = comparable(item, this.drafts[item.key])
+        const result = await api(`/settings/${encodeURIComponent(item.key)}`, { method: 'PUT', body: { value: this.valueOf(item), scope_type: scope.type || 'site', scope_id: scope.id ?? 1, expected_version: item.version ?? null } })
+        this.reconcile(item, result, submitted)
       },
       async saveAll() {
+        if (this.mutating || this.savingAll || this.loading) return
         const dirty = this.items.filter(item => this.isDirty(item)); if (!dirty.length) return
         this.savingAll = true; this.error = ''; this.notice = ''
-        try { for (const item of dirty) await this.save(item, true); this.notice = tr('settings_page.saved_many','',{count:dirty.length}); await this.load() }
-        catch (e) { this.error = e.message } finally { this.savingAll = false }
+        try {
+          // Validate the entire batch before the first write.
+          for (const item of dirty) this.valueOf(item)
+          for (const item of dirty) await this.save(item)
+          this.notice = tr('settings_page.saved_many','',{count:dirty.length})
+        } catch (e) { this.error = e.message } finally { this.savingAll = false }
       },
       async saveOne(item) {
-        this.error = ''; this.notice = ''
-        try { await this.save(item); await this.load() } catch (e) { this.error = e.message }
+        if (this.mutating || this.savingAll || this.loading) return
+        this.mutating = true; this.error = ''; this.notice = ''
+        try { await this.save(item); this.notice = tr('settings_page.saved_one','',{label:item.label||item.key}) }
+        catch (e) { this.error = e.message } finally { this.mutating = false }
       },
       async reset(item) {
-        this.error = ''; this.notice = ''
+        if (this.mutating || this.savingAll || this.loading) return
+        this.mutating = true; this.error = ''; this.notice = ''
+        const submitted = comparable(item, this.drafts[item.key])
         try {
-          const scope = item.scope || {}
-          await api(`/settings/${encodeURIComponent(item.key)}`, { method: 'DELETE', body: { scope_type: scope.type || 'site', scope_id: scope.id ?? 1, expected_version: item.version || null } })
-          this.notice = tr('settings_page.reset_notice','',{label:item.label||item.key}); await this.load()
-        } catch (e) { this.error = e.message }
+          const scope = item.scope || {}, path = `/settings/${encodeURIComponent(item.key)}`
+          await api(path, { method: 'DELETE', body: { scope_type: scope.type || 'site', scope_id: scope.id ?? 1, expected_version: item.version ?? null } })
+          item.version = null
+          // A reset may inherit a parent value rather than the registry default.
+          const query = new URLSearchParams({scope_type: scope.type || 'site', scope_id: String(scope.id ?? 1)})
+          const resolved = await api(`${path}?${query}`)
+          this.reconcile(item, resolved, submitted)
+          this.notice = tr('settings_page.reset_notice','',{label:item.label||item.key})
+        } catch (e) { this.error = e.message } finally { this.mutating = false }
       },
+      helpId(item) { return `setting-help-${encodeURIComponent(item.key)}` },
       renderControl(item) {
         const component = item.ui?.component || 'text'; const value = this.drafts[item.key]
+        const a11y = { 'aria-label': item.label || item.key, 'aria-describedby': this.helpId(item) }
         if (component === 'design-tokens') return h('div', { style: ui.card }, [h('p', { style: { margin: 0, opacity: .75 } }, tr('settings_page.design_tokens_runtime_note')), h(LButton, { label: tr('settings_page.go_appearance'), severity: 'secondary', onClick: () => navigate('appearance') })])
-        if (item.type === 'boolean' || component === 'boolean') return h('label', { class: 'cms-switch' }, [h('input', { type: 'checkbox', checked: Boolean(value), onChange: e => this.drafts[item.key] = e.target.checked }), h('span', {}, Boolean(value) ? tr('settings_page.enabled') : tr('settings_page.disabled'))])
-        if (component === 'textarea') return textarea(h, value, v => this.drafts[item.key] = v, { rows: item.ui?.rows || 3 })
-        if (component === 'select' && Array.isArray(item.ui?.options)) return select(h, value, v => this.drafts[item.key] = v, item.ui.options)
-        if (component === 'timezone') return select(h, value, v => this.drafts[item.key] = v, timezoneOptions().map(v => ({ value: v, label: v })))
-        if (item.type === 'json') return textarea(h, value, v => this.drafts[item.key] = v, { style: ui.mono, rows: 8 })
-        if (item.type === 'string_list') return input(h, value, v => this.drafts[item.key] = v, 'text', { placeholder: tr('settings_page.string_list_placeholder') })
-        const extra = { min: item.ui?.min, max: item.ui?.max, step: item.ui?.step, placeholder: item.ui?.placeholder }
+        if (item.type === 'boolean' || component === 'boolean') return h('label', { class: 'cms-switch' }, [h('input', { ...a11y, type: 'checkbox', checked: Boolean(value), onChange: e => this.drafts[item.key] = e.target.checked }), h('span', {}, Boolean(value) ? tr('settings_page.enabled') : tr('settings_page.disabled'))])
+        if (component === 'textarea') return textarea(h, value, v => this.drafts[item.key] = v, { ...a11y, rows: item.ui?.rows || 3 })
+        if (component === 'select' && Array.isArray(item.ui?.options)) return select(h, value, v => this.drafts[item.key] = v, item.ui.options, a11y)
+        if (component === 'timezone') return select(h, value, v => this.drafts[item.key] = v, timezoneOptions().map(v => ({ value: v, label: v })), a11y)
+        if (item.type === 'json') return textarea(h, value, v => this.drafts[item.key] = v, { ...a11y, style: ui.mono, rows: 8 })
+        if (item.type === 'string_list') return input(h, value, v => this.drafts[item.key] = v, 'text', { ...a11y, placeholder: tr('settings_page.string_list_placeholder') })
+        const extra = { ...a11y, min: item.ui?.min, max: item.ui?.max, step: item.ui?.step, placeholder: item.ui?.placeholder }
         return input(h, value, v => this.drafts[item.key] = v, item.sensitive ? 'password' : (item.type === 'integer' || item.type === 'number' || item.type === 'float' ? 'number' : 'text'), extra)
       },
       renderCard(item) {
         const scope = item.scope || {}
         return h('article', { class: `cms-setting-card${this.isDirty(item) ? ' dirty' : ''}`, key: item.key }, [
           h('div', { class: 'cms-setting-top' }, [
-            h('div', { class: 'cms-setting-title' }, [h('strong', {}, item.label || item.key), h('p', {}, item.ui?.description || tr('settings_page.registry_description'))]),
+            h('div', { class: 'cms-setting-title' }, [h('strong', {}, item.label || item.key), h('p', { id: this.helpId(item) }, item.ui?.description || tr('settings_page.registry_description'))]),
             h('div', { class: 'cms-setting-meta' }, [h(LBadge, { label: scope.type || 'global', severity: 'secondary' }), this.isDirty(item) ? h(LBadge, { label: tr('settings_page.unsaved'), severity: 'warning' }) : null]),
           ]),
           h('div', { class: 'cms-setting-control' }, [this.renderControl(item)]),
           item.ui?.suffix ? h('small', { style: { opacity: .7 } }, item.ui.suffix) : null,
           h('div', { class: 'cms-setting-actions' }, [
-            h(LButton, { label: tr('settings_page.save'), disabled: !this.isDirty(item), onClick: () => this.saveOne(item) }),
-            h(LButton, { label: tr('settings_page.reset'), severity: 'secondary', onClick: () => this.reset(item) }),
+            h(LButton, { label: tr('settings_page.save'), disabled: this.loading || this.mutating || this.savingAll || !this.isDirty(item), onClick: () => this.saveOne(item) }),
+            h(LButton, { label: tr('settings_page.reset'), disabled: this.loading || this.mutating || this.savingAll, severity: 'secondary', onClick: () => this.reset(item) }),
             h('small', {}, item.version ? tr('settings_page.version','',{version:item.version}) : tr('settings_page.default_value')),
           ]),
           h('details', { class: 'cms-advanced', open: Boolean(item.ui?.advanced) }, [h('summary', {}, tr('settings_page.technical_details')), h('div', { class: 'cms-advanced-grid' }, [
@@ -177,7 +208,7 @@ export function createComponent(host) {
         ]),
       ])
 
-      return h(LPage,{title:tr('routes.settings.title'),description:tr('routes.settings.lead')}, { default: () => h('div', { class: 'cms-settings-center' }, [h('style', {}, CSS), message(h, this), h('div', { class: 'cms-settings-toolbar' }, [input(h, this.search, v => this.search = v, 'search', { placeholder: tr('settings_page.search_placeholder'), 'aria-label': tr('a11y.settings_search') }), h(LButton, { label: this.savingAll ? tr('settings_page.saving') : `${tr('settings_page.save_all')}${this.dirtyCount ? ` (${this.dirtyCount})` : ''}`, disabled: !this.dirtyCount || this.savingAll, onClick: this.saveAll }), h(LButton, { label: tr('settings_page.refresh'), severity: 'secondary', onClick: this.load })]), content]) })
+      return h(LPage,{title:tr('routes.settings.title'),description:tr('routes.settings.lead')}, { default: () => h('div', { class: 'cms-settings-center' }, [h('style', {}, CSS), message(h, this), h('div', { class: 'cms-settings-toolbar' }, [input(h, this.search, v => this.search = v, 'search', { placeholder: tr('settings_page.search_placeholder'), 'aria-label': tr('a11y.settings_search') }), h(LButton, { label: this.savingAll ? tr('settings_page.saving') : `${tr('settings_page.save_all')}${this.dirtyCount ? ` (${this.dirtyCount})` : ''}`, disabled: !this.dirtyCount || this.savingAll || this.mutating || this.loading, onClick: this.saveAll }), h(LButton, { label: tr('settings_page.refresh'), disabled: this.loading || this.mutating || this.savingAll, severity: 'secondary', onClick: this.load })]), content]) })
     },
   }
 }

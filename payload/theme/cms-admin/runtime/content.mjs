@@ -241,7 +241,15 @@ export function createComponent(host) {
             ? await api(`/content/${editingId}`, { method: 'PUT', body: payload })
             : await api('/content', { method: 'POST', body: payload })
           const id = validContentId(record?.id || editingId)
-          const currentStatus = editingId ? this.items.find((item) => validContentId(item.id) === editingId)?.status : 'draft'
+          // Retain the committed record before publishing: a failed publish must retry an update.
+          if (id) {
+            this.editing = id
+            const index = this.items.findIndex((item) => validContentId(item.id) === id)
+            const saved = { ...(index >= 0 ? this.items[index] : payload), ...record, id: Number(id) }
+            if (index >= 0) this.items.splice(index, 1, saved)
+            else this.items.unshift(saved)
+          }
+          const currentStatus = record?.status || this.items.find((item) => validContentId(item.id) === id)?.status || 'draft'
           if (publishAfter && id && currentStatus !== 'published') await api(`/content/${id}/publish`, { method: 'POST', body: {} })
           this.notice = publishAfter ? (currentStatus === 'published' ? tr('content_page.saved_published') : tr('content_page.saved_publish')) : tr('content_page.saved')
           this.editorOpen = false
@@ -280,34 +288,45 @@ export function createComponent(host) {
         } catch (e) { this.error = e.message }
       },
       toggleSelected(id) {
+        if (this.bulkBusy) return
         const value = validContentId(id)
         if (!value) return
         this.selected = this.selected.includes(value) ? this.selected.filter((item) => item !== value) : [...this.selected, value]
       },
       toggleAll() {
+        if (this.bulkBusy) return
         const ids = this.items.map((item) => validContentId(item.id)).filter(Boolean)
         const all = ids.length > 0 && ids.every((id) => this.selected.includes(id))
         this.selected = all ? [] : ids
       },
       async runBulk() {
-        if (!this.bulkAction || this.selected.length === 0 || this.bulkBusy) return
-        const labelText = ({ publish: tr('content_page.bulk_publish'), trash: tr('content_page.bulk_trash'), restore: tr('content_page.bulk_restore') })[this.bulkAction] || this.bulkAction
-        if (!confirmFa(tr('content_page.bulk_action_confirm','',{action:labelText,count:this.selected.length}))) return
+        if (this.bulkBusy) return
+        const action = this.bulkAction
+        const ids = [...new Set(this.selected.map(validContentId).filter(Boolean))]
+        if (!['publish', 'restore', 'trash'].includes(action) || !ids.length) return
+        const labelText = ({ publish: tr('content_page.bulk_publish'), trash: tr('content_page.bulk_trash'), restore: tr('content_page.bulk_restore') })[action]
+        if (!confirmFa(tr('content_page.bulk_action_confirm','',{action:labelText,count:ids.length}))) return
         this.bulkBusy = true
         this.error = ''
-        let completed = 0
+        this.notice = ''
+        const completed = new Set()
+        let failure = ''
         try {
-          for (const id of [...this.selected]) {
-            if (this.bulkAction === 'trash') await api(`/content/${id}`, { method: 'DELETE' })
-            else await api(`/content/${id}/${this.bulkAction}`, { method: 'POST', body: {} })
-            completed += 1
+          for (const id of ids) {
+            if (action === 'trash') await api(`/content/${id}`, { method: 'DELETE' })
+            else await api(`/content/${id}/${action}`, { method: 'POST', body: {} })
+            completed.add(id)
           }
-          this.notice = tr('content_page.processed_success','',{count:completed})
-          this.selected = []
-          await this.load()
+          this.notice = tr('content_page.processed_success','',{count:completed.size})
         } catch (e) {
-          this.error = `${e.message} (${tr('content_page.before_error','',{count:completed})})`
-        } finally { this.bulkBusy = false }
+          failure = `${e.message} (${tr('content_page.before_error','',{count:completed.size})})`
+        } finally {
+          // Successful rows must not be submitted again after a partial failure.
+          this.selected = this.selected.filter((id) => !completed.has(validContentId(id)))
+          await this.load()
+          if (failure) this.error = this.error ? `${failure} — ${this.error}` : failure
+          this.bulkBusy = false
+        }
       },
       nextPage() {
         if (!this.pagination.has_more || this.loading) return
@@ -398,7 +417,7 @@ export function createComponent(host) {
           : h('div', { class: 'cms-content-list' }, this.items.map((item) => {
               const id = validContentId(item.id)
               return h('article', { class: 'cms-content-row', key: id }, [
-                h('input', { class: 'cms-content-check', type: 'checkbox', checked: this.selected.includes(id), 'aria-label': `${tr('a11y.select_content')}: ${item.title || id}`, onChange: () => this.toggleSelected(id) }),
+                h('input', { class: 'cms-content-check', type: 'checkbox', disabled: this.bulkBusy, checked: this.selected.includes(id), 'aria-label': `${tr('a11y.select_content')}: ${item.title || id}`, onChange: () => this.toggleSelected(id) }),
                 h('div', { class: 'cms-content-title' }, [
                   h('strong', {}, item.title || tr('content_page.untitled','',{id})),
                   h('small', {}, `${item.slug || tr('content_page.no_slug')} · #${id}`),
@@ -467,14 +486,14 @@ export function createComponent(host) {
                 h(LButton, { label: tr('content_page.apply_filter'), disabled: this.loading, onClick: () => this.load(true) }),
               ]),
               h('div', { class: 'cms-content-bulk' }, [
-                h('input', { class: 'cms-content-check', type: 'checkbox', checked: allSelected, onChange: this.toggleAll, 'aria-label': tr('a11y.select_all_content') }),
+                h('input', { class: 'cms-content-check', type: 'checkbox', disabled: this.bulkBusy, checked: allSelected, onChange: this.toggleAll, 'aria-label': tr('a11y.select_all_content') }),
                 h('strong', {}, tr('content_page.selected','',{count:this.selected.length})),
                 select(h, this.bulkAction, (v) => (this.bulkAction = v), [
                   { value: '', label: tr('content_page.bulk_action') },
                   { value: 'publish', label: tr('content_page.bulk_publish') },
                   { value: 'restore', label: tr('content_page.bulk_restore') },
                   { value: 'trash', label: tr('content_page.bulk_trash') },
-                ]),
+                ], { disabled: this.bulkBusy, 'aria-label': tr('a11y.bulk_action') }),
                 h(LButton, { label: this.bulkBusy ? tr('content_page.executing') : tr('content_page.execute'), disabled: this.bulkBusy || !this.bulkAction || !this.selected.length, onClick: this.runBulk }),
               ]),
               rows,

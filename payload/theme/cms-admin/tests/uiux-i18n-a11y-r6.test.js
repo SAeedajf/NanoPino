@@ -86,7 +86,7 @@ test('R6 adds keyboard and accessible-name contracts to critical runtime control
   assert.match(settings, /a11y\.settings_group_mobile/)
 
   const users = read('runtime/users.mjs')
-  assert.match(users, /role:'button',tabindex:0/)
+  assert.match(users, /h\('button',\{type:'button',class:'uc-user__main uc-user-select'/)
 })
 
 test('R6 separates Vite bundle parity from directly-served runtime module parity', () => {

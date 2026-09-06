@@ -41,6 +41,7 @@ export const mediaApi={
   remove:id=>cmsRequest(`/media/${id}`,{method:'DELETE'}),
 }
 export const settingsApi={
+  read:(key,params=new URLSearchParams())=>cmsRequest(`/settings/${encodeURIComponent(key)}?${params}`),
   list:()=>cmsRequest('/settings'),
   update:(key,payload)=>cmsRequest(`/settings/${encodeURIComponent(key)}`,{method:'PUT',body:payload}),
   reset:(key,payload)=>cmsRequest(`/settings/${encodeURIComponent(key)}`,{method:'DELETE',body:payload}),

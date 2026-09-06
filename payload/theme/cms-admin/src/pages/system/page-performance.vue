@@ -1,140 +1,82 @@
 <template>
   <LPage icon="gauge" class="cms-performance-page">
+    <template #actions><LButton icon="refresh-cw" variant="outline" :loading="loading" @click="load">{{ t('common.refresh') }}</LButton></template>
+    <div v-if="error" class="cms-alert cms-alert--danger" role="alert">{{ error }}</div>
+
     <div class="cms-stat-grid cms-stat-grid--three">
-      <LStatCard label="Budget" :value="center.budgets.length" icon="target" />
-      <LStatCard label="Profile" :value="center.profile" icon="server" />
-      <LStatCard label="API" :value="center.apiBound ? 'Bound' : 'Contract'" icon="waypoints" />
+      <LStatCard label="Budget" :value="budgets.length" icon="target" />
+      <LStatCard label="Queries" :value="snapshot.queries?.count ?? '—'" icon="database" />
+      <LStatCard label="Memory" :value="formatBytes(snapshot.memory?.real_peak_bytes ?? snapshot.memory?.peak_bytes)" icon="memory-stick" />
     </div>
 
     <LPanel>
-      <template #header>Performance Runtime Gates</template>
+      <template #header>Performance Runtime</template>
       <div class="cms-performance-gates">
-        <div><span>Runtime Profiler</span><LBadge :severity="center.runtimeProfilerBound ? 'success' : 'warning'">{{ center.runtimeProfilerBound ? 'Bound' : 'Unbound' }}</LBadge></div>
-        <div><span>Query Probe</span><LBadge :severity="center.queryProbeBound ? 'success' : 'warning'">{{ center.queryProbeBound ? 'Bound' : 'Unbound' }}</LBadge></div>
-        <div><span>Cache Telemetry</span><LBadge :severity="center.cacheTelemetryBound ? 'success' : 'warning'">{{ center.cacheTelemetryBound ? 'Bound' : 'Unbound' }}</LBadge></div>
-        <div><span>Extension Cost</span><LBadge :severity="center.extensionCostBound ? 'success' : 'warning'">{{ center.extensionCostBound ? 'Bound' : 'Unbound' }}</LBadge></div>
+        <div><span>Query Probe</span><LBadge :severity="snapshot.queries?.bound ? 'success' : 'warning'">{{ snapshot.queries?.bound ? 'Bound' : 'Unbound' }}</LBadge></div>
+        <div><span>Cache Telemetry</span><LBadge :severity="snapshot.cache ? 'success' : 'warning'">{{ snapshot.cache ? 'Live' : 'Unbound' }}</LBadge></div>
+        <div><span>Extension Cost</span><LBadge :severity="snapshot.extensions ? 'success' : 'warning'">{{ snapshot.extensions ? 'Live' : 'Unbound' }}</LBadge></div>
+        <div><span>Recent Samples</span><LBadge severity="secondary">{{ snapshot.recent_samples?.length || 0 }}</LBadge></div>
       </div>
-      <p class="cms-muted">
-        {{ t('performance_page.unmeasured_note') }}
-      </p>
     </LPanel>
 
     <LPanel>
-      <template #header>Performance Budgets — Shared Hosting</template>
-
-      <div class="cms-mobile-only cms-performance-budget-cards">
-        <article v-for="budget in center.budgets" :key="budget.id" class="cms-list-card cms-list-card--wide">
-          <div>
-            <strong>{{ budget.label }}</strong>
-            <small>{{ budget.metric }}</small>
-          </div>
-          <div class="cms-performance-budget-values">
-            <LBadge :severity="budgetSeverity(budget.status)">{{ budget.status }}</LBadge>
-            <small>target {{ formatBudget(budget.target, budget.unit) }} · limit {{ formatBudget(budget.limit, budget.unit) }}</small>
-          </div>
-        </article>
-      </div>
-
-      <LPanel flush bare class="cms-desktop-only">
-        <LDataTable :value="center.budgets" data-key="id">
-          <Column field="label" header="Budget" />
-          <Column field="metric" header="Metric" />
-          <Column header="Measured">
-            <template #body="{ data }">{{ data.value === null ? 'Unmeasured' : formatBudget(data.value, data.unit) }}</template>
-          </Column>
-          <Column header="Target">
-            <template #body="{ data }">{{ formatBudget(data.target, data.unit) }}</template>
-          </Column>
-          <Column header="Limit">
-            <template #body="{ data }">{{ formatBudget(data.limit, data.unit) }}</template>
-          </Column>
-          <Column header="Status">
-            <template #body="{ data }"><LBadge :severity="budgetSeverity(data.status)">{{ data.status }}</LBadge></template>
-          </Column>
-        </LDataTable>
-      </LPanel>
+      <template #header>Performance Budgets — {{ snapshot.profile || center.profile }}</template>
+      <CmsPageState :state="loading ? 'loading' : budgets.length ? 'ready' : 'empty'" empty-icon="target" :empty-title="t('performance_page.benchmark_note')" :empty-message="t('performance_page.unmeasured_note')">
+        <div class="cms-mobile-only cms-performance-budget-cards">
+          <article v-for="budget in budgets" :key="budget.id" class="cms-list-card cms-list-card--wide">
+            <div><strong>{{ budget.label || budget.id }}</strong><small>{{ budget.metric }}</small></div>
+            <div class="cms-performance-budget-values"><LBadge :severity="budgetSeverity(budget.status)">{{ budget.status }}</LBadge><small>{{ valueOrDash(budget.value) }}</small></div>
+          </article>
+        </div>
+        <LPanel flush bare class="cms-desktop-only">
+          <LDataTable :value="budgets" data-key="id">
+            <Column field="label" header="Budget" />
+            <Column field="metric" header="Metric" />
+            <Column field="value" header="Measured" />
+            <Column field="target" header="Target" />
+            <Column field="limit" header="Limit" />
+            <Column field="status" header="Status" />
+          </LDataTable>
+        </LPanel>
+      </CmsPageState>
     </LPanel>
 
     <div class="cms-performance-grid">
-      <LPanel>
-        <template #header>Database / N+1</template>
-        <div class="cms-performance-detail">
-          <span>Query count</span><strong>{{ valueOrDash(center.query.count) }}</strong>
-          <span>Total DB time</span><strong>{{ center.query.totalMs === null ? '—' : `${center.query.totalMs} ms` }}</strong>
-          <span>N+1 findings</span><strong>{{ center.query.nPlusOne.length }}</strong>
-          <span>Slow queries</span><strong>{{ center.query.slow.length }}</strong>
-        </div>
-        <small class="cms-muted">{{ center.queryProbeBound ? t('performance_page.query_bound') : t('performance_page.query_unbound') }}</small>
-      </LPanel>
-
-      <LPanel>
-        <template #header>Cache Effectiveness</template>
-        <div class="cms-performance-detail">
-          <span>Hits</span><strong>{{ valueOrDash(center.cache.hits) }}</strong>
-          <span>Misses</span><strong>{{ valueOrDash(center.cache.misses) }}</strong>
-          <span>Hit ratio</span><strong>{{ center.cache.hitRatio === null ? '—' : `${Math.round(center.cache.hitRatio * 100)}%` }}</strong>
-        </div>
-      </LPanel>
-
-      <LPanel>
-        <template #header>Memory</template>
-        <div class="cms-performance-detail">
-          <span>Peak</span><strong>{{ center.memory.peakBytes === null ? '—' : formatBytes(center.memory.peakBytes) }}</strong>
-        </div>
-      </LPanel>
-
-      <LPanel>
-        <template #header>Shared Hosting Profile</template>
-        <div class="cms-performance-detail">
-          <span>Worker required</span><strong>{{ center.sharedHosting.workerRequired ? 'Yes' : 'No' }}</strong>
-          <span>Queue fallback</span><strong>{{ center.sharedHosting.queueFallback }}</strong>
-          <span>External Search</span><strong>{{ center.sharedHosting.externalSearchRequired ? 'Required' : 'Optional' }}</strong>
-          <span>Default Cache</span><strong>{{ center.sharedHosting.defaultCache }}</strong>
-        </div>
-      </LPanel>
+      <LPanel><template #header>Database / N+1</template><div class="cms-performance-detail"><span>Query count</span><strong>{{ valueOrDash(snapshot.queries?.count) }}</strong><span>Total DB time</span><strong>{{ valueOrDash(snapshot.queries?.total_ms) }} ms</strong><span>N+1 findings</span><strong>{{ snapshot.queries?.n_plus_one?.length || 0 }}</strong><span>Slow queries</span><strong>{{ snapshot.queries?.slow?.length || 0 }}</strong></div></LPanel>
+      <LPanel><template #header>Cache Effectiveness</template><pre class="cms-code-preview">{{ pretty(snapshot.cache) }}</pre></LPanel>
+      <LPanel><template #header>Extension Cost</template><pre class="cms-code-preview">{{ pretty(snapshot.extensions || []) }}</pre></LPanel>
+      <LPanel><template #header>Recent Samples</template><pre class="cms-code-preview">{{ pretty(snapshot.recent_samples || []) }}</pre></LPanel>
     </div>
-
-    <LPanel>
-      <template #header>Portable Benchmarks</template>
-      <div v-if="center.benchmarks.length" class="cms-contract-list">
-        <div v-for="row in center.benchmarks" :key="row.name" class="cms-contract-row">
-          <strong>{{ row.name }}</strong>
-          <span>P50 {{ row.p50_ms }} ms</span>
-          <span>P95 {{ row.p95_ms }} ms</span>
-          <span>P99 {{ row.p99_ms }} ms</span>
-        </div>
-      </div>
-      <div v-else class="cms-empty-state">
-        {{ t('performance_page.benchmark_note') }}
-      </div>
-    </LPanel>
-
-    <LPanel>
-      <template #header>Performance API v1</template>
-      <div class="cms-api-status">
-        <LBadge :severity="center.apiBound ? 'success' : 'warning'">
-          {{ center.apiBound ? 'Bound' : 'Contract only' }}
-        </LBadge>
-        <span>/api/v1/cms/system/performance</span>
-      </div>
-      <div class="cms-contract-list cms-contract-list--api">
-        <div v-for="route in center.api" :key="`${route.method}:${route.path}`" class="cms-contract-row">
-          <LBadge severity="secondary">{{ route.method }}</LBadge>
-          <code>{{ route.path }}</code>
-          <small>{{ route.capability }} · {{ route.rate_limit }}</small>
-        </div>
-      </div>
-    </LPanel>
   </LPage>
 </template>
 
 <script setup>
+import { computed, onMounted, ref } from 'vue'
 import Column from 'primevue/column'
-import { LBadge, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
+import { LBadge, LButton, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
+import CmsPageState from '../../components/cms-page-state.vue'
 import { readAdminBootData } from '../../services/admin-provider.js'
+import { performanceApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
 const center = readAdminBootData().performanceCenter
+const snapshot = ref({})
+const loading = ref(false)
+const error = ref('')
+const budgets = computed(() => snapshot.value.budget_evaluations || [])
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const response = await performanceApi.status()
+    snapshot.value = response.data || {}
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
 
 function budgetSeverity(status) {
   if (status === 'pass') return 'success'
@@ -142,27 +84,15 @@ function budgetSeverity(status) {
   if (status === 'warning') return 'warning'
   return 'secondary'
 }
-
-function valueOrDash(value) {
-  return value === null || value === undefined ? '—' : value
-}
-
+function valueOrDash(value) { return value === null || value === undefined ? '—' : value }
 function formatBytes(bytes) {
   const value = Number(bytes)
   if (!Number.isFinite(value) || value < 0) return '—'
-  const units = ['B', 'KiB', 'MiB', 'GiB']
-  let size = value
-  let unit = 0
-  while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024
-    unit += 1
-  }
-  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
+  const units = ['B', 'KiB', 'MiB', 'GiB']; let size = value; let unit = 0
+  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1 }
+  return `${size.toFixed(unit ? 1 : 0)} ${units[unit]}`
 }
+function pretty(value) { return JSON.stringify(value ?? {}, null, 2) }
 
-function formatBudget(value, unit) {
-  if (unit === 'bytes') return formatBytes(value)
-  if (unit === 'ratio') return `${Math.round(Number(value) * 100)}%`
-  return `${value} ${unit || ''}`.trim()
-}
+onMounted(load)
 </script>

@@ -71,27 +71,29 @@ apps/com_pinoox_cms/
 The package metadata remains:
 
 - package: `com_pinoox_cms`
-- version: `0.23.27`
-- version code: `2327`
-- minimum kernel: `205`
+- version: `0.23.29`
+- version code: `2329`
+- minimum Pincore: `3.10.0`
+- native minimum kernel code (minpin): `216`
 
 ## 6. Building PINX locally
 
-Use the native Pinoox CLI. Do not handcraft a ZIP and rename it.
-
-Example:
+Use NanoPino's release wrapper, which invokes the native Pinoox builder and then audits the generated PINX. Do not handcraft a ZIP, rename a generic ZIP, or bypass the artifact verifier.
 
 ```bash
-php pinoox pinx:build com_pinoox_cms --output=/path/to/NanoPino.pinx --no-sign --yes
+tools/release/verify-source.sh
+tools/release/build-pinx.sh /path/to/pinoox /path/to/NanoPino.pinx
 ```
 
-For production distribution, signing and release gates must be completed before Stable 1.0.
+The wrapper runs native `pinx:build`, `pinx:info`, the R15 installability artifact audit and SHA-256 generation. For production distribution, signing and the remaining Stable release gates must also be completed.
 
 ## 7. Database
 
 NanoPino reuses the native Pinoox platform database connection and sets a valid MySQL/MariaDB engine override where required.
 
-RC10 fresh-install validation completed all 18 migrations and created the required CMS tables.
+R15 contains 19 package migrations: one read-only environment preflight followed by the existing schema/repair/index migrations. The runtime schema contract remains 16 required CMS tables.
+
+Repository lifecycle CI verifies a native 0.23.28 → 0.23.29 update without force plus a separate clean 0.23.29 install/uninstall on the declared Pincore matrix.
 
 ## 8. Contribution boundaries
 
@@ -107,3 +109,14 @@ Changes should be implemented through:
 - Drivers
 
 A feature that requires editing Pincore/vendor should be treated as a missing extension contract and redesigned accordingly.
+
+
+## 9. R15 executable PHP tests
+
+Run the dependency-light PHP domain suite with:
+
+```bash
+php tests/php/run.php
+```
+
+Repository CI runs this suite on PHP 8.2, 8.3, 8.4 and 8.5. See `docs/deployment/installability.md` before changing package requirements, minpin, database assumptions or build exclusions.

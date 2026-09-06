@@ -89,11 +89,16 @@ jobs:
       DB_DATABASE: pinoox
       DB_USERNAME: pinoox_ci
       DB_PASSWORD: pinoox_ci
-      NANOPINO_CI_ADMIN_PASSWORD: NanoPino-${{ github.run_id }}-CI
       PINOOX_E2E_REF: 5e7d65bb4c6c71edbf0e0b47735479f620640d07
-      NANOPINO_PINX_OUTPUT: ${{ runner.temp }}/NanoPino-e2e.pinx
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure ephemeral lifecycle environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "NANOPINO_CI_ADMIN_PASSWORD=NanoPino-${GITHUB_RUN_ID}-CI" >> "$GITHUB_ENV"
+          echo "NANOPINO_PINX_OUTPUT=${RUNNER_TEMP}/NanoPino-e2e.pinx" >> "$GITHUB_ENV"
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -133,6 +138,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nanopino-pinx-e2e
-          path: ${{ env.NANOPINO_PINX_OUTPUT }}
+          path: ${{ runner.temp }}/NanoPino-e2e.pinx
           if-no-files-found: error
           retention-days: 7

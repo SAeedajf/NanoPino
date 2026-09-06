@@ -16,3 +16,9 @@ A green CI result proves repository consistency; it does not by itself prove the
 Before switching CSP from report-only to enforce, capture a browser E2E run of the production admin shell, Vite assets, Luma components, Builder, Settings and Security pages with zero blocking CSP violations.
 
 Before setting `platform_super=false`, Security Center must report zero implicit-only platform accounts and at least one explicit super account. The current administrator session must then be revalidated in the target environment after the configuration change. NanoPino intentionally does not auto-grant a wildcard role as part of this transition.
+
+
+## R13 PHP runtime gate
+Repository validation now includes an executable PHP suite across PHP 8.2, 8.3, 8.4 and 8.5. The release verification job also runs the same suite after full payload lint.
+
+This closes the previous “PHP lint only” gap for framework-independent NanoPino domain behavior. It does not replace controlled Pinoox/database integration, signed PINX lifecycle testing or browser E2E; those remain Stable release gates.

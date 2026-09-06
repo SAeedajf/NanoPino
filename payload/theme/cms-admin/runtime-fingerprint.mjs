@@ -36,7 +36,16 @@ const payload = {
   runtimeFiles: paths.length,
 }
 const output = resolve(root, '../../resources/release/admin-runtime-v1.json')
-mkdirSync(resolve(root, '../../resources/release'), { recursive: true })
-writeFileSync(output, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+if (process.argv.includes('--check')) {
+  if (!existsSync(output)) throw new Error('Missing runtime fingerprint evidence.')
+  const recorded = JSON.parse(readFileSync(output, 'utf8'))
+  if (recorded.schema !== payload.schema || recorded.algorithm !== payload.algorithm || recorded.runtimeFingerprint !== payload.runtimeFingerprint || recorded.runtimeFiles !== payload.runtimeFiles) {
+    throw new Error('Admin runtime fingerprint mismatch. Rebuild before release.')
+  }
+  console.log('Runtime parity verified.')
+} else {
+  mkdirSync(resolve(root, '../../resources/release'), { recursive: true })
+  writeFileSync(output, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+}
 console.log(`Runtime fingerprint: ${payload.runtimeFingerprint}`)
 console.log(`Runtime files: ${payload.runtimeFiles}`)

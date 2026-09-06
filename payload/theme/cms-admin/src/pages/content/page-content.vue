@@ -106,9 +106,9 @@
       </div>
 
       <div class="cms-content-bulk">
-        <input type="checkbox" class="cms-check-input" :checked="allSelected" :aria-label="t('a11y.select_all_content')" @change="toggleAll">
+        <input type="checkbox" class="cms-check-input" :disabled="bulkBusy" :checked="allSelected" :aria-label="t('a11y.select_all_content')" @change="toggleAll">
         <strong>{{ t('content_page.selected', { count: selected.length }) }}</strong>
-        <select v-model="bulkAction" :aria-label="t('a11y.bulk_action')"><option value="">{{ t('content_page.bulk_action') }}</option><option value="publish">{{ t('content_page.bulk_publish') }}</option><option value="restore">{{ t('content_page.bulk_restore') }}</option><option value="trash">{{ t('content_page.bulk_trash') }}</option></select>
+        <select v-model="bulkAction" :disabled="bulkBusy" :aria-label="t('a11y.bulk_action')"><option value="">{{ t('content_page.bulk_action') }}</option><option value="publish">{{ t('content_page.bulk_publish') }}</option><option value="restore">{{ t('content_page.bulk_restore') }}</option><option value="trash">{{ t('content_page.bulk_trash') }}</option></select>
         <LButton size="sm" shape="rounded" :disabled="bulkBusy || !bulkAction || !selected.length" @click="runBulk">{{ bulkBusy ? t('content_page.executing') : t('content_page.execute') }}</LButton>
       </div>
 
@@ -116,7 +116,7 @@
         <div class="cms-mobile-only cms-extension-card-list">
           <article v-for="item in items" :key="item.id" class="cms-extension-card">
             <div class="cms-extension-card__head">
-              <input type="checkbox" class="cms-check-input" :checked="selected.includes(String(item.id))" :aria-label="`${t('a11y.select_content')} #${item.id}`" @change="toggleSelected(item.id)">
+              <input type="checkbox" class="cms-check-input" :disabled="bulkBusy" :checked="selected.includes(String(item.id))" :aria-label="`${t('a11y.select_content')} #${item.id}`" @change="toggleSelected(item.id)">
               <div><strong>{{ item.title || t('content_page.untitled', { id: item.id }) }}</strong><small>{{ typeLabel(item.type) }} · {{ item.slug || `#${item.id}` }}</small></div>
               <LBadge :severity="statusSeverity(item.status)">{{ statusLabel(item.status) }}</LBadge>
             </div>
@@ -127,7 +127,7 @@
 
         <LPanel flush bare class="cms-desktop-only">
           <LDataTable :value="items" data-key="id">
-            <Column header=""><template #body="{data:row}"><input type="checkbox" class="cms-check-input" :checked="selected.includes(String(row.id))" :aria-label="`${t('a11y.select_content')} #${row.id}`" @change="toggleSelected(row.id)"></template></Column>
+            <Column header=""><template #body="{data:row}"><input type="checkbox" class="cms-check-input" :disabled="bulkBusy" :checked="selected.includes(String(row.id))" :aria-label="`${t('a11y.select_content')} #${row.id}`" @change="toggleSelected(row.id)"></template></Column>
             <Column field="title" :header="t('content_page.title')"><template #body="{data:row}"><div><strong>{{ row.title || t('content_page.untitled', { id: row.id }) }}</strong><small class="cms-table-subline">{{ row.slug || `#${row.id}` }}</small></div></template></Column>
             <Column :header="t('content_page.type')"><template #body="{data:row}">{{ typeLabel(row.type) }}</template></Column>
             <Column :header="t('content_page.status')"><template #body="{data:row}"><LBadge :severity="statusSeverity(row.status)">{{ statusLabel(row.status) }}</LBadge></template></Column>
@@ -182,14 +182,61 @@ function closeEditor(){editorOpen.value=false;resetForm(typeFilter.value||types.
 function ids(value){return String(value||'').split(',').map(v=>Number(v.trim())).filter(v=>Number.isSafeInteger(v)&&v>0)}
 function normalizeField(field,value){if(field.multiple||['relation','gallery','taxonomy'].includes(field.type))return ids(value);if(field.type==='media')return value===''?null:Number(value);if(field.type==='number')return value===''?null:Number(value);if(field.type==='boolean')return Boolean(value);if(['json','repeater','group'].includes(field.type)){try{return JSON.parse(value|| (field.type==='repeater'?'[]':'{}'))}catch{throw new Error(t('content_page.json_invalid',{field:field.label}))}}return value}
 function payload(){if(!form.title.trim())throw new Error(t('content_page.title_required'));let metadata={};try{metadata=form.metadataJson.trim()?JSON.parse(form.metadataJson):{}}catch{throw new Error(t('content_page.metadata_invalid'))}const fields={};for(const field of currentFields.value){const value=form.fields[field.key];const blank=value===''||value===null||value===undefined;if(!editingId.value&&blank&&!field.required)continue;fields[field.key]=normalizeField(field,value)}return{site_id:Number(form.site_id||1),type:form.type,title:form.title.trim(),slug:form.slug.trim(),excerpt:form.excerpt,locale:form.locale.trim()||'fa',parent_id:form.parent_id?Number(form.parent_id):null,fields,metadata}}
-async function saveContent(publishAfter){saving.value=true;error.value='';notice.value='';try{const p=payload();const status=currentEditing.value?.status||'draft';const r=editingId.value?await contentApi.update(editingId.value,p):await contentApi.create(p);const id=r.data?.id||editingId.value;if(publishAfter&&id&&status!=='published')await contentApi.publish(id);notice.value=publishAfter?(status==='published'?t('content_page.saved_published'):t('content_page.saved_publish')):t('content_page.saved');closeEditor();await loadContents()}catch(e){error.value=message(e)}finally{saving.value=false}}
+async function saveContent(publishAfter) {
+  if (saving.value) return
+  saving.value=true;error.value='';notice.value=''
+  try {
+    const p=payload()
+    const r=editingId.value?await contentApi.update(editingId.value,p):await contentApi.create(p)
+    const record=r.data||r
+    const id=record?.id||editingId.value
+    // Preserve the committed ID/version before the independently failing publish step.
+    if (id) {
+      editingId.value=id
+      const index=items.value.findIndex(item=>String(item.id)===String(id))
+      const saved={...(index>=0?items.value[index]:p),...record,id}
+      if(index>=0)items.value.splice(index,1,saved)
+      else items.value.unshift(saved)
+    }
+    const status=record?.status||currentEditing.value?.status||'draft'
+    if(publishAfter&&id&&status!=='published')await contentApi.publish(id)
+    notice.value=publishAfter?(status==='published'?t('content_page.saved_published'):t('content_page.saved_publish')):t('content_page.saved')
+    closeEditor();await loadContents()
+  } catch(e) { error.value=message(e) }
+  finally { saving.value=false }
+}
 async function scheduleContent(){if(!editingId.value||!scheduleAt.value){error.value=t('content_page.schedule_required');return}error.value='';try{await contentApi.schedule(editingId.value,new Date(scheduleAt.value).toISOString());notice.value=t('content_page.scheduled_notice');await loadContents()}catch(e){error.value=message(e)}}
 async function act(fn){error.value='';try{await fn();notice.value=t('content_page.operation_done');await loadContents()}catch(e){error.value=message(e)}}
 const publishContent=i=>act(()=>contentApi.publish(i.id));const restoreContent=i=>act(()=>contentApi.restore(i.id));const trashContent=i=>{if(!confirm(t('content_page.trash_confirm')))return;return act(()=>contentApi.trash(i.id))}
 function openHistory(item){const base=window.location.pathname.replace(/\/content\/?$/,'');window.history.pushState({},'',`${base}/revisions?content=${encodeURIComponent(item.id)}`);window.dispatchEvent(new PopStateEvent('popstate'))}
-function toggleSelected(id){const value=String(id);selected.value=selected.value.includes(value)?selected.value.filter(v=>v!==value):[...selected.value,value]}
-function toggleAll(){selected.value=allSelected.value?[]:items.value.map(item=>String(item.id))}
-async function runBulk(){if(!bulkAction.value||!selected.value.length)return;if(!confirm(t('content_page.bulk_confirm',{count:selected.value.length})))return;bulkBusy.value=true;error.value='';let done=0;try{for(const id of [...selected.value]){if(bulkAction.value==='publish')await contentApi.publish(id);else if(bulkAction.value==='restore')await contentApi.restore(id);else await contentApi.trash(id);done++}notice.value=t('content_page.processed',{count:done});selected.value=[];await loadContents()}catch(e){error.value=`${message(e)} (${t('content_page.processed_before_error',{count:done})})`}finally{bulkBusy.value=false}}
+function toggleSelected(id){if(bulkBusy.value)return;const value=String(id);selected.value=selected.value.includes(value)?selected.value.filter(v=>v!==value):[...selected.value,value]}
+function toggleAll(){if(bulkBusy.value)return;selected.value=allSelected.value?[]:items.value.map(item=>String(item.id))}
+async function runBulk() {
+  if(bulkBusy.value)return
+  const action=bulkAction.value
+  const ids=[...new Set(selected.value)]
+  if(!['publish','restore','trash'].includes(action)||!ids.length)return
+  if(!confirm(t('content_page.bulk_confirm',{count:ids.length})))return
+  bulkBusy.value=true;error.value='';notice.value=''
+  const completed=new Set()
+  let failure=''
+  try {
+    for(const id of ids) {
+      if(action==='publish')await contentApi.publish(id)
+      else if(action==='restore')await contentApi.restore(id)
+      else await contentApi.trash(id)
+      completed.add(id)
+    }
+    notice.value=t('content_page.processed',{count:completed.size})
+  } catch(e) {
+    failure=`${message(e)} (${t('content_page.processed_before_error',{count:completed.size})})`
+  } finally {
+    selected.value=selected.value.filter(id=>!completed.has(id))
+    await loadContents()
+    if(failure)error.value=error.value?`${failure} — ${error.value}`:failure
+    bulkBusy.value=false
+  }
+}
 function nextPage(){if(!pagination.has_more)return;pagination.offset+=pagination.limit;loadContents()}
 function prevPage(){if(pagination.offset<=0)return;pagination.offset=Math.max(0,pagination.offset-pagination.limit);loadContents()}
 function typeLabel(key){const type=types.value.find(item=>item.key===key);return type?.singular_label||type?.label||key||'—'}

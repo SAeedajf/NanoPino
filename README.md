@@ -82,7 +82,7 @@ Pincore and vendor code must not be modified for NanoPino business logic.
 - Vite
 - RTL/LTR-aware i18n
 
-## RC11 validation baseline
+## Historical RC11 validation baseline
 
 - Native Pinoox update RC10 → RC11: PASS
 - Native Pinoox fresh-install baseline: PASS
@@ -98,3 +98,7 @@ Pincore and vendor code must not be modified for NanoPino business logic.
 - Source/dist parity: PASS
 
 RC11 is still a release candidate and is not Stable 1.0.
+
+## Current audit and corrective branch
+
+See [the 2026-09-06 audit](docs/audit/2026-09-06-NANOPINO-AUDIT.md) for reproduced state-integrity defects, corrections, evidence limits and all 25 phase gates. The historical checks above do not certify subsequent commits. Stable 1.0 remains blocked by native lifecycle/database recovery, authorization isolation, documentation and authenticated browser verification.

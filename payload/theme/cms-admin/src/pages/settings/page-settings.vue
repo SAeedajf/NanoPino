@@ -2,14 +2,14 @@
   <LPage icon="settings" class="cms-settings-center">
     <div class="settings-toolbar">
       <input v-model="search" class="settings-input" type="search" :placeholder="t('settings_page.search_placeholder')" :aria-label="t('a11y.settings_search')" />
-      <LButton :disabled="!dirtyCount || savingAll" @click="saveAll">
+      <LButton :disabled="!dirtyCount || savingAll || mutating || loading" @click="saveAll">
         {{ savingAll ? t('settings_page.saving') : `${t('settings_page.save_all')}${dirtyCount ? ` (${dirtyCount})` : ''}` }}
       </LButton>
-      <LButton severity="secondary" @click="load">{{ t('settings_page.refresh') }}</LButton>
+      <LButton severity="secondary" :disabled="loading || mutating || savingAll" @click="load">{{ t('settings_page.refresh') }}</LButton>
     </div>
 
-    <div v-if="error" class="settings-alert settings-alert--error">{{ error }}</div>
-    <div v-if="notice" class="settings-alert settings-alert--ok">{{ notice }}</div>
+    <div v-if="error" role="alert" class="settings-alert settings-alert--error">{{ error }}</div>
+    <div v-if="notice" role="status" aria-live="polite" class="settings-alert settings-alert--ok">{{ notice }}</div>
 
     <div class="settings-shell">
       <aside class="settings-nav" :aria-label="t('a11y.settings_groups')">
@@ -46,7 +46,7 @@
             <input v-else v-model="drafts[item.key]" class="settings-input" :type="numeric(item) ? 'number' : item.sensitive ? 'password' : 'text'" :min="item.ui?.min" :max="item.ui?.max" :step="item.ui?.step" :aria-label="item.label || item.key" :aria-describedby="`setting-help-${safeId(item.key)}`" />
           </div>
 
-          <div class="setting-actions"><LButton :disabled="!isDirty(item)" @click="saveOne(item)">{{ t('settings_page.save') }}</LButton><LButton severity="secondary" @click="reset(item)">{{ t('settings_page.reset') }}</LButton><small>{{ item.version ? t('settings_page.version', { version: item.version }) : t('settings_page.default_value') }}</small></div>
+          <div class="setting-actions"><LButton :disabled="!isDirty(item) || savingAll || mutating || loading" @click="saveOne(item)">{{ t('settings_page.save') }}</LButton><LButton severity="secondary" :disabled="loading || mutating || savingAll" @click="reset(item)">{{ t('settings_page.reset') }}</LButton><small>{{ item.version ? t('settings_page.version', { version: item.version }) : t('settings_page.default_value') }}</small></div>
           <details class="setting-details"><summary>{{ t('settings_page.technical_details') }}</summary><div><code>{{ item.key }}</code><span>Owner: {{ item.owner }}</span><span>Type: {{ item.type }}</span><span>Scopes: {{ (item.scopes || []).join(', ') }}</span></div></details>
         </article>
 
@@ -64,7 +64,7 @@ import { t } from '../../i18n/index.js'
 import { settingsApi } from '../../services/cms-api.js'
 
 const GROUPS={general:{label:t('settings_page.general'),icon:'settings-2',description:t('settings_page.general_desc')},localization:{label:t('settings_page.localization'),icon:'languages',description:t('settings_page.localization_desc')},admin:{label:t('settings_page.admin'),icon:'panel-top',description:t('settings_page.admin_desc')},diagnostics:{label:t('settings_page.diagnostics'),icon:'scan-search',description:t('settings_page.diagnostics_desc')},api:{label:t('settings_page.api'),icon:'waypoints',description:t('settings_page.api_desc')},appearance:{label:t('settings_page.appearance'),icon:'palette',description:t('settings_page.appearance_desc')}}
-const items=ref([]),drafts=ref({}),originals=ref({}),activeGroup=ref('general'),search=ref(''),loading=ref(false),savingAll=ref(false),error=ref(''),notice=ref('')
+const items=ref([]),drafts=ref({}),originals=ref({}),activeGroup=ref('general'),search=ref(''),loading=ref(false),savingAll=ref(false),mutating=ref(false),error=ref(''),notice=ref('')
 const meta=id=>GROUPS[id]||{label:id||t('settings_page.other'),icon:'circle-help',description:t('settings_page.core_extension_settings')}
 const groups=computed(()=>{const ids=[...new Set(items.value.map(i=>i.group))];return ids.map(id=>({id,...meta(id),count:items.value.filter(i=>i.group===id).length}))})
 const activeMeta=computed(()=>meta(activeGroup.value))
@@ -74,14 +74,80 @@ const timezones=computed(()=>{try{return Intl.supportedValuesOf?.('timeZone')||[
 function safeId(value){return String(value||'setting').replace(/[^A-Za-z0-9_-]+/g,'-')}
 function clone(item){if(item.type==='json')return JSON.stringify(item.value??{},null,2);if(item.type==='string_list')return Array.isArray(item.value)?item.value.join(', '):'';return item.value}
 function comparable(item,v){if(item.type==='json'){try{return JSON.stringify(JSON.parse(v))}catch{return String(v)}}if(item.type==='boolean')return v?'1':'0';if(['integer','number','float'].includes(item.type))return String(Number(v));return String(v??'')}
-function isDirty(item){return comparable(item,drafts.value[item.key])!==originals.value[item.key]}
 function numeric(item){return ['integer','number','float'].includes(item.type)}
-function valueOf(item){const v=drafts.value[item.key];if(item.type==='json')return JSON.parse(v||'{}');if(item.type==='string_list')return String(v||'').split(',').map(x=>x.trim()).filter(Boolean);if(item.type==='boolean')return Boolean(v);if(numeric(item))return Number(v);return v}
-async function load(){loading.value=true;error.value='';try{const r=await settingsApi.list();items.value=(r.data?.items||[]).slice().sort((a,b)=>String(a.group).localeCompare(String(b.group))||Number(a.ui?.order||999)-Number(b.ui?.order||999));const d={},o={};for(const i of items.value){d[i.key]=clone(i);o[i.key]=comparable(i,d[i.key])}drafts.value=d;originals.value=o;if(!groups.value.some(g=>g.id===activeGroup.value))activeGroup.value=groups.value[0]?.id||'general'}catch(e){error.value=e.message}finally{loading.value=false}}
-async function save(item){const s=item.scope||{};await settingsApi.update(item.key,{value:valueOf(item),scope_type:s.type||'site',scope_id:s.id??1,expected_version:item.version||null})}
-async function saveOne(item){try{await save(item);notice.value=t('settings_page.saved_one',{label:item.label||item.key});await load()}catch(e){error.value=e.message}}
-async function saveAll(){const dirty=items.value.filter(isDirty);if(!dirty.length)return;savingAll.value=true;try{for(const item of dirty)await save(item);notice.value=t('settings_page.saved_many',{count:dirty.length});await load()}catch(e){error.value=e.message}finally{savingAll.value=false}}
-async function reset(item){try{const s=item.scope||{};await settingsApi.reset(item.key,{scope_type:s.type||'site',scope_id:s.id??1,expected_version:item.version||null});notice.value=t('settings_page.reset_notice',{label:item.label||item.key});await load()}catch(e){error.value=e.message}}
+async function load() {
+        if (loading.value || mutating.value || savingAll.value) return
+        loading.value = true; error.value = ''
+        try {
+          const data = (await settingsApi.list()).data
+          // Reconcile at response time so edits made during the request survive.
+          const retained = new Map(items.value.filter(item => isDirty(item)).map(item => [item.key, drafts.value[item.key]]))
+          items.value = (data.items || []).slice().sort((a,b) => (a.group || '').localeCompare(b.group || '') || Number(a.ui?.order || 999) - Number(b.ui?.order || 999))
+          const nextDrafts = {}, nextOriginals = {}
+          for (const item of items.value) {
+            const value = clone(item)
+            nextDrafts[item.key] = retained.has(item.key) ? retained.get(item.key) : value
+            nextOriginals[item.key] = comparable(item, value)
+          }
+          drafts.value = nextDrafts; originals.value = nextOriginals
+          if (!groups.value.some(g => g.id === activeGroup.value)) activeGroup.value = groups.value[0]?.id || 'general'
+        } catch (e) { error.value = e.message } finally { loading.value = false }
+}
+function isDirty(item) { return comparable(item, drafts.value[item.key]) !== originals.value[item.key] }
+function valueOf(item) {
+        const value = drafts.value[item.key]
+        if (item.type === 'boolean') return value === true || value === 'true' || value === 1 || value === '1'
+        if (item.type === 'number' || item.type === 'integer' || item.type === 'float') return Number(value)
+        if (item.type === 'json') {
+          try { return JSON.parse(value) } catch { throw new Error(t('content_page.json_invalid', {field: item.label || item.key})) }
+        }
+        if (item.type === 'string_list') return String(value ?? '').split(',').map(v => v.trim()).filter(Boolean)
+        return value
+}
+function reconcile(item, response, submitted) {
+        const unchanged = comparable(item, drafts.value[item.key]) === submitted
+        Object.assign(item, response)
+        const saved = clone(item)
+        originals.value[item.key] = comparable(item, saved)
+        if (unchanged) drafts.value[item.key] = saved
+}
+async function save(item) {
+        const scope = item.scope || {}, submitted = comparable(item, drafts.value[item.key])
+        const result = (await settingsApi.update(item.key, { value: valueOf(item), scope_type: scope.type || 'site', scope_id: scope.id ?? 1, expected_version: item.version ?? null })).data
+        reconcile(item, result, submitted)
+}
+async function saveAll() {
+        if (mutating.value || savingAll.value || loading.value) return
+        const dirty = items.value.filter(item => isDirty(item)); if (!dirty.length) return
+        savingAll.value = true; error.value = ''; notice.value = ''
+        try {
+          // Validate the entire batch before the first write.
+          for (const item of dirty) valueOf(item)
+          for (const item of dirty) await save(item)
+          notice.value = t('settings_page.saved_many',{count:dirty.length})
+        } catch (e) { error.value = e.message } finally { savingAll.value = false }
+}
+async function saveOne(item) {
+        if (mutating.value || savingAll.value || loading.value) return
+        mutating.value = true; error.value = ''; notice.value = ''
+        try { await save(item); notice.value = t('settings_page.saved_one',{label:item.label||item.key}) }
+        catch (e) { error.value = e.message } finally { mutating.value = false }
+}
+async function reset(item) {
+        if (mutating.value || savingAll.value || loading.value) return
+        mutating.value = true; error.value = ''; notice.value = ''
+        const submitted = comparable(item, drafts.value[item.key])
+        try {
+          const scope = item.scope || {}, path = `/settings/${encodeURIComponent(item.key)}`
+          await settingsApi.reset(item.key, { scope_type: scope.type || 'site', scope_id: scope.id ?? 1, expected_version: item.version ?? null })
+          item.version = null
+          // A reset may inherit a parent value rather than the registry default.
+          const query = new URLSearchParams({scope_type: scope.type || 'site', scope_id: String(scope.id ?? 1)})
+          const resolved = (await settingsApi.read(item.key, query)).data
+          reconcile(item, resolved, submitted)
+          notice.value = t('settings_page.reset_notice',{label:item.label||item.key})
+        } catch (e) { error.value = e.message } finally { mutating.value = false }
+}
 function selectGroup(id){activeGroup.value=id;search.value=''}
 function go(path){history.pushState({},'',path);dispatchEvent(new PopStateEvent('popstate'))}
 onMounted(load)

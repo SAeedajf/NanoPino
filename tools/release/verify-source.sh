@@ -6,16 +6,19 @@ ADMIN="$ROOT/payload/theme/cms-admin"
 
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-command -v php >/dev/null || fail 'php is required'
+PHP_BIN="${PHP_BIN:-php}"
+export PHP_BIN
+command -v "$PHP_BIN" >/dev/null || fail 'php is required'
 command -v node >/dev/null || fail 'node is required'
 command -v npm >/dev/null || fail 'npm is required'
+command -v python3 >/dev/null || fail 'python3 is required'
 
 if find "$ROOT" -type f \( -name '*.pinx' -o -name '*.zip' \) -not -path "$ROOT/.git/*" | grep -q .; then
   fail 'Packaged artifacts must not be stored in the source repository.'
 fi
 
-php -l "$ROOT/payload/app.php" >/dev/null
-php -r '
+"$PHP_BIN" -l "$ROOT/payload/app.php" >/dev/null
+"$PHP_BIN" -r '
 $root=$argv[1];
 $app=require $root."/payload/app.php";
 $manifest=json_decode(file_get_contents($root."/manifest.json"),true,512,JSON_THROW_ON_ERROR);
@@ -33,12 +36,12 @@ printf("release_metadata=PASS version=%s code=%d\n",$app["version-name"],$app["v
 
 python3 - "$ROOT/payload" <<'PY'
 from pathlib import Path
-import subprocess, sys
+import os, subprocess, sys
 root=Path(sys.argv[1])
 files=list(root.rglob('*.php'))
 bad=[]
 for p in files:
-    r=subprocess.run(['php','-l',str(p)],capture_output=True,text=True)
+    r=subprocess.run([os.environ['PHP_BIN'],'-l',str(p)],capture_output=True,text=True)
     if r.returncode: bad.append((p,(r.stdout+r.stderr).strip()))
 print(f'php_lint={len(files)-len(bad)}/{len(files)}')
 for p,e in bad[:20]: print(p,e,file=sys.stderr)
@@ -46,7 +49,9 @@ sys.exit(1 if bad else 0)
 PY
 
 cd "$ADMIN"
-npm test
+node run-tests.mjs
+node source-fingerprint.mjs
+node runtime-fingerprint.mjs --check
 node verify-dist.mjs
 
 printf 'source_verification=PASS\n'

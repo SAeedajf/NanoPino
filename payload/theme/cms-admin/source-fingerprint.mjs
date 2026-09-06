@@ -14,6 +14,7 @@ const root = resolve('.')
 const candidates = ['src', 'public']
 const explicit = [
   'package.json',
+  'package-lock.json',
   'vite.config.js',
   'verify-dist.mjs',
   'source-fingerprint.mjs',

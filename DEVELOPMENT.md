@@ -71,8 +71,8 @@ apps/com_pinoox_cms/
 The package metadata remains:
 
 - package: `com_pinoox_cms`
-- version: `0.23.26`
-- version code: `2326`
+- version: `0.23.27`
+- version code: `2327`
 - minimum kernel: `205`
 
 ## 6. Building PINX locally

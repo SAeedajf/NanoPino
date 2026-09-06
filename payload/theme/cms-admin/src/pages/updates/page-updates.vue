@@ -7,7 +7,7 @@
           <option v-for="item in extensions" :key="item.id" :value="item.id">{{ item.name || item.id }}</option>
         </select>
         <LButton icon="refresh-cw" variant="outline" :disabled="loading || !extensionId" @click="load">{{ t('common.refresh') }}</LButton>
-        <LButton icon="save" :disabled="saving || !extensionId" @click="savePolicy">{{ saving ? t('common.saving') : t('common.save') }}</LButton>
+        <LButton icon="save" :disabled="saving || !extensionId" @click="savePolicy">{{ saving ? t('updates_page.saving') : t('common.save') }}</LButton>
       </div>
     </template>
 
@@ -147,7 +147,7 @@ async function savePolicy() {
   try {
     const response = await updateApi.savePolicy(extensionId.value, { ...policy })
     applyPolicy(response.data || {})
-    notice.value = t('common.saved')
+    notice.value = t('updates_page.saved')
   } catch (e) {
     error.value = e.message
   } finally {

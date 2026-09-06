@@ -136,3 +136,18 @@ PHP_BIN=php8.4 tools/release/verify-source.sh
 ```
 
 برای PINX فقط build native در محیط جداگانه و تست fresh-install/update/rollback با DB آزمایشی؛ گزارش تاریخی RC11 جای اجرای این شاخه را نمی‌گیرد. تغییرات فاقد DB migration و تغییر قرارداد backend هستند؛ شماره نسخه RC11 عمداً به‌عنوان baseline حفظ شده و شاخه، release جدید نیست.
+
+
+## Continuation status after the baseline audit
+
+The original tables above preserve the 2026-09-06 baseline and should not be read as the current branch status.
+
+Subsequent merged hardening closed or materially reduced several original items:
+- **O01 structural documentation gap:** required documentation paths are now 30/30 and CI checks completeness.
+- **O02 extension failure path:** install/update/uninstall exceptions now converge on recovery and fail-closed quarantine.
+- **O03 migration rollback risk:** unsafe migration-file-count rollback was replaced with bounded package migration-state compensation. Full database snapshot/restore is still open.
+- **O04 platform_super:** not disabled; R12 adds a real account/role readiness audit so cutover cannot be claimed before explicit roles are proven.
+- **O05 SSRF/CSP:** guarded Remote Search transport is bound when explicitly configured; admin shell is nonce-ready. CSP still remains report-only until browser E2E.
+- **O06 PHP tests:** R13 adds executable PHP domain tests and a PHP 8.2–8.5 CI matrix. Controlled Pinoox/database/API integration remains open.
+
+Stable 1.0 remains blocked by the target-runtime and browser/database evidence documented in the release gate.

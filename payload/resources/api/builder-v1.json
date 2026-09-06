@@ -5,6 +5,26 @@
   "routes": [
     {
       "method": "GET",
+      "path": "/api/v1/cms/builder/global-blocks",
+      "capability": "builder.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/builder/global-blocks",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/builder/global-blocks/{id}",
+      "capability": "builder.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/builder/global-blocks/{id}",
+      "capability": "builder.edit"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/cms/builder",
       "capability": "builder.read"
     },

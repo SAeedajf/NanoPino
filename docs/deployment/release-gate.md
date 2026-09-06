@@ -22,3 +22,9 @@ Before setting `platform_super=false`, Security Center must report zero implicit
 Repository validation now includes an executable PHP suite across PHP 8.2, 8.3, 8.4 and 8.5. The release verification job also runs the same suite after full payload lint.
 
 This closes the previous “PHP lint only” gap for framework-independent NanoPino domain behavior. It does not replace controlled Pinoox/database integration, signed PINX lifecycle testing or browser E2E; those remain Stable release gates.
+
+
+## R14 native PINX lifecycle gate
+Repository CI now requires a clean Pinoox + MySQL lifecycle after source verification. A candidate cannot pass the repository gate unless native platform installation, PINX build, fresh install, force-update and uninstall all complete successfully and the CMS table count remains stable across update and returns to zero after uninstall.
+
+This materially closes the previous “no real Pinoox/DB package lifecycle” gap for unsigned packages in CI. Signed trust-chain validation, fault-injected recovery and target-host/browser E2E remain separate Stable gates.

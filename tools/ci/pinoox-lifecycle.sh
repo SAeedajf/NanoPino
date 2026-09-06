@@ -6,6 +6,10 @@ PINOX_ROOT="${PINOX_ROOT:?PINOX_ROOT is required}"
 PHP_BIN="${PHP_BIN:-php}"
 OUTPUT="${NANOPINO_PINX_OUTPUT:-${RUNNER_TEMP:-/tmp}/NanoPino-e2e.pinx}"
 PACKAGE="com_pinoox_cms"
+DB_PREFIX="${DB_PREFIX:-pinx_}"
+UPGRADE_BASE_REF="${NANOPINO_UPGRADE_BASE_REF:-}"
+BASE_ROOT="${RUNNER_TEMP:-/tmp}/nanopino-upgrade-base"
+BASE_OUTPUT="${RUNNER_TEMP:-/tmp}/NanoPino-upgrade-base.pinx"
 
 : "${DB_HOST:?DB_HOST is required}"
 : "${DB_PORT:?DB_PORT is required}"
@@ -15,6 +19,13 @@ PACKAGE="com_pinoox_cms"
 : "${NANOPINO_CI_ADMIN_PASSWORD:?NANOPINO_CI_ADMIN_PASSWORD is required}"
 
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+cleanup() {
+  if git -C "$ROOT" worktree list --porcelain 2>/dev/null | grep -Fq "worktree $BASE_ROOT"; then
+    git -C "$ROOT" worktree remove --force "$BASE_ROOT" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
 
 [[ -f "$PINOX_ROOT/pinoox" ]] || fail "Invalid Pinoox root."
 [[ -f "$ROOT/manifest.json" ]] || fail "NanoPino manifest missing."
@@ -31,7 +42,7 @@ $payload=[
     "database"=>getenv("DB_DATABASE"),
     "username"=>getenv("DB_USERNAME"),
     "password"=>getenv("DB_PASSWORD"),
-    "prefix"=>"pinx_",
+    "prefix"=>getenv("DB_PREFIX") ?: "pinx_",
     "timezone"=>"+00:00",
   ],
   "user"=>[
@@ -49,20 +60,19 @@ cd "$PINOX_ROOT"
 "$PHP_BIN" pinoox install-platform check --file=.pinoox/install-platform.php
 "$PHP_BIN" pinoox install-platform run --file=.pinoox/install-platform.php --remove
 
-cd "$ROOT"
-PHP_BIN="$PHP_BIN" "$ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$OUTPUT"
-[[ -s "$OUTPUT" ]] || fail "PINX output was not created."
+build_current() {
+  cd "$ROOT"
+  PHP_BIN="$PHP_BIN" "$ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$OUTPUT"
+  [[ -s "$OUTPUT" ]] || fail "Current PINX output was not created."
+}
 
-cd "$PINOX_ROOT"
-"$PHP_BIN" pinoox pinx:install "$OUTPUT" --force
-
-"$PHP_BIN" -r '
-$app=require $argv[1];
-$manifest=json_decode(file_get_contents($argv[2]),true,512,JSON_THROW_ON_ERROR);
-if (($app["package"]??null)!==($manifest["package"]??null)) exit(2);
-if (($app["version-name"]??null)!==($manifest["version_name"]??null)) exit(3);
-if ((int)($app["version-code"]??0)!==(int)($manifest["version_code"]??0)) exit(4);
-' "$PINOX_ROOT/apps/$PACKAGE/app.php" "$ROOT/manifest.json"
+build_upgrade_base() {
+  [[ -n "$UPGRADE_BASE_REF" ]] || return 0
+  rm -rf "$BASE_ROOT"
+  git -C "$ROOT" worktree add --detach "$BASE_ROOT" "$UPGRADE_BASE_REF"
+  PHP_BIN="$PHP_BIN" "$BASE_ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$BASE_OUTPUT"
+  [[ -s "$BASE_OUTPUT" ]] || fail "Upgrade-base PINX output was not created."
+}
 
 cms_table_count() {
   "$PHP_BIN" -r '
@@ -80,25 +90,99 @@ cms_table_count() {
   '
 }
 
+migration_record_count() {
+  local migration="$1"
+  "$PHP_BIN" -r '
+  $pdo=new PDO(
+    "mysql:host=".getenv("DB_HOST").";port=".getenv("DB_PORT").";dbname=".getenv("DB_DATABASE").";charset=utf8mb4",
+    getenv("DB_USERNAME"),
+    getenv("DB_PASSWORD"),
+    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]
+  );
+  $table=(getenv("DB_PREFIX") ?: "pinx_")."history";
+  $sql="SELECT COUNT(*) FROM `".$table."` WHERE type = ? AND app = ? AND migration = ?";
+  $stmt=$pdo->prepare($sql);
+  $stmt->execute(["migration","com_pinoox_cms",$argv[1]]);
+  echo (int)$stmt->fetchColumn();
+  ' "$migration"
+}
+
 expected_tables="$("$PHP_BIN" -r '
 $m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
 echo (int)($m["cms"]["runtime_schema"]["required_tables"]??0);
 ' "$ROOT/manifest.json")"
+[[ "$expected_tables" -gt 0 ]] || fail "Invalid required table count."
+
+verify_installed_release() {
+  local manifest="$1"
+  "$PHP_BIN" -r '
+  $app=require $argv[1];
+  $manifest=json_decode(file_get_contents($argv[2]),true,512,JSON_THROW_ON_ERROR);
+  if (($app["package"]??null)!==($manifest["package"]??null)) exit(2);
+  if (($app["version-name"]??null)!==($manifest["version_name"]??null)) exit(3);
+  if ((int)($app["version-code"]??0)!==(int)($manifest["version_code"]??0)) exit(4);
+  printf("installed_version=%s code=%d minpin=%d\n",
+      $app["version-name"],
+      (int)$app["version-code"],
+      (int)($app["minpin"]??0)
+  );
+  ' "$PINOX_ROOT/apps/$PACKAGE/app.php" "$manifest"
+}
+
+uninstall_and_assert_clean() {
+  cd "$PINOX_ROOT"
+  "$PHP_BIN" pinoox pinx:uninstall "$PACKAGE" --force --yes
+  [[ ! -e "$PINOX_ROOT/apps/$PACKAGE" ]] || fail "App directory remains after uninstall."
+  local remaining
+  remaining="$(cms_table_count)"
+  [[ "$remaining" -eq 0 ]] || fail "CMS tables remain after uninstall."
+  printf 'uninstall_tables=%s\n' "$remaining"
+}
+
+build_upgrade_base
+build_current
+
+if [[ -n "$UPGRADE_BASE_REF" ]]; then
+  cd "$PINOX_ROOT"
+  "$PHP_BIN" pinoox pinx:install "$BASE_OUTPUT"
+  verify_installed_release "$BASE_ROOT/manifest.json"
+
+  base_tables="$(cms_table_count)"
+  [[ "$base_tables" -ge "$expected_tables" ]] || fail "Upgrade-base install table count is below manifest requirement."
+  printf 'upgrade_base_tables=%s\n' "$base_tables"
+
+  base_version="$("$PHP_BIN" -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR); echo $m["version_name"];' "$BASE_ROOT/manifest.json")"
+  current_version="$("$PHP_BIN" -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR); echo $m["version_name"];' "$ROOT/manifest.json")"
+
+  "$PHP_BIN" pinoox pinx:install "$OUTPUT"
+  verify_installed_release "$ROOT/manifest.json"
+
+  updated_tables="$(cms_table_count)"
+  [[ "$updated_tables" -eq "$base_tables" ]] || fail "Real version update changed CMS table count unexpectedly."
+
+  preflight_records="$(migration_record_count '2026_09_01_000000_preflight_nanopino_environment')"
+  [[ "$preflight_records" -eq 1 ]] || fail "Installability preflight migration was not recorded exactly once after update."
+
+  printf 'upgrade_from_version=%s\n' "$base_version"
+  printf 'upgrade_to_version=%s\n' "$current_version"
+  printf 'upgrade_tables=%s\n' "$updated_tables"
+  printf 'installability_preflight_records=%s\n' "$preflight_records"
+
+  uninstall_and_assert_clean
+fi
+
+cd "$PINOX_ROOT"
+"$PHP_BIN" pinoox pinx:install "$OUTPUT"
+verify_installed_release "$ROOT/manifest.json"
 
 fresh_tables="$(cms_table_count)"
-[[ "$expected_tables" -gt 0 ]] || fail "Invalid required table count."
 [[ "$fresh_tables" -ge "$expected_tables" ]] || fail "Fresh install table count is below manifest requirement."
 printf 'fresh_install_tables=%s\n' "$fresh_tables"
 
-"$PHP_BIN" pinoox pinx:install "$OUTPUT" --force
-updated_tables="$(cms_table_count)"
-[[ "$updated_tables" -eq "$fresh_tables" ]] || fail "Force-update changed CMS table count."
-printf 'force_update_tables=%s\n' "$updated_tables"
+fresh_preflight_records="$(migration_record_count '2026_09_01_000000_preflight_nanopino_environment')"
+[[ "$fresh_preflight_records" -eq 1 ]] || fail "Installability preflight migration was not recorded exactly once on fresh install."
+printf 'fresh_installability_preflight_records=%s\n' "$fresh_preflight_records"
 
-"$PHP_BIN" pinoox pinx:uninstall "$PACKAGE" --force --yes
-[[ ! -e "$PINOX_ROOT/apps/$PACKAGE" ]] || fail "App directory remains after uninstall."
+uninstall_and_assert_clean
 
-remaining_tables="$(cms_table_count)"
-[[ "$remaining_tables" -eq 0 ]] || fail "CMS tables remain after uninstall."
-printf 'uninstall_tables=%s\n' "$remaining_tables"
 printf 'pinoox_lifecycle=PASS pinx=%s\n' "$OUTPUT"

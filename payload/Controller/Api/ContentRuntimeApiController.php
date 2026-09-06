@@ -57,17 +57,29 @@ final class ContentRuntimeApiController extends ApiController
                 ? 0
                 : max(0, min(100000, (int) $query->get('offset', 0)));
 
+            $contentQuery = new ContentQuery(
+                siteId: max(1, (int) $query->get('site_id', 1)),
+                type: trim((string) $query->get('type', '')) ?: null,
+                status: $status,
+                locale: trim((string) $query->get('locale', '')) ?: null,
+                search: trim((string) $query->get('search', '')) ?: null,
+                limit: min(101, $limit + 1),
+                offset: $offset,
+                projection: $projection,
+                beforeId: $beforeId,
+            );
             $fetched = CmsRuntimeServices::content()->search(
+                $contentQuery,
+                CmsRuntimeServices::actorId(),
+            );
+            $total = CmsRuntimeServices::content()->count(
                 new ContentQuery(
-                    siteId: max(1, (int) $query->get('site_id', 1)),
-                    type: trim((string) $query->get('type', '')) ?: null,
-                    status: $status,
-                    locale: trim((string) $query->get('locale', '')) ?: null,
-                    search: trim((string) $query->get('search', '')) ?: null,
-                    limit: min(101, $limit + 1),
-                    offset: $offset,
-                    projection: $projection,
-                    beforeId: $beforeId,
+                    siteId: $contentQuery->siteId,
+                    type: $contentQuery->type,
+                    status: $contentQuery->status,
+                    locale: $contentQuery->locale,
+                    search: $contentQuery->search,
+                    projection: ContentProjection::List,
                 ),
                 CmsRuntimeServices::actorId(),
             );
@@ -86,6 +98,7 @@ final class ContentRuntimeApiController extends ApiController
                         ? $items[array_key_last($items)]->id
                         : null,
                     'returned' => count($items),
+                    'total' => $total,
                     'has_more' => $hasMore,
                 ],
             ]);

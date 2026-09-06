@@ -215,10 +215,28 @@ final readonly class GuardedRemoteSearchTransport implements RemoteSearchTranspo
     {
         $filters = ['site_id = ' . max(1, (int)($payload['site_id'] ?? 1))];
         $locale = trim((string)($payload['locale'] ?? ''));
-        if ($locale !== '') $filters[] = 'locale = "' . addcslashes($locale, "\\"") . '"';
+        if ($locale !== '') {
+            $filters[] = 'locale = "' . $this->meiliQuoted($locale) . '"';
+        }
+
         $types = array_values(array_filter($payload['types'] ?? [], 'is_string'));
-        if ($types !== []) $filters[] = 'type IN [' . implode(',', array_map(static fn(string $v): string => '"' . addcslashes($v, "\\"") . '"', $types)) . ']';
+        if ($types !== []) {
+            $filters[] = 'type IN [' . implode(',', array_map(
+                fn (string $value): string => '"' . $this->meiliQuoted($value) . '"',
+                $types,
+            )) . ']';
+        }
+
         return implode(' AND ', $filters);
+    }
+
+    private function meiliQuoted(string $value): string
+    {
+        return str_replace(
+            ['\\', '"'],
+            ['\\\\', '\\"'],
+            $value,
+        );
     }
 
     private function typesenseFilter(array $payload): string

@@ -27,7 +27,19 @@
         <div><span>Rate Limits</span><LBadge :severity="center.rateLimitsRegistered ? 'success' : 'warning'">{{ center.rateLimitsRegistered ? 'Registered' : 'Unbound' }}</LBadge></div>
         <div><span>Security Headers</span><LBadge :severity="center.headersBound ? 'success' : 'warning'">{{ center.headersBound ? 'Bound' : center.cspMode }}</LBadge></div>
         <div><span>SSRF Transport</span><LBadge :severity="center.ssrfTransportBound ? 'success' : 'warning'">{{ center.ssrfTransportBound ? 'Bound' : 'Unbound' }}</LBadge></div>
+        <div><span>Implicit Platform Super</span><LBadge :severity="center.platformSuperTransition?.platform_super ? 'warning' : 'success'">{{ center.platformSuperTransition?.platform_super ? 'Enabled' : 'Disabled' }}</LBadge></div>
       </div>
+    </LPanel>
+
+    <LPanel>
+      <template #header>Platform Super Transition</template>
+      <div class="cms-security-gates">
+        <div><span>Platform accounts</span><strong>{{ center.platformSuperTransition?.total_platform_accounts ?? '—' }}</strong></div>
+        <div><span>Explicit super accounts</span><strong>{{ center.platformSuperTransition?.explicit_super_accounts ?? '—' }}</strong></div>
+        <div><span>Implicit-only accounts</span><strong>{{ center.platformSuperTransition?.implicit_only_accounts ?? '—' }}</strong></div>
+        <div><span>Transition readiness</span><LBadge :severity="center.platformSuperTransition?.ready ? 'success' : 'warning'">{{ center.platformSuperTransition?.ready ? 'Ready for controlled cutover' : 'Not safe to disable' }}</LBadge></div>
+      </div>
+      <p class="cms-muted">NanoPino does not disable <code>platform_super</code> automatically. A controlled cutover is allowed only after every detected platform account has an explicit super role/group and the target admin session is verified.</p>
     </LPanel>
 
     <LPanel>
@@ -52,7 +64,7 @@ import { securityApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
 const boot = readAdminBootData().securityCenter
-const center = reactive({ ...boot, posture: { ...(boot.posture || {}), counts: { ...(boot.posture?.counts || {}) }, controls: [...(boot.posture?.controls || [])] }, rateLimits: [...(boot.rateLimits || [])], apiMatrix: { ...(boot.apiMatrix || {}) } })
+const center = reactive({ ...boot, posture: { ...(boot.posture || {}), counts: { ...(boot.posture?.counts || {}) }, controls: [...(boot.posture?.controls || [])] }, rateLimits: [...(boot.rateLimits || [])], apiMatrix: { ...(boot.apiMatrix || {}) }, platformSuperTransition: boot.platformSuperTransition || null })
 const loading = ref(false)
 const error = ref('')
 
@@ -67,6 +79,7 @@ async function load() {
     center.headersBound = Boolean(data.runtime?.security_headers)
     center.ssrfTransportBound = Boolean(data.runtime?.ssrf_transport)
     center.cspMode = data.runtime?.csp_mode || center.cspMode
+    center.platformSuperTransition = data.platform_super_transition || center.platformSuperTransition
     center.rateLimits = Array.isArray(data.rate_limits) ? data.rate_limits : []
     center.apiMatrix = data.api_matrix || {}
     center.apiBound = true

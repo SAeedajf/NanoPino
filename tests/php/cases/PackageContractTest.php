@@ -60,6 +60,7 @@ return [
         np_assert_contains('mysql:8.4', $workflow);
         np_assert_contains('PINOOX_E2E_REF:', $workflow);
         np_assert_contains('actions/download-artifact@v4', $workflow);
+        np_assert_contains('include-hidden-files: true', $workflow);
         np_assert_contains('tools/ci/pinoox-lifecycle.sh', $workflow);
 
         np_assert_contains('install-platform run', $lifecycle);

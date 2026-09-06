@@ -117,6 +117,8 @@ return [
         np_assert_contains('pinoox-lifecycle:', $workflow);
         np_assert_contains('mysql:8.4', $workflow);
         np_assert_contains('PINOOX_E2E_REF:', $workflow);
+        np_assert_contains("pincore: ['3.10.0', '3.14.4']", $workflow);
+        np_assert_contains('NANOPINO_UPGRADE_BASE_REF:', $workflow);
         np_assert_contains('actions/download-artifact@v4', $workflow);
         np_assert_contains('include-hidden-files: true', $workflow);
         np_assert_contains('tools/ci/pinoox-lifecycle.sh', $workflow);
@@ -126,7 +128,10 @@ return [
         np_assert_contains('pinx:install', $lifecycle);
         np_assert_contains('pinx:uninstall', $lifecycle);
         np_assert_contains('information_schema.tables', $lifecycle);
-        np_assert_contains('force_update_tables=', $lifecycle);
+        np_assert_contains('upgrade_from_version=', $lifecycle);
+        np_assert_contains('upgrade_to_version=', $lifecycle);
+        np_assert_contains('installability_preflight_records=', $lifecycle);
+        np_assert_contains('fresh_install_tables=', $lifecycle);
         np_assert_contains('uninstall_tables=', $lifecycle);
     },
 

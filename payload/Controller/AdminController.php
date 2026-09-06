@@ -515,7 +515,7 @@ final class AdminController extends Controller
                         ],
                         'updateCenter' => [
                             'api' => UpdateApiContract::routes(),
-                            'apiBound' => false,
+                            'apiBound' => RuntimeBindingState::api(),
                             'channels' => ['stable', 'beta', 'development'],
                             'autoUpdateModes' => ['disabled', 'security_only', 'patch_only', 'enabled'],
                             'policies' => [],
@@ -539,7 +539,7 @@ final class AdminController extends Controller
                         ],
                         'infrastructure' => [
                             'api' => InfrastructureApiContract::routes(),
-                            'apiBound' => false,
+                            'apiBound' => RuntimeBindingState::api(),
                             'drivers' => $driverDefinitions,
                             'cacheLayers' => ['object','query','page','api','builder_render'],
                             'search' => [
@@ -547,7 +547,7 @@ final class AdminController extends Controller
                                 'fallback' => 'search.database',
                                 'remote' => ['search.meilisearch','search.typesense'],
                                 'api' => SearchApiContract::routes(),
-                                'apiBound' => false,
+                                'apiBound' => RuntimeBindingState::api(),
                             ],
                             'cache' => [
                                 'active' => 'cache.pinoox',
@@ -593,13 +593,7 @@ final class AdminController extends Controller
                                 'onRoute','onApi','onPath','onAction','onController','onModel','onTheme',
                             ],
                             'apiBase' => '/api/v1/extensions/{package}',
-                            'starters' => [
-                                ['id'=>'plugin','label'=>'Plugin Starter','path'=>'examples/sdk/plugin-starter'],
-                                ['id'=>'module','label'=>'Module Starter','path'=>'examples/sdk/module-starter'],
-                                ['id'=>'theme','label'=>'Theme Starter','path'=>'examples/sdk/theme-starter'],
-                                ['id'=>'block-pack','label'=>'Block Pack Starter','path'=>'examples/sdk/block-pack-starter'],
-                                ['id'=>'admin-extension','label'=>'Admin Extension Starter','path'=>'examples/sdk/admin-extension-starter'],
-                            ],
+                            'starters' => [],
                             'packageValidator' => true,
                             'testHarness' => true,
                             'coreEdits' => false,
@@ -608,7 +602,7 @@ final class AdminController extends Controller
                             'api' => SystemHealthApiContract::routes(),
                             'apiBound' => RuntimeBindingState::api(),
                             'overall' => $healthRunner->overall($healthResults)->value,
-                            'historyBound' => false,
+                            'historyBound' => RuntimeBindingState::api(),
                             'logsBound' => true,
                             'supportBundleBound' => RuntimeBindingState::api(),
                             'checks' => $healthRows,
@@ -620,7 +614,7 @@ final class AdminController extends Controller
                         ],
                         'performanceCenter' => [
                             'api' => PerformanceApiContract::routes(),
-                            'apiBound' => false,
+                            'apiBound' => RuntimeBindingState::api(),
                             'profile' => 'shared_hosting',
                             'budgets' => $performanceBudgets,
                             'metrics' => [],

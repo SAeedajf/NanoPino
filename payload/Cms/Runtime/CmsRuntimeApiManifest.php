@@ -6,6 +6,7 @@ namespace App\com_pinoox_cms\Cms\Runtime;
 use App\com_pinoox_cms\Controller\Api\BuilderRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ContentRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ExtensionRuntimeApiController;
+use App\com_pinoox_cms\Controller\Api\GlobalBlockRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\MediaApiController;
 use App\com_pinoox_cms\Controller\Api\SearchRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\InfrastructureRuntimeApiController;
@@ -68,6 +69,10 @@ final class CmsRuntimeApiManifest
                 self::route('POST','/themes/activate',[ThemeRuntimeApiController::class,'activate'],'cms.themes.activate','themes.activate','cms.api.write',true),
 
                 // Builder / FSE
+                self::route('GET','/builder/global-blocks',[GlobalBlockRuntimeApiController::class,'index'],'cms.builder.global-blocks.index','builder.read','cms.api.read'),
+                self::route('POST','/builder/global-blocks',[GlobalBlockRuntimeApiController::class,'create'],'cms.builder.global-blocks.create','builder.edit','cms.api.write',true),
+                self::route('GET','/builder/global-blocks/{id}',[GlobalBlockRuntimeApiController::class,'show'],'cms.builder.global-blocks.show','builder.read','cms.api.read',false,['id'=>'\d+']),
+                self::route('PUT','/builder/global-blocks/{id}',[GlobalBlockRuntimeApiController::class,'update'],'cms.builder.global-blocks.update','builder.edit','cms.api.write',true,['id'=>'\d+']),
                 self::route('GET','/builder',[BuilderRuntimeApiController::class,'index'],'cms.builder.index','builder.read','cms.api.read'),
                 self::route('POST','/builder/open',[BuilderRuntimeApiController::class,'open'],'cms.builder.open','builder.edit','cms.api.write',true),
                 self::route('POST','/builder',[BuilderRuntimeApiController::class,'create'],'cms.builder.create','builder.edit','cms.api.write',true),

@@ -1,153 +1,110 @@
 <template>
   <LPage icon="server" class="cms-infrastructure-page">
+    <template #actions><LButton icon="refresh-cw" variant="outline" :loading="loading" @click="load">{{ t('common.refresh') }}</LButton></template>
+    <div v-if="error" class="cms-alert cms-alert--danger" role="alert">{{ error }}</div>
+    <div v-if="notice" class="cms-alert cms-alert--success" aria-live="polite">{{ notice }}</div>
+
     <div class="cms-stat-grid cms-stat-grid--three">
-      <LStatCard label="Driver" :value="infra.drivers.length" icon="plug-zap" />
-      <LStatCard label="Queue Mode" :value="infra.queue.mode" icon="list-todo" />
-      <LStatCard label="API" :value="infra.apiBound ? 'Bound' : 'Contract'" icon="waypoints" />
+      <LStatCard label="Drivers" :value="snapshot.drivers?.length || 0" icon="plug-zap" />
+      <LStatCard label="Queue" :value="queue.healthy === false ? 'Attention' : 'Live'" icon="list-todo" />
+      <LStatCard label="Failed Jobs" :value="queue.stats?.failed || 0" icon="triangle-alert" />
     </div>
-
-    <LPanel>
-      <template #header>Runtime Boundary</template>
-      <div class="cms-infrastructure-boundary">
-        <article>
-          <LBadge severity="success">Reuse</LBadge>
-          <strong>Cache → Pinoox Cache</strong>
-          <small>{{ t('infrastructure_page.cache_note') }}</small>
-        </article>
-        <article>
-          <LBadge severity="success">Reuse</LBadge>
-          <strong>Storage → Pinoox Storage</strong>
-          <small>{{ t('infrastructure_page.storage_note') }}</small>
-        </article>
-        <article>
-          <LBadge severity="success">Reuse</LBadge>
-          <strong>Scheduler → Pinoox ScheduleRegistry</strong>
-          <small>{{ t('infrastructure_page.scheduler_note') }}</small>
-        </article>
-        <article>
-          <LBadge severity="info">CMS</LBadge>
-          <strong>Queue → CMS Durable Queue</strong>
-          <small>{{ t('infrastructure_page.queue_note') }}</small>
-        </article>
-      </div>
-    </LPanel>
-
-    <LPanel>
-      <template #header>Drivers</template>
-
-      <div class="cms-mobile-only cms-driver-cards">
-        <article v-for="driver in infra.drivers" :key="driver.id" class="cms-list-card cms-list-card--wide">
-          <div>
-            <strong>{{ driver.label }}</strong>
-            <small>{{ driver.id }}</small>
-          </div>
-          <LBadge severity="secondary">{{ driver.kind }}</LBadge>
-        </article>
-      </div>
-
-      <LPanel flush bare class="cms-desktop-only">
-        <LDataTable :value="infra.drivers" data-key="id">
-          <Column field="label" header="Driver" />
-          <Column field="id" header="ID" />
-          <Column field="kind" header="Kind" />
-          <Column field="owner" header="Owner" />
-        </LDataTable>
-      </LPanel>
-    </LPanel>
 
     <div class="cms-infrastructure-grid">
-      <LPanel>
-        <template #header>Search</template>
-        <div class="cms-infrastructure-detail">
-          <span>Fallback</span><strong>{{ infra.search.fallback }}</strong>
-          <span>Remote adapters</span>
-          <div class="cms-capability-cloud">
-            <LBadge v-for="driver in infra.search.remote" :key="driver" severity="secondary">{{ driver }}</LBadge>
-          </div>
-          <small>{{ t('infrastructure_page.remote_provider_note') }}</small>
-          <div class="cms-api-status">
-            <LBadge :severity="infra.search.apiBound ? 'success' : 'warning'">
-              {{ infra.search.apiBound ? 'Search API Bound' : 'Search API Contract' }}
-            </LBadge>
-            <code>/api/v1/cms/search</code>
-          </div>
-        </div>
-      </LPanel>
-
-      <LPanel>
-        <template #header>Cache</template>
-        <div class="cms-infrastructure-detail">
-          <span>Adapter</span><strong>{{ infra.cache.active }}</strong>
-          <span>Stores</span><strong>{{ infra.cache.nativeStores.join(' / ') }}</strong>
-          <span>Invalidation</span><strong>{{ infra.cache.tagInvalidation }}</strong>
-        </div>
-      </LPanel>
-
-      <LPanel>
-        <template #header>Queue</template>
-        <div class="cms-infrastructure-detail">
-          <span>Driver</span><strong>{{ infra.queue.active }}</strong>
-          <span>Mode</span><strong>{{ infra.queue.mode }}</strong>
-          <span>{{ t('infrastructure_page.without_worker') }}</span><strong>{{ infra.queue.sharedHostingFallback }}</strong>
-          <small>{{ t('infrastructure_page.async_fail_closed') }}</small>
-        </div>
-      </LPanel>
-
-      <LPanel>
-        <template #header>Storage</template>
-        <div class="cms-infrastructure-detail">
-          <span>Adapter</span><strong>{{ infra.storage.active }}</strong>
-          <span>Native drivers</span>
-          <div class="cms-capability-cloud">
-            <LBadge v-for="driver in infra.storage.nativeDrivers" :key="driver" severity="secondary">{{ driver }}</LBadge>
-          </div>
-        </div>
-      </LPanel>
+      <LPanel><template #header>Search</template><pre class="cms-code-preview">{{ pretty(snapshot.search) }}</pre></LPanel>
+      <LPanel><template #header>Cache</template><pre class="cms-code-preview">{{ pretty(snapshot.cache) }}</pre></LPanel>
+      <LPanel><template #header>Storage</template><pre class="cms-code-preview">{{ pretty(snapshot.storage) }}</pre></LPanel>
+      <LPanel><template #header>Scheduler</template><pre class="cms-code-preview">{{ pretty(snapshot.scheduler) }}</pre></LPanel>
     </div>
 
     <LPanel>
-      <template #header>Cache Layers</template>
-      <div class="cms-capability-cloud">
-        <LBadge v-for="layer in infra.cacheLayers" :key="layer" severity="info">{{ layer }}</LBadge>
+      <template #header>Cache Control</template>
+      <div class="cms-control-form">
+        <label>Tag<input v-model.trim="cacheTag" placeholder="content:site:1"></label>
+        <LButton :disabled="busy || !cacheTag" @click="invalidateTag">Invalidate tag</LButton>
+        <label>Layer
+          <select v-model="cacheLayer">
+            <option v-for="layer in boot.cacheLayers" :key="layer" :value="layer">{{ layer }}</option>
+          </select>
+        </label>
+        <LButton variant="outline" :disabled="busy || !cacheLayer" @click="invalidateLayer">Invalidate layer</LButton>
       </div>
     </LPanel>
 
     <LPanel>
-      <template #header>Scheduler / Queue Bridge</template>
-      <div class="cms-api-status">
-        <LBadge severity="success">Native Scheduler</LBadge>
-        <span>{{ infra.scheduler.provider }}</span>
-      </div>
-      <p class="cms-muted">
-        {{ infra.scheduler.queueDrain }} — {{ t('infrastructure_page.scheduler_footer') }}
-      </p>
-    </LPanel>
-
-    <LPanel>
-      <template #header>Infrastructure API v1</template>
-      <div class="cms-api-status">
-        <LBadge :severity="infra.apiBound ? 'success' : 'warning'">
-          {{ infra.apiBound ? 'Bound' : 'Contract only' }}
-        </LBadge>
-        <span>/api/v1/cms/system/infrastructure</span>
-      </div>
-      <div class="cms-contract-list cms-contract-list--api">
-        <div v-for="route in infra.api" :key="`${route.method}:${route.path}`" class="cms-contract-row">
-          <LBadge severity="secondary">{{ route.method }}</LBadge>
-          <code>{{ route.path }}</code>
-          <small>{{ route.capability }}</small>
+      <template #header>Queue</template>
+      <CmsPageState :state="loading ? 'loading' : queue.recent?.length ? 'ready' : 'empty'" empty-icon="list-todo" empty-title="Queue is empty" empty-message="No recent queue jobs are waiting for attention.">
+        <div class="cms-stack">
+          <article v-for="job in queue.recent || []" :key="job.id" class="cms-list-card cms-list-card--wide">
+            <div><strong>{{ job.id }}</strong><small>{{ job.name || job.type || job.status }}</small><small v-if="job.last_error">{{ job.last_error }}</small></div>
+            <div class="cms-card-actions">
+              <LBadge :severity="jobSeverity(job.status)">{{ job.status }}</LBadge>
+              <LButton v-if="['failed','dead'].includes(job.status)" size="sm" variant="outline" :disabled="busy === job.id" @click="retry(job.id)">Retry</LButton>
+            </div>
+          </article>
         </div>
+      </CmsPageState>
+    </LPanel>
+
+    <LPanel>
+      <template #header>Registered Drivers</template>
+      <div class="cms-mobile-only cms-driver-cards">
+        <article v-for="driver in snapshot.drivers || []" :key="driver.id" class="cms-list-card cms-list-card--wide">
+          <div><strong>{{ driver.label }}</strong><small>{{ driver.id }}</small></div><LBadge severity="secondary">{{ driver.kind }}</LBadge>
+        </article>
       </div>
+      <LPanel flush bare class="cms-desktop-only">
+        <LDataTable :value="snapshot.drivers || []" data-key="id">
+          <Column field="label" header="Driver" /><Column field="id" header="ID" /><Column field="kind" header="Kind" /><Column field="owner" header="Owner" />
+        </LDataTable>
+      </LPanel>
     </LPanel>
   </LPage>
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import Column from 'primevue/column'
-import { LBadge, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
+import { LBadge, LButton, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
+import CmsPageState from '../../components/cms-page-state.vue'
 import { readAdminBootData } from '../../services/admin-provider.js'
+import { infrastructureApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
-const data = readAdminBootData()
-const infra = data.infrastructure
+const boot = readAdminBootData().infrastructure
+const snapshot = ref({})
+const queue = ref({})
+const loading = ref(false)
+const busy = ref('')
+const error = ref('')
+const notice = ref('')
+const cacheTag = ref('')
+const cacheLayer = ref(boot.cacheLayers?.[0] || 'object')
+
+async function load() {
+  loading.value = true; error.value = ''
+  try {
+    const [status, jobs] = await Promise.all([infrastructureApi.status(), infrastructureApi.queue()])
+    snapshot.value = status.data || {}
+    queue.value = jobs.data || {}
+  } catch (e) { error.value = e.message } finally { loading.value = false }
+}
+async function retry(id) {
+  busy.value = id; error.value = ''; notice.value = ''
+  try { await infrastructureApi.retryQueue(id); notice.value = 'Queue job returned to pending state.'; await load() }
+  catch (e) { error.value = e.message } finally { busy.value = '' }
+}
+async function invalidateTag() {
+  busy.value = 'tag'; error.value = ''; notice.value = ''
+  try { await infrastructureApi.invalidateTag(cacheTag.value); notice.value = 'Cache tag invalidated.'; await load() }
+  catch (e) { error.value = e.message } finally { busy.value = '' }
+}
+async function invalidateLayer() {
+  busy.value = 'layer'; error.value = ''; notice.value = ''
+  try { await infrastructureApi.invalidateLayer(cacheLayer.value); notice.value = 'Cache layer invalidated.'; await load() }
+  catch (e) { error.value = e.message } finally { busy.value = '' }
+}
+function jobSeverity(status) { if (status === 'failed' || status === 'dead') return 'danger'; if (status === 'pending' || status === 'running') return 'warning'; if (status === 'completed') return 'success'; return 'secondary' }
+function pretty(value) { return JSON.stringify(value ?? {}, null, 2) }
+onMounted(load)
 </script>

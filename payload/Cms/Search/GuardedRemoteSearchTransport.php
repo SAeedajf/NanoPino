@@ -179,9 +179,13 @@ final readonly class GuardedRemoteSearchTransport implements RemoteSearchTranspo
 
     private function indexDocument(array $payload): array
     {
-        return $payload + [
-            'source_id' => (string)($payload['id'] ?? ''),
-        ] + ['id' => $this->documentKey($payload)];
+        return array_merge(
+            $payload,
+            [
+                'source_id' => (string)($payload['id'] ?? ''),
+                'id' => $this->documentKey($payload),
+            ],
+        );
     }
 
     private function hit(array $document, float $score): array

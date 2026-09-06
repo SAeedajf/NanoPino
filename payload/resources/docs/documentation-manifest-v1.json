@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "documentation_version": "0.23.24",
+  "documentation_version": "0.23.28",
   "freeze_state": "candidate",
   "authoritative_entry": "docs/index.md",
   "policy": "docs/documentation/freeze-policy.md",
@@ -93,6 +93,7 @@
   "resolved_release_items": [
     "public HTTP binding/API completeness decision",
     "bidirectional public API machine-contract coverage",
-    "content collection N+1 remediation"
+    "content collection N+1 remediation",
+    "required documentation path completeness"
   ]
 }

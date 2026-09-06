@@ -122,6 +122,59 @@ final class CoreSettings
                 ui: self::ui('number', 10, 'مقدار پیشنهادی برای pagination در APIهای CMS. سقف امنیتی endpointها همچنان مستقل باقی می‌ماند.', ['api','pagination'], ['min'=>10,'max'=>100,'step'=>10]),
             ),
             new SettingDefinition(
+                'search.remote.driver', self::OWNER, SettingType::String, 'database',
+                [ScopeType::Global],
+                readPermission: 'system.health.view', writePermission: 'settings.manage',
+                group: 'infrastructure', label: 'Remote Search Driver',
+                validator: static fn (mixed $value): bool|string =>
+                    in_array((string)$value, ['database','meilisearch','typesense'], true) ?: 'Unsupported search driver.',
+                ui: self::ui('select', 10, 'Database remains the fail-closed fallback. Remote drivers require an HTTPS endpoint and explicit credentials.', ['search','driver','remote'], [
+                    'options'=>[
+                        ['value'=>'database','label'=>'Database'],
+                        ['value'=>'meilisearch','label'=>'Meilisearch'],
+                        ['value'=>'typesense','label'=>'Typesense'],
+                    ],
+                ]),
+            ),
+            new SettingDefinition(
+                'search.remote.endpoint', self::OWNER, SettingType::String, '',
+                [ScopeType::Global],
+                readPermission: 'system.health.view', writePermission: 'settings.manage',
+                group: 'infrastructure', label: 'Remote Search Endpoint',
+                validator: static function (mixed $value): bool|string {
+                    $value = trim((string)$value);
+                    if ($value === '') return true;
+                    if (strlen($value) > 2048) return 'Remote search endpoint is too long.';
+                    $parts = parse_url($value);
+                    return is_array($parts)
+                        && strtolower((string)($parts['scheme'] ?? '')) === 'https'
+                        && trim((string)($parts['host'] ?? '')) !== ''
+                        && !isset($parts['user'])
+                        && !isset($parts['pass'])
+                        ? true : 'Remote search endpoint must be an HTTPS URL without userinfo.';
+                },
+                ui: self::ui('url', 20, 'HTTPS base URL only. The resolved host is checked by the SSRF guard before every request.', ['search','endpoint','ssrf']),
+            ),
+            new SettingDefinition(
+                'search.remote.index', self::OWNER, SettingType::String, 'nanopino',
+                [ScopeType::Global],
+                readPermission: 'system.health.view', writePermission: 'settings.manage',
+                group: 'infrastructure', label: 'Remote Search Index',
+                validator: static fn (mixed $value): bool|string =>
+                    preg_match('/^[A-Za-z0-9._-]{1,128}$/', trim((string)$value)) === 1 ?: 'Invalid remote search index/collection name.',
+                ui: self::ui('text', 30, 'Meilisearch index or Typesense collection name.', ['search','index','collection']),
+            ),
+            new SettingDefinition(
+                'search.remote.api_key', self::OWNER, SettingType::String, '',
+                [ScopeType::Global],
+                readPermission: 'system.health.view', writePermission: 'settings.manage',
+                group: 'infrastructure', label: 'Remote Search API Key',
+                validator: static fn (mixed $value): bool|string =>
+                    strlen((string)$value) <= 2048 ?: 'Remote search API key is too long.',
+                ui: self::ui('password', 40, 'Stored as a sensitive setting and never returned through the Settings API.', ['search','api','key','secret']),
+                sensitive: true,
+            ),
+            new SettingDefinition(
                 'theme.design.overrides', self::OWNER, SettingType::Json, [],
                 [ScopeType::Site, ScopeType::Theme],
                 readPermission: 'themes.read', writePermission: 'themes.customize',

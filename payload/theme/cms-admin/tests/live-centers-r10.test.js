@@ -92,7 +92,8 @@ test('R10 does not advertise unavailable marketplace, remote transport, or missi
 
   assert.match(admin, /'marketplace'\s*=>\s*\[[\s\S]*?'connected'\s*=>\s*false/)
   assert.match(admin, /'starters'\s*=>\s*\[\]/)
-  assert.match(admin, /'active'\s*=>\s*'search\.database'/)
+  assert.match(admin, /'fallback'\s*=>\s*'search\.database'/)
+  assert.match(admin, /remoteSearchConfiguration\(\)/)
   assert.match(drivers, /UnboundRemoteSearchTransport/)
 })
 

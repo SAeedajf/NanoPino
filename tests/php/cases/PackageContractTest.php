@@ -65,7 +65,7 @@ return [
             JSON_THROW_ON_ERROR,
         );
 
-        np_assert_same(30, count($manifest['required_docs'] ?? []));
+        np_assert_same(31, count($manifest['required_docs'] ?? []));
         foreach ($manifest['required_docs'] as $path) {
             np_assert_true(is_file(NANOPINO_ROOT . '/' . $path), 'Missing required documentation: ' . $path);
         }

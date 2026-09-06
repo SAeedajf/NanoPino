@@ -138,9 +138,17 @@ final class CmsRuntimeServices
     private static ?CacheEffectivenessTracker $cacheTracker = null;
     private static ?ExtensionCostTracker $extensionCostTracker = null;
     private static ?PinooxQueryProbe $queryProbe = null;
+    private static bool $actorContextInitialized = false;
+    private static ?int $actorContextId = null;
 
     public static function kernel(): CmsKernel { return CmsKernel::instance(); }
-    public static function actorId(): ?int { return RuntimeActor::id(); }
+
+    public static function actorId(): ?int
+    {
+        $actorId = RuntimeActor::id();
+        self::synchronizeActorContext($actorId);
+        return $actorId;
+    }
 
     public static function authorization(): AuthorizationManager
     {
@@ -164,6 +172,7 @@ final class CmsRuntimeServices
 
     public static function settings(): SettingsService
     {
+        self::actorId();
         return self::$settings ??= new SettingsService(
             self::kernel()->settings,
             self::settingsRepository(),
@@ -174,6 +183,7 @@ final class CmsRuntimeServices
 
     public static function media(): MediaService
     {
+        self::actorId();
         return self::$media ??= new MediaService(
             new PinooxMediaRepository(),
             new PinooxNativeFileGateway(),
@@ -205,6 +215,7 @@ final class CmsRuntimeServices
 
     public static function builder(): BuilderService
     {
+        self::actorId();
         if (self::$builder !== null) return self::$builder;
         return self::$builder = new BuilderService(
             new PinooxBuilderDocumentRepository(),
@@ -219,6 +230,7 @@ final class CmsRuntimeServices
 
     public static function builderPreview(): BuilderPreviewService
     {
+        self::actorId();
         if (self::$builderPreview !== null) return self::$builderPreview;
         $validator = self::blockValidator();
         return self::$builderPreview = new BuilderPreviewService(
@@ -245,6 +257,7 @@ final class CmsRuntimeServices
 
     public static function globalBlocks(): GlobalBlockService
     {
+        self::actorId();
         return self::$globalBlocks ??= new GlobalBlockService(
             self::globalBlockRepository(),
             self::blockLoader(),
@@ -255,11 +268,13 @@ final class CmsRuntimeServices
 
     public static function builderApi(): BuilderApiFacade
     {
+        self::actorId();
         return self::$builderApi ??= new BuilderApiFacade(self::builder(), self::builderPreview());
     }
 
     public static function revisions(): RevisionService
     {
+        self::actorId();
         if (self::$revisions !== null) return self::$revisions;
         $contentRepository = new PinooxContentRepository();
         return self::$revisions = new RevisionService(
@@ -276,6 +291,7 @@ final class CmsRuntimeServices
 
     public static function content(): ContentService
     {
+        self::actorId();
         if (self::$content !== null) return self::$content;
         return self::$content = new ContentService(
             self::kernel()->contentTypes,
@@ -293,6 +309,7 @@ final class CmsRuntimeServices
 
     public static function userAdministration(): UserAdministrationService
     {
+        self::actorId();
         return self::$userAdministration ??= new UserAdministrationService(
             self::authorization(),
             new PinooxIdentityMutationGateway(),
@@ -453,6 +470,7 @@ final class CmsRuntimeServices
 
     public static function searchApi(): SearchApiFacade
     {
+        self::actorId();
         return self::$searchApi ??= new SearchApiFacade(
             new SearchService(
                 self::authorization(),
@@ -508,6 +526,7 @@ final class CmsRuntimeServices
 
     public static function infrastructureApi(): InfrastructureApiFacade
     {
+        self::actorId();
         return self::$infrastructureApi ??= new InfrastructureApiFacade(
             self::authorization(),
             new InfrastructureSnapshotService(
@@ -524,6 +543,7 @@ final class CmsRuntimeServices
 
     public static function performanceApi(): PerformanceApiFacade
     {
+        self::actorId();
         self::bindQueryProbe();
 
         return self::$performanceApi ??= new PerformanceApiFacade(
@@ -540,6 +560,7 @@ final class CmsRuntimeServices
 
     public static function updateApi(): UpdateApiFacade
     {
+        self::actorId();
         $root = self::storageRoot();
         return self::$updateApi ??= new UpdateApiFacade(
             new UpdateCenterService(
@@ -581,6 +602,34 @@ final class CmsRuntimeServices
                 new RuntimeHealthSafeModeExitGuard(self::healthRunner()),
             ),
         );
+    }
+
+    private static function synchronizeActorContext(?int $actorId): void
+    {
+        if (
+            self::$actorContextInitialized
+            && self::$actorContextId === $actorId
+        ) {
+            return;
+        }
+
+        self::$actorContextInitialized = true;
+        self::$actorContextId = $actorId;
+
+        self::$authorization = null;
+        self::$settings = null;
+        self::$media = null;
+        self::$builder = null;
+        self::$builderPreview = null;
+        self::$builderApi = null;
+        self::$globalBlocks = null;
+        self::$content = null;
+        self::$revisions = null;
+        self::$userAdministration = null;
+        self::$searchApi = null;
+        self::$infrastructureApi = null;
+        self::$performanceApi = null;
+        self::$updateApi = null;
     }
 
     /** @return list<array<string,mixed>> */

@@ -90,6 +90,7 @@ export const userApi={
 
 export const themeApi={
   list:()=>cmsRequest('/themes'),
+  patterns:(packageName,themeName)=>cmsRequest(`/themes/${encodeURIComponent(packageName)}/${encodeURIComponent(themeName)}/patterns`),
   activate:(packageName,themeName,context=null)=>cmsRequest('/themes/activate',{method:'POST',body:{package:packageName,theme:themeName,context}}),
 }
 export const recoveryApi={

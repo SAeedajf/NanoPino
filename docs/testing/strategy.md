@@ -2,15 +2,27 @@
 
 Repository CI is a release gate, not a substitute for target-runtime E2E.
 
-Current CI sequence:
-1. locked `npm ci`;
-2. production admin build;
-3. `tools/release/verify-source.sh`;
-4. PHP lint;
-5. Node contract/regression tests;
-6. source/runtime/dist parity checks;
-7. verified admin artifact upload.
+Current CI has two layers:
 
-Test categories include API completeness, mount safety, Builder state integrity, content/media/users centers, theme compatibility, security hardening, mobile/RTL and release tooling.
+1. **PHP runtime matrix** on PHP 8.2, 8.3, 8.4 and 8.5:
+   - executes NanoPino PHP classes directly through `tests/php/run.php`;
+   - covers CSP policy behavior, SSRF enforcement, Recovery Manager orchestration, Security Posture and package/release contracts.
+2. **Primary release verification** on PHP 8.4 + Node 22:
+   - locked `npm ci`;
+   - production admin build;
+   - full PHP lint;
+   - executable PHP runtime suite;
+   - Node contract/regression suite;
+   - source/runtime/dist parity checks;
+   - verified admin artifact upload.
 
-Open gap: NanoPino still needs a dedicated PHP unit/integration suite against a controlled Pinoox/database runtime.
+The PHP harness is intentionally dependency-light and lives outside the PINX payload. It exercises actual PHP behavior rather than source-text assertions.
+
+Still open for Stable evidence:
+- controlled Pinoox + database integration tests;
+- authenticated API/permission tests with real users/roles;
+- signed PINX fresh-install/update/uninstall/rollback lifecycle;
+- browser/mobile/accessibility E2E;
+- target-host performance/security probes.
+
+A green repository CI proves source/runtime consistency and executable PHP domain behavior. It does not prove the target hosting environment.

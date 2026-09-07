@@ -17,7 +17,7 @@ return [
     'developer' => 'NanoPino Project',
     'version-name' => '0.23.29',
     'version-code' => 2329,
-    'minpin' => 216,
+    'minpin' => 232,
     'boot' => true,
     'boot-global' => false,
     'router' => [
@@ -66,7 +66,7 @@ return [
         ],
         'requires' => [
             'php' => '>=8.2',
-            'pincore' => '>=3.10.0',
+            'pincore' => '>=3.14.0',
             'luma' => '>=0.4.10',
         ],
         'dependencies' => [],
@@ -153,7 +153,7 @@ return [
     ],
     'pinx' => [
         'type' => 'app',
-        'minpin' => 216,
+        'minpin' => 232,
     ],
     'build' => [
         'exclude' => [

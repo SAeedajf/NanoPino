@@ -14,7 +14,7 @@ namespace App\com_pinoox_cms\Cms\Support;
  */
 final class CmsRelease
 {
-    private const DEFAULT_MIN_PINCORE = '3.10.0';
+    private const DEFAULT_MIN_PINCORE = '3.14.0';
 
     /** @var array<string,mixed>|null */
     private static ?array $metadata = null;

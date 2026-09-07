@@ -73,8 +73,8 @@ The package metadata remains:
 - package: `com_pinoox_cms`
 - version: `0.23.29`
 - version code: `2329`
-- minimum Pincore: `3.10.0`
-- native minimum kernel code (minpin): `216`
+- minimum Pincore: `3.14.0`
+- native minimum kernel code (minpin): `232`
 
 ## 6. Building PINX locally
 

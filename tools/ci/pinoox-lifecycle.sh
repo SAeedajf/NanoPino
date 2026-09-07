@@ -70,6 +70,11 @@ build_upgrade_base() {
   [[ -n "$UPGRADE_BASE_REF" ]] || return 0
   rm -rf "$BASE_ROOT"
   git -C "$ROOT" worktree add --detach "$BASE_ROOT" "$UPGRADE_BASE_REF"
+  (
+    cd "$BASE_ROOT/payload/theme/cms-admin"
+    npm ci
+    npm run build
+  )
   PHP_BIN="$PHP_BIN" "$BASE_ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$BASE_OUTPUT"
   [[ -s "$BASE_OUTPUT" ]] || fail "Upgrade-base PINX output was not created."
 }

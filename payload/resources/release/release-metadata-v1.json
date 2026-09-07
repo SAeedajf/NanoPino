@@ -3,10 +3,10 @@
     "source": "app.php",
     "version_name": "0.23.29",
     "version_code": 2329,
-    "minpin": 216,
-    "min_pincore": "3.10.0",
-    "app_sha256": "2d723dcfa022f4c685fadc586a8b19eb3784bc7940354f3323b6cb6641c0cbfe",
-    "generated_at": "2026-09-06T23:47:08Z",
+    "minpin": 232,
+    "min_pincore": "3.14.0",
+    "app_sha256": "449b4f6496ea6dfc8a991cad90d617fb3c80bdc03a216f4d395aa555fa4f5025",
+    "generated_at": "2026-09-07T00:12:00Z",
     "product_name": "NanoPino",
     "package": "com_pinoox_cms"
 }

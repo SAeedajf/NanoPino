@@ -25,7 +25,7 @@ final class CoreContentTypes
             self::OWNER,
             'نوشته‌ها',
             'نوشته',
-            fields: ['content', 'featured_media', 'related_content'],
+            fields: ['content', 'featured_media', 'related_content', 'categories', 'tags'],
             taxonomies: ['category', 'tag'],
             hierarchical: false,
             editor: ['icon' => 'notebook-text', 'supports_parent' => false],

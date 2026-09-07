@@ -46,6 +46,26 @@ final class CoreFields
                 options: ['max_items' => 50],
                 ui: ['component' => 'content-relation', 'order' => 40],
             ),
+            new FieldDefinition(
+                'categories',
+                self::OWNER,
+                FieldType::Taxonomy,
+                'دسته‌بندی‌ها',
+                FieldStorageStrategy::Taxonomy,
+                multiple: true,
+                options: ['taxonomy' => 'category', 'max_items' => 50],
+                ui: ['component' => 'taxonomy-picker', 'order' => 50],
+            ),
+            new FieldDefinition(
+                'tags',
+                self::OWNER,
+                FieldType::Taxonomy,
+                'برچسب‌ها',
+                FieldStorageStrategy::Taxonomy,
+                multiple: true,
+                options: ['taxonomy' => 'tag', 'max_items' => 100],
+                ui: ['component' => 'taxonomy-picker', 'order' => 60],
+            ),
         ] as $definition) {
             $registry->register($definition);
         }

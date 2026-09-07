@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "version": "v1",
+  "base": "/api/v1/cms/taxonomies",
+  "resource": "taxonomy",
+  "status": "rc",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/taxonomies/{key}/terms",
+      "capability": "taxonomy.read",
+      "query": {
+        "site_id": "integer >= 1, default 1",
+        "locale": "locale such as fa or en-US, default fa",
+        "search": "optional term name or slug substring, max 190 characters",
+        "limit": "1..100, default 50",
+        "offset": "0..100000, default 0"
+      },
+      "response": [
+        "items",
+        "pagination"
+      ]
+    }
+  ],
+  "pagination": {
+    "default_limit": 50,
+    "max_limit": 100,
+    "offset": true,
+    "has_more": "offset + returned < total"
+  },
+  "authorization": {
+    "route": "taxonomy.read is required by the runtime API manifest.",
+    "registry": "TaxonomyService additionally authorizes the registered taxonomy read capability for the requested site.",
+    "scope": "Term records are constrained to site_id, taxonomy key, and locale."
+  },
+  "errors": [
+    "TAXONOMY_KEY_INVALID",
+    "TAXONOMY_LOCALE_INVALID",
+    "TAXONOMY_SEARCH_INVALID",
+    "TAXONOMY_NOT_FOUND",
+    "TAXONOMY_QUERY_INVALID",
+    "TAXONOMY_TERMS_FAILED",
+    "FORBIDDEN"
+  ]
+}

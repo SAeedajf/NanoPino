@@ -74,6 +74,49 @@ final class InMemoryTermRepository implements TermRepositoryInterface
         return $terms;
     }
 
+    public function searchForTaxonomy(
+        int $siteId,
+        string $taxonomy,
+        string $locale = 'fa',
+        ?string $search = null,
+        int $limit = 50,
+        int $offset = 0,
+    ): array {
+        $needle = function_exists('mb_strtolower')
+            ? mb_strtolower(trim((string)$search))
+            : strtolower(trim((string)$search));
+        $terms = array_values(array_filter(
+            $this->forTaxonomy($siteId, $taxonomy, $locale),
+            static function (TermRecord $term) use ($needle): bool {
+                if ($needle === '') return true;
+                $name = function_exists('mb_strtolower') ? mb_strtolower($term->name) : strtolower($term->name);
+                $slug = function_exists('mb_strtolower') ? mb_strtolower($term->slug) : strtolower($term->slug);
+                return str_contains($name, $needle) || str_contains($slug, $needle);
+            },
+        ));
+        return array_slice($terms, max(0, $offset), max(1, min(100, $limit)));
+    }
+
+    public function countForTaxonomy(
+        int $siteId,
+        string $taxonomy,
+        string $locale = 'fa',
+        ?string $search = null,
+    ): int {
+        $needle = function_exists('mb_strtolower')
+            ? mb_strtolower(trim((string)$search))
+            : strtolower(trim((string)$search));
+        return count(array_filter(
+            $this->forTaxonomy($siteId, $taxonomy, $locale),
+            static function (TermRecord $term) use ($needle): bool {
+                if ($needle === '') return true;
+                $name = function_exists('mb_strtolower') ? mb_strtolower($term->name) : strtolower($term->name);
+                $slug = function_exists('mb_strtolower') ? mb_strtolower($term->slug) : strtolower($term->slug);
+                return str_contains($name, $needle) || str_contains($slug, $needle);
+            },
+        ));
+    }
+
     public function slugExists(
         int $siteId,
         string $taxonomy,

@@ -25,6 +25,23 @@ interface TermRepositoryInterface
     /** @return list<TermRecord> */
     public function forTaxonomy(int $siteId, string $taxonomy, string $locale = 'fa'): array;
 
+    /** @return list<TermRecord> */
+    public function searchForTaxonomy(
+        int $siteId,
+        string $taxonomy,
+        string $locale = 'fa',
+        ?string $search = null,
+        int $limit = 50,
+        int $offset = 0,
+    ): array;
+
+    public function countForTaxonomy(
+        int $siteId,
+        string $taxonomy,
+        string $locale = 'fa',
+        ?string $search = null,
+    ): int;
+
     public function slugExists(
         int $siteId,
         string $taxonomy,

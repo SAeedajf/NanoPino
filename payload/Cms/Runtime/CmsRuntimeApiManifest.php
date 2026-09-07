@@ -16,6 +16,7 @@ use App\com_pinoox_cms\Controller\Api\RecoveryRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\SecurityRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\SettingsApiController;
 use App\com_pinoox_cms\Controller\Api\SystemRuntimeApiController;
+use App\com_pinoox_cms\Controller\Api\TaxonomyRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ThemeRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\UserRuntimeApiController;
 
@@ -38,7 +39,11 @@ final class CmsRuntimeApiManifest
                 self::route('DELETE','/content/{id}',[ContentRuntimeApiController::class,'trash'],'cms.content.trash','content.delete','cms.api.write',true,['id'=>'\d+']),
                 self::route('POST','/content/{id}/restore',[ContentRuntimeApiController::class,'restoreDraft'],'cms.content.restore','content.update','cms.api.write',true,['id'=>'\d+']),
                 self::route('GET','/content/{id}/revisions',[ContentRuntimeApiController::class,'revisions'],'cms.content.revisions','content.read','cms.api.read',false,['id'=>'\d+']),
+                self::route('GET','/content/{id}/revisions/{revisionId}',[ContentRuntimeApiController::class,'revision'],'cms.content.revision.show','content.read','cms.api.read',false,['id'=>'\d+','revisionId'=>'\d+']),
                 self::route('POST','/content/{id}/revisions/{revisionId}/restore',[ContentRuntimeApiController::class,'restoreRevision'],'cms.content.revision.restore','content.update','cms.api.write',true,['id'=>'\d+','revisionId'=>'\d+']),
+
+                // Taxonomy
+                self::route('GET','/taxonomies/{key}/terms',[TaxonomyRuntimeApiController::class,'terms'],'cms.taxonomy.terms','taxonomy.read','cms.api.read',false,['key'=>'[a-z][a-z0-9_-]{1,63}']),
 
                 // Media
                 self::route('GET','/media',[MediaApiController::class,'index'],'cms.media.index','media.read','cms.api.read'),

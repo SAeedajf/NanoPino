@@ -57,3 +57,17 @@ A row can move to Done only when:
 - no Pincore/vendor business logic is modified;
 - documentation records any new public/extension contract;
 - observed-live defects receive target-host verification before being called fully resolved.
+
+
+## P1 implementation notes
+
+P1 replaces daily authoring fields that exposed numeric IDs or infrastructure terminology with Registry-driven controls.
+
+- RichText fields render an author-facing formatting surface with links, lists and Media Library image insertion. Paste is reduced to plain text and rendered HTML is allow-listed before entering the editable surface.
+- Media/Gallery fields use the existing Media API; Relation and Parent controls use paged Content list/read APIs; Taxonomy fields use the registered Taxonomy service through the versioned term-search route.
+- Core Post categories and tags are ordinary registered Taxonomy fields, so extensions can use the same Field/Taxonomy contract without changing the Content page.
+- Revision selection is independently searchable and paginated; a requested content ID can be resolved directly instead of being restricted to the first 100 records.
+- Revision restore is preceded by an integrity-verified snapshot preview and a current-vs-revision diff.
+- Media upload failures can be retried or removed per file, and zero-result pagination no longer fabricates a 1-to-0 range.
+
+P1 remains open until Admin build, runtime parity, API-contract verification, behavior tests and PINX lifecycle gates pass.

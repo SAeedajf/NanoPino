@@ -60,7 +60,8 @@
     "resources/api/users-v1.json",
     "resources/api/content-v1.json",
     "resources/api/settings-v1.json",
-    "resources/api/themes-v1.json"
+    "resources/api/themes-v1.json",
+    "resources/api/taxonomy-v1.json"
   ],
   "historical_patterns": [
     "PHASE-*-REPORT.md",

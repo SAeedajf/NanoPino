@@ -120,6 +120,54 @@ final class TaxonomyService
         return $term;
     }
 
+    /** @return array{items:list<TermRecord>,total:int,limit:int,offset:int} */
+    public function searchTerms(
+        string $taxonomyKey,
+        int $siteId,
+        string $locale = 'fa',
+        ?string $search = null,
+        int $limit = 50,
+        int $offset = 0,
+        ?int $actorId = null,
+    ): array {
+        $taxonomy = $this->taxonomies->definition($taxonomyKey);
+        if ($taxonomy === null) {
+            throw new ContentValidationException('Taxonomy not registered: ' . $taxonomyKey);
+        }
+
+        $this->authorization->authorize(new AuthorizationRequest(
+            $taxonomy->permissions['read'],
+            $actorId,
+            ScopeType::Site,
+            $siteId,
+            'taxonomy',
+            $taxonomyKey,
+        ));
+
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, min(100000, $offset));
+        $search = trim((string)$search);
+
+        return [
+            'items' => $this->repository->searchForTaxonomy(
+                $siteId,
+                $taxonomyKey,
+                $locale,
+                $search !== '' ? $search : null,
+                $limit,
+                $offset,
+            ),
+            'total' => $this->repository->countForTaxonomy(
+                $siteId,
+                $taxonomyKey,
+                $locale,
+                $search !== '' ? $search : null,
+            ),
+            'limit' => $limit,
+            'offset' => $offset,
+        ];
+    }
+
     /** @return list<TermRecord> */
     public function listTerms(
         string $taxonomyKey,

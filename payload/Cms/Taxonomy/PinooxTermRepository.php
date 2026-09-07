@@ -70,6 +70,61 @@ final class PinooxTermRepository implements TermRepositoryInterface
             ->all();
     }
 
+    public function searchForTaxonomy(
+        int $siteId,
+        string $taxonomy,
+        string $locale = 'fa',
+        ?string $search = null,
+        int $limit = 50,
+        int $offset = 0,
+    ): array {
+        $query = TermModel::query()
+            ->where('site_id', $siteId)
+            ->where('taxonomy', $taxonomy)
+            ->where('locale', $locale);
+
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+            $query->where(static function ($builder) use ($escaped): void {
+                $builder->where('name', 'like', '%' . $escaped . '%')
+                    ->orWhere('slug', 'like', '%' . $escaped . '%');
+            });
+        }
+
+        return $query
+            ->orderBy('name')
+            ->orderBy('id')
+            ->limit(max(1, min(100, $limit)))
+            ->offset(max(0, min(100000, $offset)))
+            ->get()
+            ->map(fn (TermModel $model): TermRecord => $this->hydrate($model))
+            ->all();
+    }
+
+    public function countForTaxonomy(
+        int $siteId,
+        string $taxonomy,
+        string $locale = 'fa',
+        ?string $search = null,
+    ): int {
+        $query = TermModel::query()
+            ->where('site_id', $siteId)
+            ->where('taxonomy', $taxonomy)
+            ->where('locale', $locale);
+
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+            $query->where(static function ($builder) use ($escaped): void {
+                $builder->where('name', 'like', '%' . $escaped . '%')
+                    ->orWhere('slug', 'like', '%' . $escaped . '%');
+            });
+        }
+
+        return (int)$query->count();
+    }
+
     public function slugExists(
         int $siteId,
         string $taxonomy,

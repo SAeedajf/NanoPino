@@ -33,17 +33,66 @@
           </label>
 
           <div v-for="field in currentFields" :key="field.key" class="cms-content-field cms-control-form__wide">
-            <label>{{ field.label }}<span v-if="field.required"> *</span>
-              <textarea v-if="['richtext','textarea'].includes(field.type)" v-model="form.fields[field.key]" :rows="field.type==='richtext'?10:5" />
-              <select v-else-if="field.type==='select' && Object.keys(field.choices||{}).length" v-model="form.fields[field.key]">
-                <option v-for="(text,key) in field.choices" :key="key" :value="key">{{ text }}</option>
-              </select>
-              <input v-else-if="field.type==='boolean'" v-model="form.fields[field.key]" type="checkbox" class="cms-check-input">
-              <input v-else-if="['number','media'].includes(field.type)" v-model="form.fields[field.key]" type="number" :min="field.type==='media'?1:undefined">
-              <textarea v-else-if="['json','repeater','group'].includes(field.type)" v-model="form.fields[field.key]" rows="6" dir="ltr" spellcheck="false" />
-              <input v-else v-model="form.fields[field.key]" type="text" :placeholder="field.multiple || ['relation','gallery','taxonomy'].includes(field.type) ? t('content_page.ids_csv') : ''">
-            </label>
-            <small class="cms-muted">{{ field.type }} · {{ field.storage }}<template v-if="field.multiple"> · {{ t('content_page.multiple') }}</template></small>
+            <div class="cms-content-field__label"><strong>{{ field.label }}<span v-if="field.required"> *</span></strong><small class="cms-muted">{{ fieldHint(field) }}</small></div>
+
+            <div v-if="field.type==='richtext'" class="cms-richtext">
+              <div class="cms-richtext__toolbar" role="toolbar" :aria-label="t('content_page.richtext_toolbar')">
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'bold')"><strong>B</strong><span class="cms-sr-only">{{ t('content_page.bold') }}</span></button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'italic')"><em>I</em><span class="cms-sr-only">{{ t('content_page.italic') }}</span></button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'insertUnorderedList')">• {{ t('content_page.list_short') }}</button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'insertOrderedList')">1. {{ t('content_page.list_short') }}</button>
+                <button type="button" @mousedown.prevent="createRichLink(field.key)">{{ t('content_page.link') }}</button>
+                <button type="button" @mousedown.prevent="openRichMedia(field)">{{ t('content_page.insert_image') }}</button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'removeFormat')">{{ t('content_page.clear_format') }}</button>
+              </div>
+              <div
+                class="cms-richtext__editor"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                :aria-label="field.label"
+                :data-rich-field="field.key"
+                v-html="safeRichHtml(form.fields[field.key])"
+                @input="onRichTextInput(field.key,$event)"
+                @paste.prevent="pastePlainText(field.key,$event)"
+              />
+            </div>
+
+            <textarea v-else-if="field.type==='textarea'" v-model="form.fields[field.key]" rows="5" />
+            <select v-else-if="field.type==='select' && Object.keys(field.choices||{}).length" v-model="form.fields[field.key]">
+              <option v-for="(text,key) in field.choices" :key="key" :value="key">{{ text }}</option>
+            </select>
+            <input v-else-if="field.type==='boolean'" v-model="form.fields[field.key]" type="checkbox" class="cms-check-input">
+            <input v-else-if="field.type==='number'" v-model="form.fields[field.key]" type="number">
+
+            <div v-else-if="field.type==='media' || field.type==='gallery'" class="cms-resource-value">
+              <div v-if="selectedIds(field).length" class="cms-resource-chips">
+                <span v-for="id in selectedIds(field)" :key="id" class="cms-resource-chip">
+                  <img v-if="resourceInfo('media',id)?.thumb || resourceInfo('media',id)?.url" :src="resourceInfo('media',id)?.thumb || resourceInfo('media',id)?.url" alt="">
+                  <span>{{ resourceInfo('media',id)?.title || resourceInfo('media',id)?.original_name || t('content_page.media_item',{id}) }}</span>
+                  <button type="button" :aria-label="t('content_page.remove_selection')" @click="removeFieldSelection(field,id)">×</button>
+                </span>
+              </div>
+              <LButton size="sm" variant="outline" @click="openFieldPicker(field)">{{ field.type==='gallery' ? t('content_page.choose_media_multiple') : t('content_page.choose_featured_media') }}</LButton>
+            </div>
+
+            <div v-else-if="field.type==='relation' || field.type==='taxonomy'" class="cms-resource-value">
+              <div v-if="selectedIds(field).length" class="cms-resource-chips">
+                <span v-for="id in selectedIds(field)" :key="id" class="cms-resource-chip">
+                  {{ selectedResourceLabel(field,id) }}
+                  <button type="button" :aria-label="t('content_page.remove_selection')" @click="removeFieldSelection(field,id)">×</button>
+                </span>
+              </div>
+              <LButton size="sm" variant="outline" @click="openFieldPicker(field)">{{ field.type==='taxonomy' ? t('content_page.choose_terms') : t('content_page.choose_related') }}</LButton>
+            </div>
+
+            <textarea v-else-if="['json','repeater','group'].includes(field.type)" v-model="form.fields[field.key]" rows="6" dir="ltr" spellcheck="false" />
+            <input v-else v-model="form.fields[field.key]" type="text">
+
+            <details class="cms-content-field__technical">
+              <summary>{{ t('content_page.technical_details') }}</summary>
+              <code>{{ field.key }}</code> · <code>{{ field.type }}</code> · <code>{{ field.storage }}</code>
+            </details>
           </div>
 
           <details class="cms-content-advanced cms-control-form__wide">
@@ -86,13 +135,49 @@
               <label>Locale
                 <input v-model.trim="form.locale" type="text" maxlength="16" dir="ltr">
               </label>
-              <label v-if="currentType?.hierarchical">{{ t('content_page.parent') }}
-                <select v-model="form.parent_id"><option value="">{{ t('content_page.no_parent') }}</option><option v-for="parent in parentOptions" :key="parent.id" :value="parent.id">{{ parent.title || `#${parent.id}` }}</option></select>
-              </label>
-              <small class="cms-muted">Revision: {{ currentType?.revisions ? t('content_page.enabled') : t('content_page.disabled') }} · Taxonomy: {{ currentType?.taxonomies?.join(t('common.list_separator')) || t('content_page.none') }}</small>
+              <div v-if="currentType?.hierarchical" class="cms-resource-value">
+                <strong>{{ t('content_page.parent') }}</strong>
+                <span v-if="form.parent_id" class="cms-resource-chip">{{ parentDisplay }}<button type="button" :aria-label="t('content_page.remove_selection')" @click="clearParent">×</button></span>
+                <span v-else class="cms-muted">{{ t('content_page.no_parent') }}</span>
+                <LButton size="sm" variant="outline" @click="openParentPicker">{{ t('content_page.choose_parent') }}</LButton>
+              </div>
+              <details class="cms-content-field__technical">
+                <summary>{{ t('content_page.technical_details') }}</summary>
+                <div>{{ t('content_page.revision_support') }}: {{ currentType?.revisions ? t('content_page.enabled') : t('content_page.disabled') }}</div>
+                <div>{{ t('content_page.taxonomies') }}: {{ currentType?.taxonomies?.join(t('common.list_separator')) || t('content_page.none') }}</div>
+              </details>
             </div>
           </LPanel>
         </aside>
+      </div>
+    </LPanel>
+
+    <LPanel v-if="picker.open" class="cms-control-panel cms-resource-picker">
+      <template #header>{{ picker.title }}</template>
+      <div class="cms-resource-picker__toolbar">
+        <label>{{ t('content_page.search_resources') }}
+          <input ref="pickerSearchInput" v-model="picker.query" type="search" :placeholder="pickerPlaceholder" @keyup.enter="loadPicker(true)">
+        </label>
+        <LButton :disabled="picker.loading" @click="loadPicker(true)">{{ t('content_page.search') }}</LButton>
+        <LButton variant="outline" severity="neutral" @click="closePicker">{{ t('content_page.cancel') }}</LButton>
+      </div>
+      <div v-if="picker.error" class="cms-inline-callout cms-inline-callout--danger" role="alert">{{ picker.error }}</div>
+      <div v-if="picker.loading" class="cms-page-state" role="status">{{ t('content_page.loading_resources') }}</div>
+      <div v-else-if="!picker.items.length" class="cms-page-state">{{ t('content_page.no_resources') }}</div>
+      <div v-else class="cms-resource-picker__grid">
+        <button v-for="item in picker.items" :key="item.id" type="button" class="cms-resource-picker__item" :data-selected="picker.selected.includes(String(item.id))" @click="togglePickerItem(item)">
+          <img v-if="['media','rich-media'].includes(picker.kind) && (item.thumb || item.url)" :src="item.thumb || item.url" :alt="item.alt || ''">
+          <span><strong>{{ pickerItemLabel(item) }}</strong><small>{{ pickerItemMeta(item) }}</small></span>
+          <LBadge v-if="picker.selected.includes(String(item.id))" severity="success">{{ t('content_page.selected_one') }}</LBadge>
+        </button>
+      </div>
+      <div class="cms-content-pagination">
+        <span class="cms-muted">{{ pickerRange }}</span>
+        <div class="cms-card-actions">
+          <LButton variant="outline" :disabled="picker.loading || picker.pagination.offset<=0" @click="pickerPrev">{{ t('content_page.previous') }}</LButton>
+          <LButton variant="outline" :disabled="picker.loading || !picker.pagination.has_more" @click="pickerNext">{{ t('content_page.next') }}</LButton>
+          <LButton v-if="picker.multiple" :disabled="picker.loading" @click="applyPicker">{{ t('content_page.apply_selection',{count:picker.selected.length}) }}</LButton>
+        </div>
       </div>
     </LPanel>
 
@@ -142,28 +227,32 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import Column from 'primevue/column'
 import { LBadge, LButton, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
-import { contentApi } from '../../services/cms-api.js'
+import { contentApi, mediaApi, taxonomyApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
-const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref(''),previousType=ref('post')
+const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref(''),previousType=ref('post'),pickerSearchInput=ref(null),parentLabel=ref('')
 const pagination=reactive({limit:50,offset:0,returned:0,has_more:false})
 const form=reactive({site_id:1,type:'post',title:'',slug:'',excerpt:'',locale:'fa',parent_id:'',fields:{},metadataJson:'{}'})
+const resourceCache=reactive({})
+const picker=reactive({open:false,kind:'',fieldKey:'',title:'',query:'',items:[],loading:false,error:'',multiple:false,taxonomy:'',targetTypes:[],selected:[],pagination:{limit:24,offset:0,total:0,has_more:false},richField:''})
 const statusTabs=[{value:'',label:t('content_page.all')},{value:'draft',label:t('content_page.draft')},{value:'scheduled',label:t('content_page.scheduled')},{value:'published',label:t('content_page.published')},{value:'trash',label:t('content_page.trash_short')}]
 const currentType=computed(()=>types.value.find(item=>item.key===form.type)||null)
 const currentFields=computed(()=>currentType.value?.fields||[])
 const currentEditing=computed(()=>items.value.find(item=>String(item.id)===String(editingId.value))||null)
-const parentOptions=computed(()=>items.value.filter(item=>item.type===form.type&&String(item.id)!==String(editingId.value)))
+const parentDisplay=computed(()=>parentLabel.value||resourceInfo('content',form.parent_id)?.title||(form.parent_id?t('content_page.parent_item',{id:form.parent_id}):t('content_page.no_parent')))
+const pickerPlaceholder=computed(()=>picker.kind==='media'?t('content_page.search_media_placeholder'):picker.kind==='taxonomy'?t('content_page.search_terms_placeholder'):t('content_page.search_content_placeholder'))
+const pickerRange=computed(()=>{const total=Number(picker.pagination.total||0);if(total<=0)return t('content_page.resource_range_empty');const from=Math.min(total,picker.pagination.offset+1),to=Math.min(total,picker.pagination.offset+picker.items.length);return t('content_page.resource_range',{from,to,total})})
 const allSelected=computed(()=>items.value.length>0&&items.value.every(item=>selected.value.includes(String(item.id))))
 function message(e){return e?.message||t('content_page.unexpected_error')}
 function clone(value){return JSON.parse(JSON.stringify(value))}
 function meaningful(value){if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.keys(value).length>0;return String(value??'').trim()!==''}
 function draftSignature(){return JSON.stringify({site_id:form.site_id,type:form.type,title:form.title,slug:form.slug,excerpt:form.excerpt,locale:form.locale,parent_id:form.parent_id,fields:clone(form.fields),metadataJson:form.metadataJson,scheduleAt:scheduleAt.value})}
 function defaultValue(field){if(field.default!==null&&field.default!==undefined)return field.default;if(field.multiple)return[];if(field.type==='boolean')return false;if(['json','group'].includes(field.type))return'{}';if(field.type==='repeater')return'[]';return''}
-function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value='';previousType.value=key}
+function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value='';previousType.value=key;parentLabel.value='';closePicker()}
 async function loadContents(resetOffset=false){if(resetOffset)pagination.offset=0;loading.value=true;error.value='';try{const r=await contentApi.list({search:query.value,type:typeFilter.value,status:statusFilter.value,locale:localeFilter.value,limit:pagination.limit,offset:pagination.offset});items.value=r.data?.items||[];types.value=r.data?.types||types.value;Object.assign(pagination,r.data?.pagination||{});selected.value=selected.value.filter(id=>items.value.some(item=>String(item.id)===id));if(!types.value.some(item=>item.key===form.type))resetForm(types.value[0]?.key||'post')}catch(e){error.value=message(e)}finally{loading.value=false}}
 function moveStatusTab(event, delta) {
   const tabs = [...(event.currentTarget?.parentElement?.querySelectorAll('[role=\"tab\"]') || [])]
@@ -177,7 +266,7 @@ function moveStatusTab(event, delta) {
 }
 function setStatus(value){statusFilter.value=value;loadContents(true)}
 function applyFilters(){loadContents(true)}
-function startCreate(){resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';notice.value='';window.scrollTo({top:0,behavior:'smooth'})}
+function startCreate(){if(statusFilter.value==='trash'){statusFilter.value='';notice.value=t('content_page.create_left_trash')}resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';window.scrollTo({top:0,behavior:'smooth'})}
 function changeType(){
   if(editingId.value)return
   const next=form.type,previous=previousType.value||next
@@ -194,10 +283,91 @@ function changeType(){
   if(!nextDescriptor?.hierarchical)form.parent_id=''
   previousType.value=next
 }
-function extractValue(item,field){if(field.storage==='document')return item.document?.[field.key]??defaultValue(field);if(field.storage==='relation')return (item.relations?.[field.key]||[]).join(', ');if(field.storage==='taxonomy')return (item.terms?.[field.key]||[]).join(', ');const value=item.fields?.[field.key]??defaultValue(field);return ['json','repeater','group'].includes(field.type)&&typeof value!=='string'?JSON.stringify(value,null,2):Array.isArray(value)?value.join(', '):value}
-function editContent(item){editingId.value=item.id;form.site_id=item.site_id||1;form.type=item.type;previousType.value=item.type;form.title=item.title||'';form.slug=item.slug||'';form.excerpt=item.excerpt||'';form.locale=item.locale||'fa';form.parent_id=item.parent_id?String(item.parent_id):'';form.metadataJson=JSON.stringify(item.metadata||{},null,2);form.fields={};const descriptor=types.value.find(type=>type.key===item.type);for(const field of descriptor?.fields||[])form.fields[field.key]=extractValue(item,field);scheduleAt.value=item.scheduled_at?String(item.scheduled_at).slice(0,16):'';editorOpen.value=true;window.scrollTo({top:0,behavior:'smooth'})}
+function extractValue(item,field){if(field.storage==='document')return item.document?.[field.key]??defaultValue(field);if(field.storage==='relation')return [...(item.relations?.[field.key]||[])];if(field.storage==='taxonomy'){const taxonomy=field.taxonomy||field.key;return [...(item.terms?.[taxonomy]||item.terms?.[field.key]||[])]}const value=item.fields?.[field.key]??defaultValue(field);return ['json','repeater','group'].includes(field.type)&&typeof value!=='string'?JSON.stringify(value,null,2):Array.isArray(value)?[...value]:value}
+async function editContent(item){editingId.value=item.id;form.site_id=item.site_id||1;form.type=item.type;previousType.value=item.type;form.title=item.title||'';form.slug=item.slug||'';form.excerpt=item.excerpt||'';form.locale=item.locale||'fa';form.parent_id=item.parent_id?String(item.parent_id):'';parentLabel.value='';form.metadataJson=JSON.stringify(item.metadata||{},null,2);form.fields={};const descriptor=types.value.find(type=>type.key===item.type);for(const field of descriptor?.fields||[])form.fields[field.key]=extractValue(item,field);scheduleAt.value=item.scheduled_at?String(item.scheduled_at).slice(0,16):'';editorOpen.value=true;error.value='';if(form.parent_id)hydrateParent(form.parent_id);hydrateMediaFields();window.scrollTo({top:0,behavior:'smooth'})}
 function closeEditor(){editorOpen.value=false;resetForm(typeFilter.value||types.value[0]?.key||'post')}
-function ids(value){return String(value||'').split(',').map(v=>Number(v.trim())).filter(v=>Number.isSafeInteger(v)&&v>0)}
+function ids(value){const source=Array.isArray(value)?value:String(value||'').split(',');return source.map(v=>Number(String(v).trim())).filter(v=>Number.isSafeInteger(v)&&v>0)}
+function resourceKey(kind,id){return `${kind}:${id}`}
+function resourceInfo(kind,id){return resourceCache[resourceKey(kind,id)]||null}
+function rememberResource(kind,item){if(item?.id)resourceCache[resourceKey(kind,item.id)]={...item}}
+function fieldHint(field){return({richtext:t('content_page.hint_richtext'),media:t('content_page.hint_media'),gallery:t('content_page.hint_gallery'),relation:t('content_page.hint_relation'),taxonomy:t('content_page.hint_taxonomy'),textarea:t('content_page.hint_textarea'),json:t('content_page.hint_structured'),repeater:t('content_page.hint_structured'),group:t('content_page.hint_structured')})[field.type]||t('content_page.hint_standard')}
+function selectedIds(field){const value=form.fields[field.key];return ids(value)}
+function selectedResourceLabel(field,id){if(field.type==='taxonomy')return resourceInfo('taxonomy',id)?.name||t('content_page.term_item',{id});return resourceInfo('content',id)?.title||t('content_page.content_item',{id})}
+function removeFieldSelection(field,id){const current=selectedIds(field).filter(value=>String(value)!==String(id));form.fields[field.key]=field.type==='media'&&!field.multiple?'':current}
+function clearParent(){form.parent_id='';parentLabel.value=''}
+async function hydrateParent(id){if(!id)return;try{const row=(await contentApi.read(id)).data;rememberResource('content',row);parentLabel.value=row?.title||t('content_page.parent_item',{id})}catch{}}
+function hydrateMediaFields(){for(const field of currentFields.value.filter(row=>row.type==='media'||row.type==='gallery'))for(const id of selectedIds(field).slice(0,20)){if(resourceInfo('media',id))continue;mediaApi.read(id).then(r=>rememberResource('media',r.data||r)).catch(()=>{})}}
+
+function safeUrl(value){try{const url=new URL(String(value||''),window.location.origin);return ['http:','https:'].includes(url.protocol)?url.href:''}catch{return''}}
+function safeRichHtml(value){
+  const html=String(value||'')
+  if(typeof DOMParser==='undefined')return html.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  const doc=new DOMParser().parseFromString(`<div>${html}</div>`,'text/html'),root=doc.body.firstElementChild
+  const allowed=new Set(['DIV','P','BR','STRONG','B','EM','I','U','S','UL','OL','LI','A','H2','H3','H4','BLOCKQUOTE','CODE','PRE','IMG'])
+  for(const el of [...root.querySelectorAll('*')]){
+    if(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','SVG','MATH'].includes(el.tagName)){el.remove();continue}
+    if(!allowed.has(el.tagName)){el.replaceWith(...el.childNodes);continue}
+    const originalHref=el.getAttribute?.('href')||'',originalSrc=el.getAttribute?.('src')||'',originalAlt=el.getAttribute?.('alt')||''
+    for(const attr of [...el.attributes])el.removeAttribute(attr.name)
+    if(el.tagName==='A'){
+      const href=safeUrl(originalHref)
+      if(href){el.setAttribute('href',href);el.setAttribute('rel','noopener noreferrer')}
+    }
+    if(el.tagName==='IMG'){
+      const source=safeUrl(originalSrc)
+      if(!source){el.remove();continue}
+      el.setAttribute('src',source);el.setAttribute('alt',originalAlt.slice(0,300))
+    }
+  }
+  return root.innerHTML
+}
+function richEditor(fieldKey){return document.querySelector(`[data-rich-field="${CSS.escape(fieldKey)}"]`)}
+function syncRichEditor(fieldKey){const el=richEditor(fieldKey);if(el)form.fields[fieldKey]=el.innerHTML}
+function onRichTextInput(fieldKey,event){form.fields[fieldKey]=event.currentTarget.innerHTML}
+function pastePlainText(fieldKey,event){const text=event.clipboardData?.getData('text/plain')||'';document.execCommand('insertText',false,text);form.fields[fieldKey]=event.currentTarget.innerHTML}
+function formatRichText(fieldKey,command,value=null){const el=richEditor(fieldKey);if(!el)return;el.focus();document.execCommand(command,false,value);syncRichEditor(fieldKey)}
+function createRichLink(fieldKey){const raw=window.prompt(t('content_page.link_prompt'),'https://');if(!raw)return;const href=safeUrl(raw);if(!href){error.value=t('content_page.link_invalid');return}formatRichText(fieldKey,'createLink',href)}
+function openRichMedia(field){openPicker({kind:'rich-media',fieldKey:field.key,title:t('content_page.insert_image'),multiple:false,richField:field.key})}
+
+function closePicker(){picker.open=false;picker.kind='';picker.fieldKey='';picker.title='';picker.query='';picker.items=[];picker.error='';picker.multiple=false;picker.taxonomy='';picker.targetTypes=[];picker.selected=[];picker.richField='';picker.pagination={limit:24,offset:0,total:0,has_more:false}}
+async function openPicker(config){closePicker();Object.assign(picker,{open:true,...config,selected:(config.selected||[]).map(String),pagination:{limit:24,offset:0,total:0,has_more:false}});await nextTick();pickerSearchInput.value?.focus?.();loadPicker(true)}
+function openFieldPicker(field){const current=selectedIds(field);if(field.type==='media')return openPicker({kind:'media',fieldKey:field.key,title:field.label,multiple:Boolean(field.multiple),selected:current});if(field.type==='gallery')return openPicker({kind:'media',fieldKey:field.key,title:field.label,multiple:true,selected:current});if(field.type==='relation')return openPicker({kind:'content',fieldKey:field.key,title:field.label,multiple:Boolean(field.multiple),selected:current,targetTypes:field.target_types||[]});if(field.type==='taxonomy')return openPicker({kind:'taxonomy',fieldKey:field.key,title:field.label,multiple:Boolean(field.multiple),selected:current,taxonomy:field.taxonomy||''})}
+function openParentPicker(){openPicker({kind:'parent',fieldKey:'parent_id',title:t('content_page.choose_parent'),multiple:false,selected:form.parent_id?[String(form.parent_id)]:[]})}
+async function loadPicker(reset=false){
+  if(!picker.open)return
+  if(reset)picker.pagination.offset=0
+  picker.loading=true;picker.error=''
+  try{
+    let data
+    if(picker.kind==='media'||picker.kind==='rich-media'){
+      const r=await mediaApi.list({q:picker.query,kind:'image',limit:picker.pagination.limit,offset:picker.pagination.offset});data=r.data||r
+      picker.items=data.items||[];for(const item of picker.items)rememberResource('media',item)
+    }else if(picker.kind==='taxonomy'){
+      if(!picker.taxonomy)throw new Error(t('content_page.taxonomy_missing'))
+      const r=await taxonomyApi.terms(picker.taxonomy,{search:picker.query,site_id:form.site_id,locale:form.locale,limit:picker.pagination.limit,offset:picker.pagination.offset});data=r.data||r
+      picker.items=data.items||[];for(const item of picker.items)rememberResource('taxonomy',item)
+    }else{
+      const onlyType=picker.kind==='parent'?form.type:(picker.targetTypes?.length===1?picker.targetTypes[0]:'')
+      const r=await contentApi.list({search:picker.query,type:onlyType,site_id:form.site_id,locale:form.locale,limit:picker.pagination.limit,offset:picker.pagination.offset,projection:'list'});data=r.data||r
+      picker.items=(data.items||[]).filter(item=>String(item.id)!==String(editingId.value)&&(!picker.targetTypes?.length||picker.targetTypes.includes(item.type)))
+      for(const item of picker.items)rememberResource('content',item)
+    }
+    Object.assign(picker.pagination,data.pagination||{})
+  }catch(e){picker.error=message(e);picker.items=[]}
+  finally{picker.loading=false}
+}
+function pickerItemLabel(item){if(picker.kind==='taxonomy')return item.name||`#${item.id}`;if(picker.kind==='media'||picker.kind==='rich-media')return item.title||item.original_name||`#${item.id}`;return item.title||t('content_page.untitled',{id:item.id})}
+function pickerItemMeta(item){if(picker.kind==='taxonomy')return item.slug||picker.taxonomy;if(picker.kind==='media'||picker.kind==='rich-media')return item.mime||t('content_page.media_item',{id:item.id});return `${typeLabel(item.type)} · #${item.id}`}
+function togglePickerItem(item){
+  const id=String(item.id)
+  if(picker.kind==='parent'){form.parent_id=id;parentLabel.value=item.title||t('content_page.parent_item',{id});rememberResource('content',item);closePicker();return}
+  if(picker.kind==='rich-media'){const src=safeUrl(item.url||item.thumb);if(src){const alt=String(item.alt||'').replace(/[<>"&]/g,'');form.fields[picker.richField]=String(form.fields[picker.richField]||'')+`<p><img src="${src}" alt="${alt}"></p>`}closePicker();return}
+  if(!picker.multiple){const field=currentFields.value.find(row=>row.key===picker.fieldKey);if(field)form.fields[field.key]=Number(item.id);closePicker();return}
+  picker.selected=picker.selected.includes(id)?picker.selected.filter(value=>value!==id):[...picker.selected,id]
+}
+function applyPicker(){const field=currentFields.value.find(row=>row.key===picker.fieldKey);if(field)form.fields[field.key]=picker.selected.map(Number);closePicker()}
+function pickerNext(){if(!picker.pagination.has_more||picker.loading)return;picker.pagination.offset+=picker.pagination.limit;loadPicker()}
+function pickerPrev(){if(picker.pagination.offset<=0||picker.loading)return;picker.pagination.offset=Math.max(0,picker.pagination.offset-picker.pagination.limit);loadPicker()}
 function normalizeField(field,value){if(field.multiple||['relation','gallery','taxonomy'].includes(field.type))return ids(value);if(field.type==='media')return value===''?null:Number(value);if(field.type==='number')return value===''?null:Number(value);if(field.type==='boolean')return Boolean(value);if(['json','repeater','group'].includes(field.type)){try{return JSON.parse(value|| (field.type==='repeater'?'[]':'{}'))}catch{throw new Error(t('content_page.json_invalid',{field:field.label}))}}return value}
 function payload(){if(!form.title.trim())throw new Error(t('content_page.title_required'));let metadata={};try{metadata=form.metadataJson.trim()?JSON.parse(form.metadataJson):{}}catch{throw new Error(t('content_page.metadata_invalid'))}const fields={};for(const field of currentFields.value){const value=form.fields[field.key];const blank=value===''||value===null||value===undefined;if(!editingId.value&&blank&&!field.required)continue;fields[field.key]=normalizeField(field,value)}return{site_id:Number(form.site_id||1),type:form.type,title:form.title.trim(),slug:form.slug.trim(),excerpt:form.excerpt,locale:form.locale.trim()||'fa',parent_id:form.parent_id?Number(form.parent_id):null,fields,metadata}}
 async function saveContent(publishAfter) {
@@ -285,5 +455,5 @@ onMounted(async()=>{resetForm();await loadContents()})
 </script>
 
 <style scoped>
-.cms-content-tabs{display:flex;gap:.45rem;overflow:auto;padding:.1rem 0 .4rem}.cms-content-tab{border:1px solid var(--p-surface-300);border-radius:999px;background:transparent;padding:.55rem .8rem;white-space:nowrap;cursor:pointer}.cms-content-tab[data-active="true"]{background:var(--p-primary-color);border-color:var(--p-primary-color);color:#fff}.cms-content-editor{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.75fr);gap:1rem}.cms-content-editor__main,.cms-content-editor__side{display:grid;gap:.8rem;align-content:start}.cms-content-field{padding:.8rem;border:1px solid var(--p-surface-200);border-radius:.75rem}.cms-content-field>label{display:grid;gap:.45rem}.cms-content-advanced{padding:.75rem;border:1px solid var(--p-surface-200);border-radius:.75rem}.cms-content-advanced summary{cursor:pointer;font-weight:650}.cms-content-advanced label{display:grid;gap:.45rem;margin-top:.7rem}.cms-schedule-field{display:grid;gap:.45rem;margin-top:.8rem}.cms-content-filters{grid-template-columns:minmax(220px,1fr) 180px 120px auto}.cms-content-bulk{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.8rem 0;padding:.7rem;border:1px dashed var(--p-surface-300);border-radius:.75rem}.cms-check-input{width:1.2rem;height:1.2rem}.cms-table-subline{display:block;opacity:.65;margin-top:.2rem}.cms-content-pagination{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}.cms-control-form--single{grid-template-columns:1fr}@media(max-width:900px){.cms-content-editor{grid-template-columns:1fr}.cms-content-filters{grid-template-columns:1fr 1fr}}@media(max-width:600px){.cms-content-filters{grid-template-columns:1fr}}
+.cms-content-tabs{display:flex;gap:.45rem;overflow:auto;padding:.1rem 0 .4rem}.cms-content-tab{border:1px solid var(--p-surface-300);border-radius:999px;background:transparent;padding:.55rem .8rem;white-space:nowrap;cursor:pointer}.cms-content-tab[data-active="true"]{background:var(--p-primary-color);border-color:var(--p-primary-color);color:#fff}.cms-content-editor{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.75fr);gap:1rem}.cms-content-editor__main,.cms-content-editor__side{display:grid;gap:.8rem;align-content:start}.cms-content-field{padding:.8rem;border:1px solid var(--p-surface-200);border-radius:.75rem;display:grid;gap:.7rem}.cms-content-field__label{display:grid;gap:.2rem}.cms-content-field__technical{font-size:.78rem;opacity:.72}.cms-content-field__technical summary{cursor:pointer}.cms-richtext{border:1px solid var(--p-surface-300);border-radius:.75rem;overflow:hidden}.cms-richtext__toolbar{display:flex;gap:.3rem;flex-wrap:wrap;padding:.45rem;border-bottom:1px solid var(--p-surface-200);background:var(--p-surface-50)}.cms-richtext__toolbar button{min-width:42px;min-height:40px;border:1px solid var(--p-surface-300);border-radius:.55rem;background:var(--p-surface-0);color:inherit;cursor:pointer}.cms-richtext__editor{min-height:220px;padding:.8rem;outline:none;line-height:1.8}.cms-richtext__editor:focus{box-shadow:inset 0 0 0 2px var(--p-primary-color)}.cms-richtext__editor img{max-width:100%;height:auto}.cms-resource-value{display:grid;gap:.55rem}.cms-resource-chips{display:flex;gap:.45rem;flex-wrap:wrap}.cms-resource-chip{display:inline-flex;gap:.4rem;align-items:center;min-height:38px;padding:.3rem .55rem;border:1px solid var(--p-surface-300);border-radius:999px;background:var(--p-surface-50)}.cms-resource-chip img{width:30px;height:30px;object-fit:cover;border-radius:50%}.cms-resource-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:1.1rem}.cms-resource-picker__toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.6rem;align-items:end}.cms-resource-picker__toolbar label{display:grid;gap:.35rem}.cms-resource-picker__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.65rem;margin:.8rem 0}.cms-resource-picker__item{min-height:72px;display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.55rem;border:1px solid var(--p-surface-200);border-radius:.75rem;background:var(--p-surface-0);color:inherit;text-align:start;cursor:pointer}.cms-resource-picker__item[data-selected="true"]{border-color:var(--p-primary-color);box-shadow:0 0 0 1px var(--p-primary-color)}.cms-resource-picker__item img{width:54px;height:54px;object-fit:cover;border-radius:.55rem}.cms-resource-picker__item>span{display:grid;gap:.2rem;min-width:0}.cms-resource-picker__item small{opacity:.68;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cms-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.cms-content-advanced{padding:.75rem;border:1px solid var(--p-surface-200);border-radius:.75rem}.cms-content-advanced summary{cursor:pointer;font-weight:650}.cms-content-advanced label{display:grid;gap:.45rem;margin-top:.7rem}.cms-schedule-field{display:grid;gap:.45rem;margin-top:.8rem}.cms-content-filters{grid-template-columns:minmax(220px,1fr) 180px 120px auto}.cms-content-bulk{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.8rem 0;padding:.7rem;border:1px dashed var(--p-surface-300);border-radius:.75rem}.cms-check-input{width:1.2rem;height:1.2rem}.cms-table-subline{display:block;opacity:.65;margin-top:.2rem}.cms-content-pagination{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}.cms-control-form--single{grid-template-columns:1fr}@media(max-width:900px){.cms-content-editor{grid-template-columns:1fr}.cms-content-filters{grid-template-columns:1fr 1fr}}@media(max-width:600px){.cms-content-filters,.cms-resource-picker__toolbar{grid-template-columns:1fr}.cms-resource-picker__item{grid-template-columns:48px minmax(0,1fr)}.cms-resource-picker__item>.l-badge{grid-column:1 / -1}.cms-richtext__toolbar button{flex:1 1 42px}}
 </style>

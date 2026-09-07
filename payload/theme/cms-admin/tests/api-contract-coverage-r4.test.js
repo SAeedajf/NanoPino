@@ -57,9 +57,9 @@ test('R4 machine contracts cover every public runtime route bidirectionally', ()
   const runtime = runtimeRoutes()
   const { routes: contracts, files } = contractRoutes()
 
-  assert.equal(files.length, 14)
-  assert.equal(runtime.size, 72)
-  assert.equal(contracts.size, 72)
+  assert.equal(files.length, 15)
+  assert.equal(runtime.size, 74)
+  assert.equal(contracts.size, 74)
   assert.deepEqual([...contracts.keys()].filter((key) => !runtime.has(key)), [])
   assert.deepEqual([...runtime.keys()].filter((key) => !contracts.has(key)), [])
 

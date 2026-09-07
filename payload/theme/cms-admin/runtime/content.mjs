@@ -604,6 +604,28 @@ export function createComponent(host) {
           })
         : null
 
+      const pickerTotal=Number(this.picker.pagination.total||0)
+      const pickerRange=pickerTotal<=0?tr('content_page.resource_range_empty'):tr('content_page.resource_range','',{from:Math.min(pickerTotal,this.picker.pagination.offset+1),to:Math.min(pickerTotal,this.picker.pagination.offset+this.picker.items.length),total:pickerTotal})
+      const pickerPanel = this.picker.open?h(LPanel,{title:this.picker.title},{default:()=>h('div',{style:ui.page},[
+        h('div',{class:'cms-resource-picker-toolbar'},[
+          label(h,tr('content_page.search_resources'),input(h,this.picker.query,v=>this.picker.query=v,'search',{placeholder:this.picker.kind==='media'||this.picker.kind==='rich-media'?tr('content_page.search_media_placeholder'):this.picker.kind==='taxonomy'?tr('content_page.search_terms_placeholder'):tr('content_page.search_content_placeholder'),onKeyup:e=>{if(e.key==='Enter')this.loadPicker(true)}})),
+          h(LButton,{label:tr('content_page.search'),disabled:this.picker.loading,onClick:()=>this.loadPicker(true)}),
+          h(LButton,{label:tr('content_page.cancel'),severity:'secondary',onClick:this.closePicker})
+        ]),
+        this.picker.error?h('div',{role:'alert',class:'cms-content-empty'},this.picker.error):null,
+        this.picker.loading?h('div',{class:'cms-content-empty',role:'status'},tr('content_page.loading_resources')):
+        !this.picker.items.length?h('div',{class:'cms-content-empty'},tr('content_page.no_resources')):
+        h('div',{class:'cms-resource-picker-grid'},this.picker.items.map(item=>h('button',{type:'button',class:'cms-resource-picker-item','data-selected':String(this.picker.selected.includes(String(item.id))),key:item.id,onClick:()=>this.togglePickerItem(item)},[
+          (this.picker.kind==='media'||this.picker.kind==='rich-media')&&(item.thumb||item.url)?h('img',{src:item.thumb||item.url,alt:item.alt||''}):h('span',{},''),
+          h('span',{},[h('strong',{},this.pickerItemLabel(item)),h('small',{},this.pickerItemMeta(item))]),
+          this.picker.selected.includes(String(item.id))?h(LBadge,{label:tr('content_page.selected_one'),severity:'success'}):null
+        ]))),
+        h('div',{class:'cms-content-pagination'},[h('span',{class:'cms-content-muted'},pickerRange),h('div',{class:'cms-content-actions'},[
+          h(LButton,{label:tr('content_page.previous'),severity:'secondary',disabled:this.picker.loading||this.picker.pagination.offset<=0,onClick:this.pickerPrev}),
+          h(LButton,{label:tr('content_page.next'),severity:'secondary',disabled:this.picker.loading||!this.picker.pagination.has_more,onClick:this.pickerNext}),
+          this.picker.multiple?h(LButton,{label:tr('content_page.apply_selection','',{count:this.picker.selected.length}),onClick:this.applyPicker}):null
+        ])])
+      ])}):null
       const rows = this.loading
         ? h('div', { class: 'cms-content-empty' }, tr('state.loading_message'))
         : this.items.length === 0
@@ -671,6 +693,7 @@ export function createComponent(host) {
             }),
           ]),
           editor,
+          pickerPanel,
           h(LPanel, { title: tr('content_page.list') }, {
             default: () => h('div', { style: ui.page }, [
               h('div', { class: 'cms-content-filterbar' }, [

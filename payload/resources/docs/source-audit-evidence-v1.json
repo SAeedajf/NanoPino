@@ -3,7 +3,7 @@
   "status": "not_available",
   "release_version": "0.23.29",
   "release_version_code": 2329,
-  "documentation_manifest_sha256": "e13d335d7bf5126e57cc0fd0e8261a897d369d16578ff1abdeba5cb1039b50a2",
+  "documentation_manifest_sha256": "0332c8ba47288e21dee7b47ff9de61c7920245852c9fac6ba8f78a2a3d9e7c31",
   "required_docs": 31,
   "machine_contracts": 23,
   "adr_count": 0,

@@ -236,6 +236,15 @@ final readonly class ExtensionCenterService
 
         $this->authorize($capability, $actorId);
 
+        if (
+            $this->catalog->isCoreModule($extensionId)
+            && in_array($type, [ExtensionOperationType::Deactivate, ExtensionOperationType::Uninstall], true)
+        ) {
+            throw new \InvalidArgumentException(
+                'Core modules cannot be deactivated or uninstalled from Extension Center.'
+            );
+        }
+
         $operation = $this->operations->run(
             new ExtensionOperationRequest(
                 $type,

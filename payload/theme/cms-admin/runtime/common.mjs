@@ -63,14 +63,21 @@ export function message(h,state){if(state.error)return h('div',{style:ui.error,r
 export function safeJson(value,fallback={}){try{return typeof value==='string'?JSON.parse(value):value}catch{return fallback}}
 export function routeButton(h,LButton,label,path){return h(LButton,{label,onClick:()=>navigate(path)})}
 export function navigate(path){
-  const clean=String(path||'/').replace(/^\/+|\/+$/g,'')
-  const current=window.location.pathname.replace(/\/+$/,'')
-  const known=['appearance/site-editor','developer/sdk','content','media','appearance','extensions','users','settings','builder','site-editor','recovery','system','security','performance','logs','updates','revisions','blocks','audit','infrastructure']
-  let base=current
-  for(const item of known.sort((a,b)=>b.length-a.length)){
-    if(base.endsWith('/'+item)){base=base.slice(0,-item.length-1);break}
-  }
-  const target=clean?`${base}/${clean}`:base||'/'
+  const key=String(path||'/').trim().replace(/^\/+|\/+$/g,'')
+  const routes=Array.isArray(boot().cmsAdmin?.manifest?.routes)?boot().cmsAdmin.manifest.routes:[]
+  const normalized=(value)=>String(value||'').trim().replace(/^\/+|\/+$/g,'')
+  const route=routes.find((item)=>{
+    const routePath=normalized(item?.path)
+    const name=String(item?.name||'').replace(/^cms\./,'').replaceAll('_','-')
+    const id=String(item?.id||'').replace(/^cms\./,'').replaceAll('_','-')
+    return routePath===key
+      || routePath.endsWith(`/${key}`)
+      || name===key
+      || id===key
+  })
+  const child=normalized(route?.path||key)
+  const mount=String(boot().cmsAdmin?.mountPath||'').trim().replace(/^\/+|\/+$/g,'')
+  const target=`${mount?`/${mount}`:''}${child?`/${child}`:'/' }`.replace(/\/{2,}/g,'/')
   window.history.pushState({},'',target)
   window.dispatchEvent(new PopStateEvent('popstate'))
 }

@@ -5,6 +5,7 @@ namespace App\com_pinoox_cms\Cms\Runtime;
 
 use App\com_pinoox_cms\Controller\Api\BuilderRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ContentRuntimeApiController;
+use App\com_pinoox_cms\Controller\Api\DeveloperRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ExtensionRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\GlobalBlockRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\MediaApiController;
@@ -89,6 +90,9 @@ final class CmsRuntimeApiManifest
                 self::route('GET','/builder/{id}/revisions',[BuilderRuntimeApiController::class,'revisions'],'cms.builder.revisions','builder.read','cms.api.read',false,['id'=>'\d+']),
                 self::route('POST','/builder/{id}/revisions/{revisionId}/restore',[BuilderRuntimeApiController::class,'restore'],'cms.builder.restore','builder.edit','cms.api.write',true,['id'=>'\d+','revisionId'=>'\d+']),
                 self::route('POST','/builder/preview',[BuilderRuntimeApiController::class,'preview'],'cms.builder.preview','builder.preview','cms.api.write',true),
+
+                // Developer SDK
+                self::route('POST','/developer/starter',[DeveloperRuntimeApiController::class,'starter'],'cms.developer.starter','system.developer.generate','cms.api.write',true),
 
                 // Extensions / PINX
                 self::route('GET','/extensions',[ExtensionRuntimeApiController::class,'index'],'cms.extensions.index','extensions.read','cms.api.read'),

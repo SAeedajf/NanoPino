@@ -79,6 +79,7 @@ final class CoreCapabilities
             'system.logs.view' => 'View privacy-safe CMS runtime logs.',
             'system.support.export' => 'Export privacy-safe CMS support diagnostics.',
             'system.developer.view' => 'View CMS Developer SDK and Extension contracts.',
+            'system.developer.generate' => 'Generate validated Extension SDK starter source packages.',
         ];
     }
 

@@ -29,6 +29,8 @@ final class AppConfigManifestProjector
             'package' => $type === 'theme'
                 ? (string) ($pinx['theme_name'] ?? $appConfig['theme'] ?? '')
                 : (string) ($appConfig['package'] ?? ''),
+            'name' => (string) ($appConfig['title'] ?? $appConfig['name'] ?? $appConfig['package'] ?? ''),
+            'description' => (string) ($appConfig['description'] ?? ''),
             'developer' => (string) ($appConfig['developer'] ?? ''),
             'version_name' => (string) ($appConfig['version-name'] ?? '1.0.0'),
             'version_code' => (int) ($appConfig['version-code'] ?? 1),

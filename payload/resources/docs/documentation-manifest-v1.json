@@ -45,6 +45,7 @@
     "resources/schemas/cms-builder-binding-v1.schema.json",
     "resources/schemas/cms-design-v1.schema.json",
     "resources/api/builder-v1.json",
+    "resources/api/developer-v1.json",
     "resources/api/extensions-v1.json",
     "resources/api/infrastructure-v1.json",
     "resources/api/media-v1.json",

@@ -35,7 +35,7 @@ This materially closes the previous “no real Pinoox/DB package lifecycle” ga
 R15 supersedes the R14 same-version force-update probe with a versioned native lifecycle. CI now installs the previous official NanoPino 0.23.28 release and upgrades it to 0.23.29 **without force**, then performs a separate clean 0.23.29 fresh install/uninstall cycle.
 
 The lifecycle matrix runs against:
-- Pincore 3.10.0 / native version code 216 — the declared minimum supported kernel;
+- Pincore 3.14.0 / native version code 232 — the declared minimum supported kernel;
 - Pincore 3.14.4 — the current verified baseline;
 - MySQL 8.4.
 

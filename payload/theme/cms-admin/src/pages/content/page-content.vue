@@ -33,17 +33,66 @@
           </label>
 
           <div v-for="field in currentFields" :key="field.key" class="cms-content-field cms-control-form__wide">
-            <label>{{ field.label }}<span v-if="field.required"> *</span>
-              <textarea v-if="['richtext','textarea'].includes(field.type)" v-model="form.fields[field.key]" :rows="field.type==='richtext'?10:5" />
-              <select v-else-if="field.type==='select' && Object.keys(field.choices||{}).length" v-model="form.fields[field.key]">
-                <option v-for="(text,key) in field.choices" :key="key" :value="key">{{ text }}</option>
-              </select>
-              <input v-else-if="field.type==='boolean'" v-model="form.fields[field.key]" type="checkbox" class="cms-check-input">
-              <input v-else-if="['number','media'].includes(field.type)" v-model="form.fields[field.key]" type="number" :min="field.type==='media'?1:undefined">
-              <textarea v-else-if="['json','repeater','group'].includes(field.type)" v-model="form.fields[field.key]" rows="6" dir="ltr" spellcheck="false" />
-              <input v-else v-model="form.fields[field.key]" type="text" :placeholder="field.multiple || ['relation','gallery','taxonomy'].includes(field.type) ? t('content_page.ids_csv') : ''">
-            </label>
-            <small class="cms-muted">{{ field.type }} · {{ field.storage }}<template v-if="field.multiple"> · {{ t('content_page.multiple') }}</template></small>
+            <div class="cms-content-field__label"><strong>{{ field.label }}<span v-if="field.required"> *</span></strong><small class="cms-muted">{{ fieldHint(field) }}</small></div>
+
+            <div v-if="field.type==='richtext'" class="cms-richtext">
+              <div class="cms-richtext__toolbar" role="toolbar" :aria-label="t('content_page.richtext_toolbar')">
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'bold')"><strong>B</strong><span class="cms-sr-only">{{ t('content_page.bold') }}</span></button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'italic')"><em>I</em><span class="cms-sr-only">{{ t('content_page.italic') }}</span></button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'insertUnorderedList')">• {{ t('content_page.list_short') }}</button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'insertOrderedList')">1. {{ t('content_page.list_short') }}</button>
+                <button type="button" @mousedown.prevent="createRichLink(field.key)">{{ t('content_page.link') }}</button>
+                <button type="button" @mousedown.prevent="openRichMedia(field)">{{ t('content_page.insert_image') }}</button>
+                <button type="button" @mousedown.prevent="formatRichText(field.key,'removeFormat')">{{ t('content_page.clear_format') }}</button>
+              </div>
+              <div
+                class="cms-richtext__editor"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                :aria-label="field.label"
+                :data-rich-field="field.key"
+                v-html="safeRichHtml(form.fields[field.key])"
+                @input="onRichTextInput(field.key,$event)"
+                @paste.prevent="pastePlainText(field.key,$event)"
+              />
+            </div>
+
+            <textarea v-else-if="field.type==='textarea'" v-model="form.fields[field.key]" rows="5" />
+            <select v-else-if="field.type==='select' && Object.keys(field.choices||{}).length" v-model="form.fields[field.key]">
+              <option v-for="(text,key) in field.choices" :key="key" :value="key">{{ text }}</option>
+            </select>
+            <input v-else-if="field.type==='boolean'" v-model="form.fields[field.key]" type="checkbox" class="cms-check-input">
+            <input v-else-if="field.type==='number'" v-model="form.fields[field.key]" type="number">
+
+            <div v-else-if="field.type==='media' || field.type==='gallery'" class="cms-resource-value">
+              <div v-if="selectedIds(field).length" class="cms-resource-chips">
+                <span v-for="id in selectedIds(field)" :key="id" class="cms-resource-chip">
+                  <img v-if="resourceInfo('media',id)?.thumb || resourceInfo('media',id)?.url" :src="resourceInfo('media',id)?.thumb || resourceInfo('media',id)?.url" alt="">
+                  <span>{{ resourceInfo('media',id)?.title || resourceInfo('media',id)?.original_name || t('content_page.media_item',{id}) }}</span>
+                  <button type="button" :aria-label="t('content_page.remove_selection')" @click="removeFieldSelection(field,id)">×</button>
+                </span>
+              </div>
+              <LButton size="sm" variant="outline" @click="openFieldPicker(field)">{{ field.type==='gallery' ? t('content_page.choose_media_multiple') : t('content_page.choose_featured_media') }}</LButton>
+            </div>
+
+            <div v-else-if="field.type==='relation' || field.type==='taxonomy'" class="cms-resource-value">
+              <div v-if="selectedIds(field).length" class="cms-resource-chips">
+                <span v-for="id in selectedIds(field)" :key="id" class="cms-resource-chip">
+                  {{ selectedResourceLabel(field,id) }}
+                  <button type="button" :aria-label="t('content_page.remove_selection')" @click="removeFieldSelection(field,id)">×</button>
+                </span>
+              </div>
+              <LButton size="sm" variant="outline" @click="openFieldPicker(field)">{{ field.type==='taxonomy' ? t('content_page.choose_terms') : t('content_page.choose_related') }}</LButton>
+            </div>
+
+            <textarea v-else-if="['json','repeater','group'].includes(field.type)" v-model="form.fields[field.key]" rows="6" dir="ltr" spellcheck="false" />
+            <input v-else v-model="form.fields[field.key]" type="text">
+
+            <details class="cms-content-field__technical">
+              <summary>{{ t('content_page.technical_details') }}</summary>
+              <code>{{ field.key }}</code> · <code>{{ field.type }}</code> · <code>{{ field.storage }}</code>
+            </details>
           </div>
 
           <details class="cms-content-advanced cms-control-form__wide">
@@ -86,13 +135,49 @@
               <label>Locale
                 <input v-model.trim="form.locale" type="text" maxlength="16" dir="ltr">
               </label>
-              <label v-if="currentType?.hierarchical">{{ t('content_page.parent') }}
-                <select v-model="form.parent_id"><option value="">{{ t('content_page.no_parent') }}</option><option v-for="parent in parentOptions" :key="parent.id" :value="parent.id">{{ parent.title || `#${parent.id}` }}</option></select>
-              </label>
-              <small class="cms-muted">Revision: {{ currentType?.revisions ? t('content_page.enabled') : t('content_page.disabled') }} · Taxonomy: {{ currentType?.taxonomies?.join(t('common.list_separator')) || t('content_page.none') }}</small>
+              <div v-if="currentType?.hierarchical" class="cms-resource-value">
+                <strong>{{ t('content_page.parent') }}</strong>
+                <span v-if="form.parent_id" class="cms-resource-chip">{{ parentDisplay }}<button type="button" :aria-label="t('content_page.remove_selection')" @click="clearParent">×</button></span>
+                <span v-else class="cms-muted">{{ t('content_page.no_parent') }}</span>
+                <LButton size="sm" variant="outline" @click="openParentPicker">{{ t('content_page.choose_parent') }}</LButton>
+              </div>
+              <details class="cms-content-field__technical">
+                <summary>{{ t('content_page.technical_details') }}</summary>
+                <div>{{ t('content_page.revision_support') }}: {{ currentType?.revisions ? t('content_page.enabled') : t('content_page.disabled') }}</div>
+                <div>{{ t('content_page.taxonomies') }}: {{ currentType?.taxonomies?.join(t('common.list_separator')) || t('content_page.none') }}</div>
+              </details>
             </div>
           </LPanel>
         </aside>
+      </div>
+    </LPanel>
+
+    <LPanel v-if="picker.open" class="cms-control-panel cms-resource-picker">
+      <template #header>{{ picker.title }}</template>
+      <div class="cms-resource-picker__toolbar">
+        <label>{{ t('content_page.search_resources') }}
+          <input ref="pickerSearchInput" v-model="picker.query" type="search" :placeholder="pickerPlaceholder" @keyup.enter="loadPicker(true)">
+        </label>
+        <LButton :disabled="picker.loading" @click="loadPicker(true)">{{ t('content_page.search') }}</LButton>
+        <LButton variant="outline" severity="neutral" @click="closePicker">{{ t('content_page.cancel') }}</LButton>
+      </div>
+      <div v-if="picker.error" class="cms-inline-callout cms-inline-callout--danger" role="alert">{{ picker.error }}</div>
+      <div v-if="picker.loading" class="cms-page-state" role="status">{{ t('content_page.loading_resources') }}</div>
+      <div v-else-if="!picker.items.length" class="cms-page-state">{{ t('content_page.no_resources') }}</div>
+      <div v-else class="cms-resource-picker__grid">
+        <button v-for="item in picker.items" :key="item.id" type="button" class="cms-resource-picker__item" :data-selected="picker.selected.includes(String(item.id))" @click="togglePickerItem(item)">
+          <img v-if="picker.kind==='media' && (item.thumb || item.url)" :src="item.thumb || item.url" :alt="item.alt || ''">
+          <span><strong>{{ pickerItemLabel(item) }}</strong><small>{{ pickerItemMeta(item) }}</small></span>
+          <LBadge v-if="picker.selected.includes(String(item.id))" severity="success">{{ t('content_page.selected_one') }}</LBadge>
+        </button>
+      </div>
+      <div class="cms-content-pagination">
+        <span class="cms-muted">{{ pickerRange }}</span>
+        <div class="cms-card-actions">
+          <LButton variant="outline" :disabled="picker.loading || picker.pagination.offset<=0" @click="pickerPrev">{{ t('content_page.previous') }}</LButton>
+          <LButton variant="outline" :disabled="picker.loading || !picker.pagination.has_more" @click="pickerNext">{{ t('content_page.next') }}</LButton>
+          <LButton v-if="picker.multiple" :disabled="picker.loading" @click="applyPicker">{{ t('content_page.apply_selection',{count:picker.selected.length}) }}</LButton>
+        </div>
       </div>
     </LPanel>
 

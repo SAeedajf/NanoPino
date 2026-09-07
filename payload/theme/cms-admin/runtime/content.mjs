@@ -551,9 +551,6 @@ export function createComponent(host) {
       const descriptor = this.typeDescriptor()
       const typeOptions = [{ value: '', label: tr('content_page.all_types') }, ...this.types.map((item) => ({ value: item.key, label: item.label || item.key }))]
       const currentTypeOptions = this.types.map((item) => ({ value: item.key, label: item.singular_label || item.label || item.key }))
-      const parentOptions = [{ value: '', label: tr('content_page.no_parent') }, ...this.items
-        .filter((item) => item.type === this.form.type && validContentId(item.id) !== validContentId(this.editing))
-        .map((item) => ({ value: validContentId(item.id), label: `${item.title || tr('content_page.untitled','',{id:item.id})} · #${item.id}` }))]
       const allSelected = this.items.length > 0 && this.items.every((item) => this.selected.includes(validContentId(item.id)))
 
       const editor = this.editorOpen
@@ -563,8 +560,9 @@ export function createComponent(host) {
                 label(h, tr('content_page.title'), input(h, this.form.title, (v) => (this.form.title = v), 'text', { maxlength: '255', placeholder: tr('content_page.title_placeholder') })),
                 label(h, tr('content_page.excerpt'), textarea(h, this.form.excerpt, (v) => (this.form.excerpt = v), { rows: 4, maxlength: '2000' })),
                 ...(descriptor?.fields || []).map((field) => h('div', { class: 'cms-content-fieldset', key: field.key }, [
-                  label(h, `${field.label}${field.required ? ' *' : ''}`, this.fieldControl(field)),
-                  h('small', { class: 'cms-content-muted' }, `${field.type} · ${field.storage}${field.multiple ? ` · ${tr('content_page.multiple')}` : ''}`),
+                  h('div',{class:'cms-content-field-label'},[h('strong',{},field.label+(field.required?' *':'')),h('small',{class:'cms-content-muted'},this.fieldHint(field))]),
+                  this.fieldControl(field),
+                  h('details',{class:'cms-content-technical'},[h('summary',{},tr('content_page.technical_details')),h('code',{},field.key),' · ',h('code',{},field.type),' · ',h('code',{},field.storage)])
                 ])),
                 h('details', { class: 'cms-content-advanced' }, [
                   h('summary', {}, tr('content_page.advanced')),
@@ -594,8 +592,12 @@ export function createComponent(host) {
                   label(h, tr('content_page.content_type'), select(h, this.form.type, this.changeFormType, currentTypeOptions)),
                   label(h, tr('content_page.slug'), input(h, this.form.slug, (v) => (this.form.slug = v), 'text', { dir: 'ltr', placeholder: tr('content_page.slug_auto') })),
                   label(h, tr('content_page.language'), input(h, this.form.locale, (v) => (this.form.locale = v), 'text', { dir: 'ltr', maxlength: '16' })),
-                  descriptor?.hierarchical ? label(h, tr('content_page.parent'), select(h, this.form.parent_id, (v) => (this.form.parent_id = v), parentOptions)) : null,
-                  h('small', { class: 'cms-content-muted' }, `Revision: ${descriptor?.revisions ? tr('content_page.enabled') : tr('content_page.disabled')} · Taxonomy: ${(descriptor?.taxonomies || []).join(tr('common.list_separator')) || tr('content_page.none')}`),
+                  descriptor?.hierarchical ? h('div',{class:'cms-resource-value'},[
+                    h('strong',{},tr('content_page.parent')),
+                    this.form.parent_id?h('span',{class:'cms-resource-chip'},[h('span',{},this.parentLabel||this.resourceInfo('content',this.form.parent_id)?.title||tr('content_page.parent_item','',{id:this.form.parent_id})),h('button',{type:'button','aria-label':tr('content_page.remove_selection'),onClick:this.clearParent},'×')]):h('span',{class:'cms-content-muted'},tr('content_page.no_parent')),
+                    h(LButton,{label:tr('content_page.choose_parent'),severity:'secondary',onClick:this.openParentPicker})
+                  ]):null,
+                  h('details',{class:'cms-content-technical'},[h('summary',{},tr('content_page.technical_details')),h('div',{},tr('content_page.revision_support')+': '+(descriptor?.revisions?tr('content_page.enabled'):tr('content_page.disabled'))),h('div',{},tr('content_page.taxonomies')+': '+((descriptor?.taxonomies||[]).join(tr('common.list_separator'))||tr('content_page.none')))]),
                 ]),
               ]),
             ]),

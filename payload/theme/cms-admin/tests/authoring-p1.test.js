@@ -55,8 +55,10 @@ test('parent picker searches independently of the current content page and exclu
 
 test('media upload rows can be retried or removed independently',async()=>{
   const vm=instance(media)
-  const failed={id:'a',file:{name:'a.jpg',size:10},name:'a.jpg',size:10,status:'error',error:'network'}
-  const other={id:'b',file:{name:'b.jpg',size:10},name:'b.jpg',size:10,status:'error',error:'network'}
+  const firstFile=new Blob(['a'],{type:'image/jpeg'});Object.defineProperty(firstFile,'name',{value:'a.jpg'})
+  const secondFile=new Blob(['b'],{type:'image/jpeg'});Object.defineProperty(secondFile,'name',{value:'b.jpg'})
+  const failed={id:'a',file:firstFile,name:'a.jpg',size:firstFile.size,status:'error',error:'network'}
+  const other={id:'b',file:secondFile,name:'b.jpg',size:secondFile.size,status:'error',error:'network'}
   vm.uploads=[failed,other]
   vm.load=async()=>{}
   globalThis.fetch=async()=>response({id:44})

@@ -78,6 +78,8 @@ test('P2 theme center preserves Pinoox per-package stacks and scopes NanoPino si
   }
   assert.match(vue,/isActive\(theme\)&&isSiteTheme\(theme\)/)
   assert.match(runtime,/isActive&&this\.isSiteTheme\(x\)/)
+  assert.match(vue,/async function activate\(theme\)/)
+  assert.doesNotMatch(vue,/async function activate\(t\)/)
 })
 
 test('P2 block catalog stays extension-first and recognizes third-party essential capabilities',()=>{

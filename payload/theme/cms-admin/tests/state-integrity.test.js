@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { createComponent as settings } from '../runtime/settings.mjs'
 import { createComponent as builder } from '../runtime/builder.mjs'
 import { createComponent as content } from '../runtime/content.mjs'
+import { createComponent as media } from '../runtime/media.mjs'
+import { createComponent as siteEditor } from '../runtime/site-editor.mjs'
+import { createComponent as extensions } from '../runtime/extensions.mjs'
 import { createComponent as users } from '../runtime/users.mjs'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
@@ -234,4 +237,147 @@ test('user selection is a native button separate from privileged row actions', (
   const row = nodes.find(node => node.tag === 'article' && node.props.key === 7)
   assert.equal(row.props.role, undefined)
   assert.equal(row.props.tabindex, undefined)
+})
+
+
+test('content type changes preserve shared authoring state and require consent before incompatible field loss', () => {
+  const vm = instance(content)
+  vm.types = [
+    { key: 'page', hierarchical: true, fields: [{ key: 'body', type: 'richtext' }, { key: 'hero', type: 'text' }] },
+    { key: 'post', hierarchical: false, fields: [{ key: 'body', type: 'richtext' }, { key: 'tagline', type: 'text' }] },
+  ]
+  vm.form = { site_id: 1, type: 'page', title: 'Kept title', slug: 'kept', excerpt: 'Kept excerpt', locale: 'fa', parent_id: '9', fields: { body: 'Shared body', hero: 'Unsaved hero' }, metadataJson: '{}' }
+  vm.previousType = 'page'
+  globalThis.confirm = () => false
+  vm.changeFormType('post')
+  assert.equal(vm.form.type, 'page')
+  assert.equal(vm.form.title, 'Kept title')
+  assert.equal(vm.form.fields.hero, 'Unsaved hero')
+
+  globalThis.confirm = () => true
+  vm.changeFormType('post')
+  assert.equal(vm.form.type, 'post')
+  assert.equal(vm.form.title, 'Kept title')
+  assert.equal(vm.form.excerpt, 'Kept excerpt')
+  assert.equal(vm.form.fields.body, 'Shared body')
+  assert.equal(vm.form.fields.hero, undefined)
+  assert.equal(vm.form.parent_id, '')
+})
+
+test('content save acknowledges its submitted snapshot without closing over newer edits', async () => {
+  const vm = instance(content), pending = deferred()
+  vm.types = [{ key: 'post', fields: [] }]
+  vm.form = { site_id: 1, type: 'post', title: 'Submitted', slug: '', excerpt: '', locale: 'fa', parent_id: '', fields: {}, metadataJson: '{}' }
+  vm.previousType = 'post'; vm.editorOpen = true; vm.load = async () => {}
+  globalThis.fetch = async () => pending.promise
+  const save = vm.save(false)
+  vm.form.title = 'Typed while saving'
+  pending.resolve(response({ id: 21, status: 'draft', title: 'Submitted' }))
+  await save
+  assert.equal(vm.editing, '21')
+  assert.equal(vm.form.title, 'Typed while saving')
+  assert.equal(vm.editorOpen, true)
+  assert.match(vm.notice, /saved_newer_draft|newer/i)
+})
+
+test('content scheduling saves the submitted content snapshot before scheduling', async () => {
+  const vm = instance(content), pending = deferred(), calls = []
+  vm.types = [{ key: 'post', fields: [] }]
+  vm.editing = '9'; vm.scheduleAt = '2026-09-08T10:30'
+  vm.form = { site_id: 1, type: 'post', title: 'Scheduled body', slug: '', excerpt: '', locale: 'fa', parent_id: '', fields: {}, metadataJson: '{}' }
+  vm.load = async () => {}
+  globalThis.fetch = async (url, options) => {
+    calls.push([url, options.method, options.body ? JSON.parse(options.body) : null])
+    if (calls.length === 1) return pending.promise
+    return response({})
+  }
+  const run = vm.schedule()
+  vm.form.title = 'Newer unsaved title'
+  pending.resolve(response({ id: 9, title: 'Scheduled body', status: 'draft' }))
+  await run
+  assert.equal(calls.length, 2)
+  assert.equal(calls[0][1], 'PUT')
+  assert.equal(calls[0][2].title, 'Scheduled body')
+  assert.ok(calls[1][0].endsWith('/content/9/schedule'))
+  assert.equal(vm.form.title, 'Newer unsaved title')
+})
+
+test('media detail accepts only the latest selection response', async () => {
+  const vm = instance(media), first = deferred(), second = deferred()
+  let call = 0
+  globalThis.fetch = async () => (++call === 1 ? first.promise : second.promise)
+  const a = vm.openDetail({ id: 1 })
+  const b = vm.openDetail({ id: 2 })
+  second.resolve(response({ id: 2, kind: 'image', title: 'B', alt: '' }))
+  await b
+  first.resolve(response({ id: 1, kind: 'image', title: 'A', alt: '' }))
+  await a
+  assert.equal(vm.detail.id, 2)
+  assert.equal(vm.form.title, 'B')
+})
+
+test('media metadata save preserves edits typed after the request snapshot', async () => {
+  const vm = instance(media), pending = deferred()
+  vm.detail = { id: 7, kind: 'image', title: 'Before' }
+  vm.form = { title: 'Submitted', alt: '', caption: '', description: '', focal_x: '', focal_y: '' }
+  vm.draftDirty = true
+  globalThis.fetch = async (_url, options) => {
+    if (options?.method === 'PATCH') return pending.promise
+    return response({ items: [], summary: {}, pagination: {} })
+  }
+  const save = vm.saveMetadata()
+  vm.form.title = 'Typed after submit'
+  pending.resolve(response({ id: 7, kind: 'image', title: 'Submitted', alt: '' }))
+  await save
+  assert.equal(vm.form.title, 'Typed after submit')
+  assert.equal(vm.draftDirty, true)
+  assert.match(vm.notice, /saved_newer_draft|newer/i)
+})
+
+test('full site style save keeps newer token edits dirty', async () => {
+  const vm = instance(siteEditor), pending = deferred()
+  Object.defineProperty(vm, 'canCustomize', { configurable: true, value: true })
+  vm.stylesLoaded = true
+  vm.styleVersion = 3
+  vm.styleValue = { colors: { primary: '#111111' } }
+  globalThis.fetch = async () => pending.promise
+  const save = vm.saveStyles()
+  vm.styleValue.colors.primary = '#222222'
+  pending.resolve(response({ version: 4, value: { colors: { primary: '#111111' } } }))
+  await save
+  assert.equal(vm.styleVersion, 4)
+  assert.equal(vm.styleValue.colors.primary, '#222222')
+  assert.equal(vm.styleDirty, true)
+})
+
+test('full site editor reports document and style load failures independently', async () => {
+  const vm = instance(siteEditor)
+  globalThis.fetch = async url => {
+    if (String(url).includes('/builder?')) throw new Error('builder unavailable')
+    return response({ version: 1, value: { colors: { primary: '#123456' } } })
+  }
+  await vm.loadAll()
+  assert.equal(vm.documentsLoaded, false)
+  assert.equal(vm.stylesLoaded, true)
+  assert.match(vm.documentError, /builder unavailable/)
+  assert.ok(vm.error)
+})
+
+test('extension package selection invalidates approval and ignores a late inspection response', async () => {
+  const vm = instance(extensions), first = deferred(), second = deferred()
+  let call = 0
+  globalThis.fetch = async () => (++call === 1 ? first.promise : second.promise)
+  vm.selectFile('package-a')
+  const a = vm.inspect()
+  vm.approved = true
+  vm.selectFile('package-b')
+  assert.equal(vm.approved, false)
+  assert.equal(vm.stage, null)
+  const b = vm.inspect()
+  second.resolve(response({ stage: { id: 'B' }, review: { manifest: { id: 'b' } }, mode: 'install' }))
+  await b
+  first.resolve(response({ stage: { id: 'A' }, review: { manifest: { id: 'a' } }, mode: 'install' }))
+  await a
+  assert.equal(vm.stage.id, 'B')
+  assert.equal(vm.review.manifest.id, 'b')
 })

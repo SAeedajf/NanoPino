@@ -8,10 +8,10 @@
     </template>
 
     <div class="cms-stat-grid">
-      <LStatCard :label="t('media_page.all_media')" :value="summary.total || 0" icon="images" />
-      <LStatCard :label="t('media_page.image')" :value="summary.image || 0" icon="image" />
-      <LStatCard :label="t('media_page.video')" :value="summary.video || 0" icon="video" />
-      <LStatCard :label="t('media_page.missing_alt')" :value="summary.missing_alt || 0" icon="circle-alert" />
+      <LStatCard :label="t('media_page.all_media')" :value="libraryLoaded ? (summary.total ?? 0) : '—'" icon="images" />
+      <LStatCard :label="t('media_page.image')" :value="libraryLoaded ? (summary.image ?? 0) : '—'" icon="image" />
+      <LStatCard :label="t('media_page.video')" :value="libraryLoaded ? (summary.video ?? 0) : '—'" icon="video" />
+      <LStatCard :label="t('media_page.missing_alt')" :value="libraryLoaded ? (summary.missing_alt ?? 0) : '—'" icon="circle-alert" />
     </div>
 
     <LPanel>
@@ -55,6 +55,7 @@
     <div class="cms-media-layout" :class="{ 'has-detail': selected }">
       <section>
         <div v-if="loading" class="cms-page-state" role="status" aria-live="polite">{{ t('media_page.loading_library') }}</div>
+        <div v-else-if="error && !libraryLoaded" class="cms-page-state cms-page-state--error" role="alert"><strong>{{ t('media_page.load_failed') }}</strong><p>{{ t('media_page.load_failed_hint') }}</p><LButton variant="outline" @click="loadMedia">{{ t('media_page.refresh') }}</LButton></div>
         <div v-else-if="!assets.length" class="cms-page-state">{{ t('media_page.not_found') }}</div>
         <div v-else-if="view==='grid'" class="cms-media-grid">
           <article v-for="asset in assets" :key="asset.id" class="cms-media-card" :class="{ selected:selected?.id===asset.id }" role="button" tabindex="0" :aria-pressed="selected?.id===asset.id ? 'true' : 'false'" @click="openAsset(asset)" @keydown.enter.prevent="openAsset(asset)" @keydown.space.prevent="openAsset(asset)">
@@ -80,8 +81,8 @@
         <LPanel>
           <template #header>{{ t('media_page.details') }}</template>
           <div class="cms-media-detail-preview"><img v-if="selected.kind==='image' && selected.url" :src="selected.url" :alt="draft.alt"><video v-else-if="selected.kind==='video' && selected.url" controls :src="selected.url"/><audio v-else-if="selected.kind==='audio' && selected.url" controls :src="selected.url"/><LIcon v-else :name="kindIcon(selected.kind)" :size="42" /></div>
-          <div class="cms-form-grid"><label>{{ t('media_page.title') }}<input v-model="draft.title" class="cms-input"></label><label v-if="selected.kind==='image'">{{ t('media_page.alt') }}<input v-model="draft.alt" class="cms-input" :placeholder="t('media_page.alt_placeholder')"></label><label>{{ t('media_page.caption') }}<textarea v-model="draft.caption" class="cms-input" rows="3"/></label><label>{{ t('media_page.description') }}<textarea v-model="draft.description" class="cms-input" rows="4"/></label></div>
-          <div class="cms-card-actions"><LButton :disabled="saving" @click="saveMetadata">{{ saving ? t('media_page.saving') : t('media_page.save') }}</LButton><LButton variant="outline" @click="copyUrl">{{ t('media_page.copy_url') }}</LButton><LButton variant="outline" severity="danger" @click="removeAsset">{{ t('media_page.delete') }}</LButton></div>
+          <div class="cms-form-grid"><label>{{ t('media_page.title') }}<input v-model="draft.title" class="cms-input" @input="draftDirty=true"></label><label v-if="selected.kind==='image'">{{ t('media_page.alt') }}<input v-model="draft.alt" class="cms-input" :placeholder="t('media_page.alt_placeholder')" @input="draftDirty=true"></label><label>{{ t('media_page.caption') }}<textarea v-model="draft.caption" class="cms-input" rows="3" @input="draftDirty=true"/></label><label>{{ t('media_page.description') }}<textarea v-model="draft.description" class="cms-input" rows="4" @input="draftDirty=true"/></label></div>
+          <div class="cms-card-actions"><LButton :disabled="saving" @click="saveMetadata">{{ saving ? t('media_page.saving') : t('media_page.save') }}</LButton><LButton variant="outline" @click="copyUrl">{{ t('media_page.copy_url') }}</LButton><LButton variant="outline" @click="closeAsset">{{ t('media_page.close') }}</LButton><LButton variant="outline" severity="danger" @click="removeAsset">{{ t('media_page.delete') }}</LButton></div>
         </LPanel>
         <LPanel><template #header>{{ t('media_page.usages', { count: selected.usage_count || 0 }) }}</template><article v-for="usage in selected.usages || []" :key="usage.id" class="cms-usage-row"><strong>{{ usage.resource_type }} #{{ usage.resource_id }}</strong><small>{{ usage.context }}</small></article><p v-if="!(selected.usages||[]).length" class="cms-muted">{{ t('media_page.no_usages') }}</p></LPanel>
         <LPanel><template #header>{{ t('media_page.variants', { count: selected.variant_count || 0 }) }}</template><article v-for="variant in selected.variants || []" :key="variant.id" class="cms-usage-row"><strong>{{ variant.variant_key || variant.key }}</strong><small>{{ variant.width || '—' }}×{{ variant.height || '—' }} · {{ formatBytes(variant.size) }}</small></article><p v-if="!(selected.variants||[]).length" class="cms-muted">{{ t('media_page.no_variants') }}</p></LPanel>
@@ -97,21 +98,43 @@ import { mediaApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
 const assets=ref([]), summary=ref({}), policy=ref({allowed_extensions:[],max_mb:20}), pagination=ref({limit:48,offset:0,returned:0,has_more:false}), kinds=ref(['image','video','audio','document'])
-const query=ref(''), kind=ref(''), view=ref('grid'), loading=ref(false), uploading=ref(false), dragging=ref(false), notice=ref(''), error=ref(''), fileInput=ref(null), uploadQueue=ref([]), selected=ref(null), saving=ref(false), draft=ref({title:'',alt:'',caption:'',description:''})
-let timer=null
+const query=ref(''), kind=ref(''), view=ref('grid'), loading=ref(false), libraryLoaded=ref(false), uploading=ref(false), dragging=ref(false), notice=ref(''), error=ref(''), fileInput=ref(null), uploadQueue=ref([]), selected=ref(null), saving=ref(false), draft=ref({title:'',alt:'',caption:'',description:''}), draftDirty=ref(false)
+let timer=null, libraryRequest=0, selectionRequest=0
 const accept=computed(()=>(policy.value.allowed_extensions||[]).map(v=>'.'+v).join(','))
 onMounted(loadMedia)
-async function loadMedia(){loading.value=true;error.value='';try{const response=await mediaApi.list({q:query.value,kind:kind.value,limit:pagination.value.limit,offset:pagination.value.offset});const data=response.data||{};assets.value=data.items||[];summary.value=data.summary||{};policy.value=data.upload_policy||policy.value;pagination.value={...pagination.value,...(data.pagination||{})};kinds.value=data.kinds||kinds.value}catch(e){error.value=e.message}finally{loading.value=false}}
+async function loadMedia(){const request=++libraryRequest;loading.value=true;error.value='';try{const response=await mediaApi.list({q:query.value,kind:kind.value,limit:pagination.value.limit,offset:pagination.value.offset});if(request!==libraryRequest)return;const data=response.data||{};assets.value=data.items||[];summary.value=data.summary||{};policy.value=data.upload_policy||policy.value;pagination.value={...pagination.value,...(data.pagination||{})};kinds.value=data.kinds||kinds.value;libraryLoaded.value=true}catch(e){if(request===libraryRequest)error.value=e.message}finally{if(request===libraryRequest)loading.value=false}}
 function queueSearch(){clearTimeout(timer);pagination.value.offset=0;timer=setTimeout(loadMedia,350)}
-function applyFilters(){pagination.value.offset=0;selected.value=null;loadMedia()}
-async function openAsset(asset){try{selected.value=(await mediaApi.read(asset.id)).data;draft.value={title:selected.value.title||'',alt:selected.value.alt||'',caption:selected.value.caption||'',description:selected.value.description||''}}catch(e){error.value=e.message}}
-async function saveMetadata(){if(!selected.value)return;saving.value=true;try{const response=await mediaApi.update(selected.value.id,draft.value);selected.value={...selected.value,...response.data};notice.value=t('media_page.saved');await loadMedia()}catch(e){error.value=e.message}finally{saving.value=false}}
-async function removeAsset(){if(!selected.value||!confirm(t('media_page.delete_confirm',{title:titleOf(selected.value)})))return;try{await mediaApi.remove(selected.value.id);selected.value=null;notice.value=t('media_page.deleted');await loadMedia()}catch(e){if(e.code==='MEDIA_IN_USE'&&e.details?.usages){selected.value={...selected.value,in_use:true,usage_count:e.details.usages.length,usages:e.details.usages};error.value=t('media_page.in_use')}else error.value=e.message}}
+function confirmDiscardDraft(){return !draftDirty.value||confirm(t('media_page.discard_draft_confirm'))}
+function clearSelection(){selected.value=null;draft.value={title:'',alt:'',caption:'',description:''};draftDirty.value=false;selectionRequest++}
+function applyFilters(){if(!confirmDiscardDraft())return;pagination.value.offset=0;clearSelection();loadMedia()}
+async function openAsset(asset){
+  if(!asset?.id||String(asset.id)===String(selected.value?.id))return
+  if(!confirmDiscardDraft())return
+  const request=++selectionRequest;error.value=''
+  try{const response=await mediaApi.read(asset.id);if(request!==selectionRequest)return;selected.value=response.data||response;draft.value={title:selected.value.title||'',alt:selected.value.alt||'',caption:selected.value.caption||'',description:selected.value.description||''};draftDirty.value=false}
+  catch(e){if(request===selectionRequest)error.value=e.message}
+}
+function closeAsset(){if(!confirmDiscardDraft())return;clearSelection()}
+async function saveMetadata(){
+  if(!selected.value||saving.value)return
+  const id=selected.value.id,submitted=JSON.stringify(draft.value),body=JSON.parse(submitted)
+  saving.value=true;error.value='';notice.value=''
+  try{
+    const response=await mediaApi.update(id,body),updated=response.data||response
+    if(String(selected.value?.id)===String(id)){
+      selected.value={...selected.value,...updated}
+      if(JSON.stringify(draft.value)===submitted){draft.value={title:updated.title||'',alt:updated.alt||'',caption:updated.caption||'',description:updated.description||''};draftDirty.value=false;notice.value=t('media_page.saved')}
+      else{draftDirty.value=true;notice.value=t('media_page.saved_newer_draft')}
+    }
+    await loadMedia()
+  }catch(e){error.value=e.message}finally{saving.value=false}
+}
+async function removeAsset(){if(!selected.value||!confirm(t('media_page.delete_confirm',{title:titleOf(selected.value)})))return;try{await mediaApi.remove(selected.value.id);clearSelection();notice.value=t('media_page.deleted');await loadMedia()}catch(e){if(e.code==='MEDIA_IN_USE'&&e.details?.usages){selected.value={...selected.value,in_use:true,usage_count:e.details.usages.length,usages:e.details.usages};error.value=t('media_page.in_use')}else error.value=e.message}}
 async function copyUrl(){if(!selected.value?.url)return;try{await navigator.clipboard.writeText(selected.value.url);notice.value=t('media_page.url_copied')}catch{error.value=t('media_page.url_copy_failed')}}
 function onDrop(event){dragging.value=false;addFiles([...(event.dataTransfer.files||[])])}function onFileChange(event){addFiles([...(event.target.files||[])]);event.target.value=''}
 function addFiles(files){const allowed=new Set((policy.value.allowed_extensions||[]).map(v=>String(v).toLowerCase()));const max=Number(policy.value.max_bytes||0);for(const file of files){const ext=String(file.name.split('.').pop()||'').toLowerCase();let status='queued',rowError='';if(allowed.size&&!allowed.has(ext)){status='rejected';rowError=t('media_page.extension_rejected')}else if(max&&file.size>max){status='rejected';rowError=t('media_page.size_rejected',{max:policy.value.max_mb||Math.round(max/1048576)})}uploadQueue.value.push({id:`${Date.now()}-${Math.random()}`,file,name:file.name,size:file.size,status,error:rowError})}runUploads()}
 async function runUploads(){if(uploading.value)return;uploading.value=true;let done=0;try{for(const row of uploadQueue.value){if(row.status!=='queued')continue;row.status='uploading';try{const form=new FormData();form.append('file',row.file,row.file.name);form.append('site_id','1');form.append('public','1');const response=await mediaApi.upload(form);row.assetId=response.data.id;row.status='done';done++}catch(e){row.status='error';row.error=e.message}}if(done){notice.value=t('media_page.uploaded_count',{count:done});pagination.value.offset=0;await loadMedia()}}finally{uploading.value=false}}
-function nextPage(){if(!pagination.value.has_more)return;pagination.value.offset+=pagination.value.limit;selected.value=null;loadMedia()}function prevPage(){pagination.value.offset=Math.max(0,pagination.value.offset-pagination.value.limit);selected.value=null;loadMedia()}
+function nextPage(){if(!pagination.value.has_more||!confirmDiscardDraft())return;pagination.value.offset+=pagination.value.limit;clearSelection();loadMedia()}function prevPage(){if(!confirmDiscardDraft())return;pagination.value.offset=Math.max(0,pagination.value.offset-pagination.value.limit);clearSelection();loadMedia()}
 function titleOf(a){return a?.title||a?.original_name||`#${a?.id||'—'}`}function kindLabel(v){return({image:t('media_page.image'),video:t('media_page.video'),audio:t('media_page.audio'),document:t('media_page.document')})[v]||v}function kindIcon(v){return({image:'image',video:'video',audio:'audio-lines',document:'file-text'})[v]||'file'}function formatBytes(v){const n=Number(v||0);return n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:n<1073741824?`${(n/1048576).toFixed(1)} MB`:`${(n/1073741824).toFixed(2)} GB`}
 </script>
 

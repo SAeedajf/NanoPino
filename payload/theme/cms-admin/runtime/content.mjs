@@ -389,6 +389,31 @@ export function createComponent(host) {
         this.pagination.offset = Math.max(0, this.pagination.offset - this.pagination.limit)
         this.load()
       },
+      resourceKey(kind, id) { return kind + ':' + id },
+      resourceInfo(kind, id) { return this.resourceCache[this.resourceKey(kind,id)] || null },
+      rememberResource(kind, item) {
+        if(!item?.id)return
+        this.resourceCache={...this.resourceCache,[this.resourceKey(kind,item.id)]:{...item}}
+      },
+      fieldHint(field) {
+        return ({richtext:tr('content_page.hint_richtext'),media:tr('content_page.hint_media'),gallery:tr('content_page.hint_gallery'),relation:tr('content_page.hint_relation'),taxonomy:tr('content_page.hint_taxonomy'),textarea:tr('content_page.hint_textarea'),json:tr('content_page.hint_structured'),repeater:tr('content_page.hint_structured'),group:tr('content_page.hint_structured')})[field.type]||tr('content_page.hint_standard')
+      },
+      selectedIds(field){return csvIds(this.form.fields?.[field.key])},
+      selectedResourceLabel(field,id){return field.type==='taxonomy'?(this.resourceInfo('taxonomy',id)?.name||tr('content_page.term_item','',{id})):(this.resourceInfo('content',id)?.title||tr('content_page.content_item','',{id}))},
+      removeFieldSelection(field,id){
+        const current=this.selectedIds(field).filter(value=>String(value)!==String(id))
+        this.form.fields={...(this.form.fields||{}),[field.key]:field.type==='media'&&!field.multiple?'':current}
+      },
+      clearParent(){this.form.parent_id='';this.parentLabel=''},
+      async hydrateParent(id){if(!id)return;try{const row=await api('/content/'+id);this.rememberResource('content',row);this.parentLabel=row?.title||tr('content_page.parent_item','',{id})}catch{}},
+      hydrateMediaFields(){
+        for(const field of (this.typeDescriptor()?.fields||[]).filter(row=>row.type==='media'||row.type==='gallery')){
+          for(const id of this.selectedIds(field).slice(0,20)){
+            if(this.resourceInfo('media',id))continue
+            api('/media/'+id).then(row=>this.rememberResource('media',row)).catch(()=>{})
+          }
+        }
+      },
       fieldControl(field) {
         const value = this.form.fields?.[field.key]
         const set = (next) => { this.form.fields = { ...(this.form.fields || {}), [field.key]: next } }

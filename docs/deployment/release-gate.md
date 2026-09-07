@@ -28,3 +28,19 @@ This closes the previous “PHP lint only” gap for framework-independent NanoP
 Repository CI now requires a clean Pinoox + MySQL lifecycle after source verification. A candidate cannot pass the repository gate unless native platform installation, PINX build, fresh install, force-update and uninstall all complete successfully and the CMS table count remains stable across update and returns to zero after uninstall.
 
 This materially closes the previous “no real Pinoox/DB package lifecycle” gap for unsigned packages in CI. Signed trust-chain validation, fault-injected recovery and target-host/browser E2E remain separate Stable gates.
+
+
+## R15 installability and versioned-upgrade gate
+
+R15 supersedes the R14 same-version force-update probe with a versioned native lifecycle. CI now installs the previous official NanoPino 0.23.28 release and upgrades it to 0.23.29 **without force**, then performs a separate clean 0.23.29 fresh install/uninstall cycle.
+
+The lifecycle matrix runs against:
+- Pincore 3.14.0 / native version code 232 — the declared minimum supported kernel;
+- Pincore 3.14.4 — the current verified baseline;
+- MySQL 8.4.
+
+Release packaging is additionally blocked unless the built PINX passes the R15 artifact audit. The audit verifies package/version/minpin parity, required runtime files, Vite/build evidence, release metadata hashes, safe archive paths, bounded resource use and absence of development-only Admin source/build files.
+
+NanoPino also ships a read-only environment preflight as the first package migration. This runs before CMS schema-creating migrations and blocks unsupported PHP/Pincore/database/filesystem conditions.
+
+R15 materially strengthens installability evidence but does not close signed PINX trust-chain validation, fault-injected database/filesystem recovery, authenticated browser/mobile/WCAG E2E or exact target shared-hosting validation.

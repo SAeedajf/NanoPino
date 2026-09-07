@@ -52,12 +52,12 @@ const fallback = {
     logs: [],
     kernel: {
       runtime: { code: null, version: null, source: 'unbound' },
-      compatibility: { compatible: false, minimum: { code: 205, version: '3.8.15' }, current: { code: null, version: null }, optional_features_unavailable: [], primitives: [] },
+      compatibility: { compatible: false, minimum: { code: 232, version: '3.14.0' }, current: { code: null, version: null }, optional_features_unavailable: [], primitives: [] },
     },
   },
   developerSdk: {
     version: 'v1',
-    minimum: { php: '>=8.2', pincore: '>=3.8.15', kernelCode: 205, cms: '>=0.21.0', luma: '>=0.4.10' },
+    minimum: { php: '>=8.2', pincore: '>=3.14.0', kernelCode: 232, cms: '>=0.21.0', luma: '>=0.4.10' },
     extensionTypes: ['module','plugin','integration','theme','admin-extension','block','block-package','driver','language-pack'],
     registries: [],
     nativeRegistration: [],

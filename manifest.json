@@ -10,23 +10,23 @@
     "description": {}
   },
   "developer": "NanoPino Project",
-  "version_name": "0.23.28",
-  "version_code": 2328,
-  "minpin": 205,
+  "version_name": "0.23.29",
+  "version_code": 2329,
+  "minpin": 232,
   "depends": {},
   "target_app": null,
   "theme_name": null,
   "theme_meta": null,
-  "built_at": "2026-09-06T14:28:37Z",
-  "pinoox_version_name": "3.8.15-compatible",
-  "pinoox_version_code": 205,
+  "built_at": "2026-09-06T23:47:08Z",
+  "pinoox_version_name": "3.14.0+",
+  "pinoox_version_code": 232,
   "cms": {
     "schema": 1,
     "extension_type": "core-module",
     "publisher": "pinoox-cms-project",
     "requires": {
       "php": ">=8.2",
-      "pincore": ">=3.8.15",
+      "pincore": ">=3.14.0",
       "luma": ">=0.4.10"
     },
     "dependencies": [],
@@ -111,7 +111,9 @@
       "content-ownership-boundary",
       "author-assignment-authorization",
       "strict-same-origin-csrf",
-      "security-hardening-r5"
+      "security-hardening-r5",
+      "installability-preflight-r15",
+      "native-pinx-artifact-audit-r15"
     ],
     "capabilities": [],
     "abilities": [],

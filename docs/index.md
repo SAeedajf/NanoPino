@@ -1,6 +1,6 @@
 # NanoPino Documentation
 
-This directory documents the current NanoPino source contract. Machine-readable API/schema files under `payload/resources` remain authoritative where a prose document and a machine contract disagree.
+This directory documents the current NanoPino source contract.\n\n**Freeze Candidate:** 0.23.29 / R15 installability validation. Machine-readable API/schema files under `payload/resources` remain authoritative where a prose document and a machine contract disagree.
 
 Start here:
 - [Architecture](architecture/overview.md)
@@ -15,6 +15,7 @@ Start here:
 - [Testing](testing/strategy.md)
 - [Production deployment](deployment/production.md)
 - [Shared hosting](deployment/shared-hosting.md)
+- [Installation readiness and recovery](deployment/installability.md)
 - [Recovery](recovery/safe-mode.md)
 - [Release gate](deployment/release-gate.md)
 

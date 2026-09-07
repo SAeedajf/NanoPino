@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "status": "not_available",
-  "release_version": "0.23.28",
-  "release_version_code": 2328,
-  "documentation_manifest_sha256": "faf76968d6f9feb60dde85bd12e81a18a438eab7d8e850eff65bf0c21444e6c5",
-  "required_docs": 30,
+  "release_version": "0.23.29",
+  "release_version_code": 2329,
+  "documentation_manifest_sha256": "dbb4e24d4588945427eeee3301885f9a2891e2c48b73737957957ff569c8ce9e",
+  "required_docs": 31,
   "machine_contracts": 22,
   "adr_count": 0,
   "markdown_files": 0,
   "internal_links": 0,
   "source_audit_completed_at": null,
-  "reason": "Source documentation exists in the repository, but source docs are excluded from distributable PINX artifacts and no completed source-audit evidence has been captured for this candidate."
+  "reason": "Source documentation is present and required paths are repository-gated, but a completed signed-off artifact documentation audit has not yet been captured for this candidate."
 }

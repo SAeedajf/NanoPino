@@ -589,8 +589,8 @@ final class AdminController extends Controller
                             'version' => 'v1',
                             'minimum' => [
                                 'php' => '>=8.2',
-                                'pincore' => '>=3.8.15',
-                                'kernelCode' => 205,
+                                'pincore' => '>=3.14.0',
+                                'kernelCode' => 232,
                                 'cms' => '>=0.21.0',
                                 'luma' => '>=0.4.10',
                             ],

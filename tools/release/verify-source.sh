@@ -28,6 +28,13 @@ if (($manifest["version_name"]??null)!==($app["version-name"]??null)) $errors[]=
 if ((int)($manifest["version_code"]??0)!==(int)($app["version-code"]??0)) $errors[]="manifest version_code mismatch";
 if (($meta["version_name"]??null)!==($app["version-name"]??null)) $errors[]="release metadata version_name mismatch";
 if ((int)($meta["version_code"]??0)!==(int)($app["version-code"]??0)) $errors[]="release metadata version_code mismatch";
+if ((int)($manifest["minpin"]??0)!==(int)($app["minpin"]??0)) $errors[]="manifest minpin mismatch";
+if ((int)($meta["minpin"]??0)!==(int)($app["minpin"]??0)) $errors[]="release metadata minpin mismatch";
+if ((int)($app["pinx"]["minpin"]??0)!==(int)($app["minpin"]??0)) $errors[]="app pinx minpin mismatch";
+$appPincore=ltrim(trim((string)($app["cms"]["requires"]["pincore"]??"")),">=<~^ ");
+$manifestPincore=ltrim(trim((string)($manifest["cms"]["requires"]["pincore"]??"")),">=<~^ ");
+if ($appPincore==="" || $manifestPincore!==$appPincore) $errors[]="manifest pincore requirement mismatch";
+if (($meta["min_pincore"]??null)!==$appPincore) $errors[]="release metadata min_pincore mismatch";
 if (($meta["app_sha256"]??null)!==hash_file("sha256",$root."/payload/app.php")) $errors[]="release metadata app_sha256 mismatch";
 if (($app["package"]??null)!=="com_pinoox_cms") $errors[]="unexpected package id";
 if ($errors) {fwrite(STDERR,implode(PHP_EOL,$errors).PHP_EOL); exit(1);}

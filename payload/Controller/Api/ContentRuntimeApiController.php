@@ -239,6 +239,44 @@ final class ContentRuntimeApiController extends ApiController
         }
     }
 
+    public function revision(string $id, string $revisionId): JsonResponse
+    {
+        try {
+            $record = CmsRuntimeServices::revisions()->revisionForContent(
+                $this->id($id),
+                $this->id($revisionId),
+                CmsRuntimeServices::actorId(),
+            );
+
+            return CmsApiResponse::ok([
+                'id' => $record->id,
+                'kind' => $record->kind->value,
+                'checksum' => $record->checksum,
+                'actor_id' => $record->actorId,
+                'source_revision_id' => $record->sourceRevisionId,
+                'created_at' => $record->createdAt,
+                'snapshot' => $record->snapshot->payload(),
+            ]);
+        } catch (AuthorizationDeniedException) {
+            return CmsApiResponse::error('FORBIDDEN', 'Revision access is not permitted.', 403);
+        } catch (ContentValidationException|\InvalidArgumentException $e) {
+            $notFound = str_contains(strtolower($e->getMessage()), 'not found');
+            return CmsApiResponse::error(
+                $notFound ? 'REVISION_NOT_FOUND' : 'REVISION_QUERY_INVALID',
+                $notFound ? 'Revision not found.' : $e->getMessage(),
+                $notFound ? 404 : 422,
+            );
+        } catch (\Throwable $e) {
+            return CmsRuntimeErrorReporter::response(
+                $e,
+                'CONTENT_REVISION_READ_FAILED',
+                'Content revision could not be loaded.',
+                500,
+                ['operation' => 'content.revision.read'],
+            );
+        }
+    }
+
     public function restoreRevision(string $id, string $revisionId): JsonResponse
     {
         return $this->mutation(

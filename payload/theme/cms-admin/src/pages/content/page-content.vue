@@ -149,7 +149,7 @@ import CmsPageState from '../../components/cms-page-state.vue'
 import { contentApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
-const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref('')
+const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref(''),previousType=ref('post')
 const pagination=reactive({limit:50,offset:0,returned:0,has_more:false})
 const form=reactive({site_id:1,type:'post',title:'',slug:'',excerpt:'',locale:'fa',parent_id:'',fields:{},metadataJson:'{}'})
 const statusTabs=[{value:'',label:t('content_page.all')},{value:'draft',label:t('content_page.draft')},{value:'scheduled',label:t('content_page.scheduled')},{value:'published',label:t('content_page.published')},{value:'trash',label:t('content_page.trash_short')}]
@@ -159,8 +159,11 @@ const currentEditing=computed(()=>items.value.find(item=>String(item.id)===Strin
 const parentOptions=computed(()=>items.value.filter(item=>item.type===form.type&&String(item.id)!==String(editingId.value)))
 const allSelected=computed(()=>items.value.length>0&&items.value.every(item=>selected.value.includes(String(item.id))))
 function message(e){return e?.message||t('content_page.unexpected_error')}
+function clone(value){return JSON.parse(JSON.stringify(value))}
+function meaningful(value){if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.keys(value).length>0;return String(value??'').trim()!==''}
+function draftSignature(){return JSON.stringify({site_id:form.site_id,type:form.type,title:form.title,slug:form.slug,excerpt:form.excerpt,locale:form.locale,parent_id:form.parent_id,fields:clone(form.fields),metadataJson:form.metadataJson,scheduleAt:scheduleAt.value})}
 function defaultValue(field){if(field.default!==null&&field.default!==undefined)return field.default;if(field.multiple)return[];if(field.type==='boolean')return false;if(['json','group'].includes(field.type))return'{}';if(field.type==='repeater')return'[]';return''}
-function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value=''}
+function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value='';previousType.value=key}
 async function loadContents(resetOffset=false){if(resetOffset)pagination.offset=0;loading.value=true;error.value='';try{const r=await contentApi.list({search:query.value,type:typeFilter.value,status:statusFilter.value,locale:localeFilter.value,limit:pagination.limit,offset:pagination.offset});items.value=r.data?.items||[];types.value=r.data?.types||types.value;Object.assign(pagination,r.data?.pagination||{});selected.value=selected.value.filter(id=>items.value.some(item=>String(item.id)===id));if(!types.value.some(item=>item.key===form.type))resetForm(types.value[0]?.key||'post')}catch(e){error.value=message(e)}finally{loading.value=false}}
 function moveStatusTab(event, delta) {
   const tabs = [...(event.currentTarget?.parentElement?.querySelectorAll('[role=\"tab\"]') || [])]
@@ -175,9 +178,24 @@ function moveStatusTab(event, delta) {
 function setStatus(value){statusFilter.value=value;loadContents(true)}
 function applyFilters(){loadContents(true)}
 function startCreate(){resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';notice.value='';window.scrollTo({top:0,behavior:'smooth'})}
-function changeType(){if(editingId.value)return;resetForm(form.type)}
+function changeType(){
+  if(editingId.value)return
+  const next=form.type,previous=previousType.value||next
+  if(next===previous)return
+  const previousDescriptor=types.value.find(item=>item.key===previous)
+  const nextDescriptor=types.value.find(item=>item.key===next)
+  const nextKeys=new Set((nextDescriptor?.fields||[]).map(field=>field.key))
+  const removed=(previousDescriptor?.fields||[]).filter(field=>!nextKeys.has(field.key)&&meaningful(form.fields?.[field.key]))
+  const dropsParent=Boolean(form.parent_id)&&!nextDescriptor?.hierarchical
+  if((removed.length||dropsParent)&&!confirm(t('content_page.change_type_confirm',{count:removed.length+(dropsParent?1:0)}))){form.type=previous;return}
+  const oldFields=clone(form.fields||{}),nextFields={}
+  for(const field of nextDescriptor?.fields||[])nextFields[field.key]=Object.prototype.hasOwnProperty.call(oldFields,field.key)?oldFields[field.key]:defaultValue(field)
+  form.fields=nextFields
+  if(!nextDescriptor?.hierarchical)form.parent_id=''
+  previousType.value=next
+}
 function extractValue(item,field){if(field.storage==='document')return item.document?.[field.key]??defaultValue(field);if(field.storage==='relation')return (item.relations?.[field.key]||[]).join(', ');if(field.storage==='taxonomy')return (item.terms?.[field.key]||[]).join(', ');const value=item.fields?.[field.key]??defaultValue(field);return ['json','repeater','group'].includes(field.type)&&typeof value!=='string'?JSON.stringify(value,null,2):Array.isArray(value)?value.join(', '):value}
-function editContent(item){editingId.value=item.id;form.site_id=item.site_id||1;form.type=item.type;form.title=item.title||'';form.slug=item.slug||'';form.excerpt=item.excerpt||'';form.locale=item.locale||'fa';form.parent_id=item.parent_id?String(item.parent_id):'';form.metadataJson=JSON.stringify(item.metadata||{},null,2);form.fields={};const descriptor=types.value.find(type=>type.key===item.type);for(const field of descriptor?.fields||[])form.fields[field.key]=extractValue(item,field);scheduleAt.value=item.scheduled_at?String(item.scheduled_at).slice(0,16):'';editorOpen.value=true;window.scrollTo({top:0,behavior:'smooth'})}
+function editContent(item){editingId.value=item.id;form.site_id=item.site_id||1;form.type=item.type;previousType.value=item.type;form.title=item.title||'';form.slug=item.slug||'';form.excerpt=item.excerpt||'';form.locale=item.locale||'fa';form.parent_id=item.parent_id?String(item.parent_id):'';form.metadataJson=JSON.stringify(item.metadata||{},null,2);form.fields={};const descriptor=types.value.find(type=>type.key===item.type);for(const field of descriptor?.fields||[])form.fields[field.key]=extractValue(item,field);scheduleAt.value=item.scheduled_at?String(item.scheduled_at).slice(0,16):'';editorOpen.value=true;window.scrollTo({top:0,behavior:'smooth'})}
 function closeEditor(){editorOpen.value=false;resetForm(typeFilter.value||types.value[0]?.key||'post')}
 function ids(value){return String(value||'').split(',').map(v=>Number(v.trim())).filter(v=>Number.isSafeInteger(v)&&v>0)}
 function normalizeField(field,value){if(field.multiple||['relation','gallery','taxonomy'].includes(field.type))return ids(value);if(field.type==='media')return value===''?null:Number(value);if(field.type==='number')return value===''?null:Number(value);if(field.type==='boolean')return Boolean(value);if(['json','repeater','group'].includes(field.type)){try{return JSON.parse(value|| (field.type==='repeater'?'[]':'{}'))}catch{throw new Error(t('content_page.json_invalid',{field:field.label}))}}return value}
@@ -185,6 +203,7 @@ function payload(){if(!form.title.trim())throw new Error(t('content_page.title_r
 async function saveContent(publishAfter) {
   if (saving.value) return
   saving.value=true;error.value='';notice.value=''
+  const submittedDraft=draftSignature()
   try {
     const p=payload()
     const r=editingId.value?await contentApi.update(editingId.value,p):await contentApi.create(p)
@@ -201,11 +220,30 @@ async function saveContent(publishAfter) {
     const status=record?.status||currentEditing.value?.status||'draft'
     if(publishAfter&&id&&status!=='published')await contentApi.publish(id)
     notice.value=publishAfter?(status==='published'?t('content_page.saved_published'):t('content_page.saved_publish')):t('content_page.saved')
-    closeEditor();await loadContents()
+    const unchanged=draftSignature()===submittedDraft
+    if(unchanged)closeEditor()
+    else notice.value=t('content_page.saved_newer_draft')
+    await loadContents()
   } catch(e) { error.value=message(e) }
   finally { saving.value=false }
 }
-async function scheduleContent(){if(!editingId.value||!scheduleAt.value){error.value=t('content_page.schedule_required');return}error.value='';try{await contentApi.schedule(editingId.value,new Date(scheduleAt.value).toISOString());notice.value=t('content_page.scheduled_notice');await loadContents()}catch(e){error.value=message(e)}}
+async function scheduleContent(){
+  if(saving.value)return
+  if(!editingId.value||!scheduleAt.value){error.value=t('content_page.schedule_required');return}
+  saving.value=true;error.value='';notice.value=''
+  const submittedDraft=draftSignature(),publishAt=new Date(scheduleAt.value).toISOString(),id=editingId.value
+  try{
+    const p=payload()
+    const updated=await contentApi.update(id,p)
+    const record=updated.data||updated
+    const index=items.value.findIndex(item=>String(item.id)===String(id))
+    if(index>=0)items.value.splice(index,1,{...items.value[index],...record,id})
+    await contentApi.schedule(id,publishAt)
+    notice.value=draftSignature()===submittedDraft?t('content_page.scheduled_notice'):t('content_page.scheduled_newer_draft')
+    await loadContents()
+  }catch(e){error.value=message(e)}
+  finally{saving.value=false}
+}
 async function act(fn){error.value='';try{await fn();notice.value=t('content_page.operation_done');await loadContents()}catch(e){error.value=message(e)}}
 const publishContent=i=>act(()=>contentApi.publish(i.id));const restoreContent=i=>act(()=>contentApi.restore(i.id));const trashContent=i=>{if(!confirm(t('content_page.trash_confirm')))return;return act(()=>contentApi.trash(i.id))}
 function openHistory(item){const base=window.location.pathname.replace(/\/content\/?$/,'');window.history.pushState({},'',`${base}/revisions?content=${encodeURIComponent(item.id)}`);window.dispatchEvent(new PopStateEvent('popstate'))}

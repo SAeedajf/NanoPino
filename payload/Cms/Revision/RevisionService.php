@@ -163,6 +163,36 @@ final class RevisionService implements ContentRevisionRecorderInterface
         return $record;
     }
 
+    public function revisionForContent(
+        int $contentId,
+        int $revisionId,
+        ?int $actorId = null,
+    ): RevisionRecord {
+        $current = $this->content->find($contentId)
+            ?? throw new ContentValidationException('Content not found.');
+
+        $type = $this->contentTypes->definition($current->type)
+            ?? throw new ContentValidationException('Content type not registered.');
+
+        $this->authorizeOwnedContent(
+            $type->permissions['read'],
+            $current->siteId,
+            $current->id,
+            $current->authorId,
+            $actorId,
+        );
+
+        $revision = $this->revisions->find($revisionId)
+            ?? throw new ContentValidationException('Revision not found: ' . $revisionId);
+
+        $this->verify($revision);
+        if ($revision->snapshot->contentId !== $contentId) {
+            throw new ContentValidationException('Revision does not belong to requested content.');
+        }
+
+        return $revision;
+    }
+
     public function compare(int $fromRevisionId, int $toRevisionId, ?int $actorId = null): RevisionDiff
     {
         $from = $this->revisions->find($fromRevisionId)

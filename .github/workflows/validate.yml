@@ -137,7 +137,7 @@ jobs:
           (
             cd "$PINOX_ROOT"
             composer require "pinoox/pincore:${PINCORE_E2E_VERSION}" --no-update --no-interaction
-            composer update pinoox/pincore --with-all-dependencies --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+            composer update --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
             php -r '
               $config=require "vendor/pinoox/pincore/config/pincore.config.php";
               $expected=getenv("PINCORE_E2E_VERSION");

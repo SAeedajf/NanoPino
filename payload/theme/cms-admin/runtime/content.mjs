@@ -452,6 +452,43 @@ export function createComponent(host) {
       },
       openRichMedia(field){this.openPicker({kind:'rich-media',fieldKey:field.key,title:tr('content_page.insert_image'),multiple:false,richField:field.key})},
       openParentPicker(){this.openPicker({kind:'parent',fieldKey:'parent_id',title:tr('content_page.choose_parent'),multiple:false,selected:this.form.parent_id?[String(this.form.parent_id)]:[]})},
+      async loadPicker(reset=false){
+        if(!this.picker.open)return
+        if(reset)this.picker.pagination.offset=0
+        this.picker.loading=true;this.picker.error=''
+        try{
+          const q=new URLSearchParams({limit:String(this.picker.pagination.limit),offset:String(this.picker.pagination.offset)})
+          let data
+          if(this.picker.kind==='media'||this.picker.kind==='rich-media'){
+            if(this.picker.query.trim())q.set('q',this.picker.query.trim());q.set('kind','image');data=await api('/media?'+q)
+            this.picker.items=data.items||[];for(const item of this.picker.items)this.rememberResource('media',item)
+          }else if(this.picker.kind==='taxonomy'){
+            if(!this.picker.taxonomy)throw new Error(tr('content_page.taxonomy_missing'))
+            if(this.picker.query.trim())q.set('search',this.picker.query.trim());q.set('site_id',String(this.form.site_id||1));q.set('locale',this.form.locale||'fa')
+            data=await api('/taxonomies/'+encodeURIComponent(this.picker.taxonomy)+'/terms?'+q)
+            this.picker.items=data.items||[];for(const item of this.picker.items)this.rememberResource('taxonomy',item)
+          }else{
+            if(this.picker.query.trim())q.set('search',this.picker.query.trim());q.set('site_id',String(this.form.site_id||1));q.set('locale',this.form.locale||'fa');q.set('projection','list')
+            const onlyType=this.picker.kind==='parent'?this.form.type:(this.picker.targetTypes?.length===1?this.picker.targetTypes[0]:'')
+            if(onlyType)q.set('type',onlyType)
+            data=await api('/content?'+q)
+            this.picker.items=(data.items||[]).filter(item=>validContentId(item.id)!==validContentId(this.editing)&&(!this.picker.targetTypes?.length||this.picker.targetTypes.includes(item.type)))
+            for(const item of this.picker.items)this.rememberResource('content',item)
+          }
+          this.picker.pagination={...this.picker.pagination,...(data.pagination||{})}
+        }catch(e){this.picker.error=e.message;this.picker.items=[]}
+        finally{this.picker.loading=false}
+      },
+      pickerItemLabel(item){
+        if(this.picker.kind==='taxonomy')return item.name||'#'+item.id
+        if(this.picker.kind==='media'||this.picker.kind==='rich-media')return item.title||item.original_name||'#'+item.id
+        return item.title||tr('content_page.untitled','',{id:item.id})
+      },
+      pickerItemMeta(item){
+        if(this.picker.kind==='taxonomy')return item.slug||this.picker.taxonomy
+        if(this.picker.kind==='media'||this.picker.kind==='rich-media')return item.mime||tr('content_page.media_item','',{id:item.id})
+        return this.typeLabel(item.type)+' · #'+item.id
+      },
       fieldControl(field) {
         const value = this.form.fields?.[field.key]
         const set = (next) => { this.form.fields = { ...(this.form.fields || {}), [field.key]: next } }

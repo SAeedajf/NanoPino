@@ -136,7 +136,8 @@ jobs:
           git -C "$PINOX_ROOT" checkout --detach "$PINOOX_E2E_REF"
           (
             cd "$PINOX_ROOT"
-            composer require "pinoox/pincore:${PINCORE_E2E_VERSION}"               --no-dev               --with-all-dependencies               --prefer-dist               --no-interaction               --no-progress               --optimize-autoloader
+            composer require "pinoox/pincore:${PINCORE_E2E_VERSION}" --no-update --no-interaction
+            composer update pinoox/pincore --with-all-dependencies --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
             php -r '
               $config=require "vendor/pinoox/pincore/config/pincore.config.php";
               $expected=getenv("PINCORE_E2E_VERSION");

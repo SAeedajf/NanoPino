@@ -107,12 +107,19 @@ final class ExtensionScaffoldGenerator
                 $componentId,
                 \App\com_pinoox_cms\Cms\Admin\AdminAssetUrl::module($context->package(), 'page'),
                 i18n: [
-                    'fa'=>['page'=>['title'=>'نمونه افزونه','loaded'=>'ماژول مدیریت افزونه از مسیر امن same-origin بارگذاری شد.']],
-                    'en'=>['page'=>['title'=>'Example extension','loaded'=>'The Extension Admin module was loaded from a safe same-origin path.']],
+                    'fa'=>['page'=>['title'=>'نمونه توسعه SDK','loaded'=>'این صفحه فقط نمونه توسعه و بررسی قرارداد SDK است و ابزار عملیاتی نهایی نیست.']],
+                    'en'=>['page'=>['title'=>'SDK Development Example','loaded'=>'This page is a development/contract example, not a finished operational tool.']],
                 ],
             )
-            ->adminRoute('example.page', '/extensions/example', 'example.page', $componentId, 'example.read')
-            ->adminMenu('example.menu', 'Example', 'example.page', 'puzzle', 'example.read')
+            ->adminRoute(
+                'example.page',
+                '/extensions/example',
+                'example.page',
+                $componentId,
+                'example.read',
+                ['title'=>'Development Example','lead'=>'SDK starter page for development and contract verification only.'],
+            )
+            ->adminMenu('example.menu', 'Development Example', 'example.page', 'puzzle', 'example.read')
             ->apiRoute(new \App\com_pinoox_cms\Cms\Sdk\Api\SdkApiRoute(
                 method: 'GET',
                 uri: \App\com_pinoox_cms\Cms\Sdk\Api\SdkApiRoute::extensionUri($context->package(), '/status'),
@@ -158,8 +165,15 @@ PHP,
                     'en'=>['page'=>['title'=>'Example extension','loaded'=>'The Extension Admin module was loaded from a safe same-origin path.']],
                 ],
             )
-            ->adminRoute('example.admin', '/extensions/example-admin', 'example.admin', $componentId, 'example.admin')
-            ->adminMenu('example.admin.menu', 'Example Admin', 'example.admin', 'layout-panel-top', 'example.admin');
+            ->adminRoute(
+                'example.admin',
+                '/extensions/example-admin',
+                'example.admin',
+                $componentId,
+                'example.admin',
+                ['title'=>'Development Example','lead'=>'SDK starter admin-extension page for development only.'],
+            )
+            ->adminMenu('example.admin.menu', 'Development Example', 'example.admin', 'layout-panel-top', 'example.admin');
 PHP,
             ExtensionType::Block, ExtensionType::BlockPackage => <<<'PHP'
         $context->capability('example.blocks.use', 'Use Example blocks.');
@@ -262,7 +276,7 @@ PHP;
             ."        default: () => h(LPanel, {}, {\n"
             ."          header: () => tr('page.title', {}, 'Extension'),\n"
             ."          default: () => [\n"
-            ."            h(LBadge, { severity: 'success' }, { default: () => 'SDK v1' }),\n"
+            ."            h(LBadge, { severity: 'info' }, { default: () => tr('page.title', {}, 'SDK Development Example') }),\n"
             ."            h('p', { class: 'cms-muted' }, tr('page.loaded')),\n"
             ."          ],\n"
             ."        }),\n"

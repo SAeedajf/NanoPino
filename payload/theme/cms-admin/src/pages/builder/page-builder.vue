@@ -2,7 +2,8 @@
   <LPage icon="panels-top-left" class="cms-builder-page">
     <template #actions>
       <div class="cms-card-actions">
-        <LButton icon="folder-open" variant="outline" shape="rounded" :loading="busy" @click="openDocument">{{ t('builder_page.open') }}</LButton>
+        <LButton icon="folder-open" variant="outline" shape="rounded" :loading="busy" @click="openExistingDocument">{{ t('builder_page.open_existing') }}</LButton>
+        <LButton icon="file-plus-2" variant="outline" shape="rounded" :disabled="busy||!canEdit" @click="createDocument">{{ t('builder_page.create_override') }}</LButton>
         <LButton icon="undo-2" variant="outline" shape="rounded" :disabled="!canUndo" @click="undo">{{ t('builder_page.undo') }}</LButton>
         <LButton icon="redo-2" variant="outline" shape="rounded" :disabled="!canRedo" @click="redo">{{ t('builder_page.redo') }}</LButton>
         <LButton icon="eye" variant="outline" shape="rounded" :disabled="busy||!canPreview" @click="preview">{{ t('builder_page.preview') }}</LButton>
@@ -22,11 +23,44 @@
     </div>
 
     <LPanel><template #header>{{ t('builder_page.target') }}</template>
-      <div class="cms-control-form">
-        <label>{{ t('builder_page.type') }}<select v-model="target.type"><option value="content">Content</option><option value="template">Template</option><option value="template_part">Template Part</option><option value="site">Site</option></select></label>
-        <label>Key<input v-model.trim="target.key" type="text" dir="ltr"></label>
-        <label>Locale<input v-model.trim="target.locale" type="text" dir="ltr"></label>
-        <label>Site ID<input v-model.number="target.site_id" type="number" min="1"></label>
+      <div class="cms-builder-target">
+        <label>{{ t('builder_page.type') }}
+          <select v-model="target.type" @change="resetTargetKey">
+            <option value="content">{{ t('builder_page.target_content') }}</option>
+            <option value="template">{{ t('builder_page.target_template') }}</option>
+            <option value="template_part">{{ t('builder_page.target_part') }}</option>
+            <option value="site">{{ t('builder_page.target_site') }}</option>
+          </select>
+        </label>
+        <label v-if="target.type==='content'">{{ t('builder_page.content_target') }}
+          <div class="cms-builder-target-search">
+            <input v-model.trim="contentQuery" type="search" :placeholder="t('builder_page.content_search_placeholder')" @keyup.enter="loadContentTargets">
+            <LButton size="sm" variant="outline" :disabled="contentLoading" @click="loadContentTargets">{{ t('builder_page.search') }}</LButton>
+          </div>
+          <select v-model="target.key">
+            <option value="">{{ t('builder_page.choose_content') }}</option>
+            <option v-for="item in contentTargets" :key="item.id" :value="`${item.type}:${item.id}`">{{ item.title || t('builder_page.untitled_content',{id:item.id}) }} · {{ typeHuman(item.type) }}</option>
+          </select>
+        </label>
+        <label v-else-if="target.type==='template'">{{ t('builder_page.template_target') }}
+          <select v-model="target.key"><option v-for="item in templateTargets" :key="item.key" :value="item.key">{{ item.label }}</option></select>
+        </label>
+        <label v-else-if="target.type==='template_part'">{{ t('builder_page.part_target') }}
+          <select v-model="target.key"><option v-for="item in partTargets" :key="item.key" :value="item.key">{{ item.label }}</option></select>
+        </label>
+        <div v-else class="cms-builder-target-fixed"><strong>{{ t('builder_page.site_target') }}</strong><span>{{ t('builder_page.whole_site') }}</span></div>
+        <label>{{ t('builder_page.language') }}<select v-model="target.locale"><option value="fa">{{ t('builder_page.fa') }}</option><option value="en">{{ t('builder_page.en') }}</option><option value="ar">{{ t('builder_page.ar') }}</option></select></label>
+        <div class="cms-builder-target-help"><strong>{{ targetSummary }}</strong><small>{{ t('builder_page.target_effect') }}</small></div>
+        <details class="cms-content-field__technical"><summary>{{ t('builder_page.technical_target') }}</summary><code>{{ target.type }}:{{ target.key || '—' }} · site {{ target.site_id }}</code></details>
+      </div>
+    </LPanel>
+
+    <LPanel v-if="!record" class="cms-builder-onboarding">
+      <template #header>{{ t('builder_page.start_title') }}</template>
+      <div class="cms-builder-onboarding__body">
+        <div><strong>{{ t('builder_page.start_step_1') }}</strong><p>{{ t('builder_page.start_step_1_help') }}</p></div>
+        <div><strong>{{ t('builder_page.start_step_2') }}</strong><p>{{ t('builder_page.start_step_2_help') }}</p></div>
+        <div class="cms-card-actions"><LButton variant="outline" :disabled="busy||!targetReady" @click="openExistingDocument">{{ t('builder_page.open_existing') }}</LButton><LButton :disabled="busy||!canEdit||!targetReady" @click="createDocument">{{ t('builder_page.create_override') }}</LButton></div>
       </div>
     </LPanel>
 
@@ -36,7 +70,7 @@
           <div class="cms-builder-panel-head"><strong>{{ t('builder_page.block_library') }}</strong><LBadge severity="secondary">{{ filteredBlocks.length }}</LBadge></div>
           <input v-model.trim="blockSearch" class="cms-control-input" type="search" :placeholder="t('builder_page.block_search')" :aria-label="t('a11y.builder_block_search')">
           <div class="cms-builder-block-library">
-            <button v-for="block in filteredBlocks" :key="block.id" type="button" class="cms-builder-block-item" :disabled="!canEdit" @click="insertBlock(block)">
+            <button v-for="block in filteredBlocks" :key="block.id" type="button" class="cms-builder-block-item" :disabled="!canEdit||!record" @click="insertBlock(block)">
               <LIcon :name="block.icon||'box'" :size="18"/><span><strong>{{ block.title }}</strong><small>{{ block.name }}</small></span>
             </button>
           </div>
@@ -47,14 +81,14 @@
               <label>{{ t('builder_page.reusable_name') }}<input v-model.trim="reusableName" type="text" :disabled="!canEdit||!selectedNode" :placeholder="t('builder_page.reusable_name_placeholder')"></label>
               <LButton size="sm" variant="outline" :disabled="!canEdit||!selectedNode||!reusableName||reusableBusy" @click="saveSelectedAsGlobal">{{ reusableBusy ? t('builder_page.reusable_saving') : t('builder_page.reusable_save') }}</LButton>
             </div>
-            <button v-for="item in globalBlocks" :key="`global:${item.id}`" type="button" class="cms-builder-block-item" :disabled="!canEdit" @click="insertGlobalBlock(item)">
+            <button v-for="item in globalBlocks" :key="`global:${item.id}`" type="button" class="cms-builder-block-item" :disabled="!canEdit||!record" @click="insertGlobalBlock(item)">
               <LIcon name="repeat-2" :size="18"/><span><strong>{{ item.name }}</strong><small>#{{ item.id }} · v{{ item.version }}</small></span>
             </button>
           </div>
 
           <div class="cms-builder-panel-head"><strong>{{ t('builder_page.patterns') }}</strong><LBadge severity="secondary">{{ patterns.length }}</LBadge></div>
           <div class="cms-stack">
-            <button v-for="pattern in patterns" :key="`pattern:${pattern.id}`" type="button" class="cms-builder-block-item" :disabled="!canEdit" @click="insertPattern(pattern)">
+            <button v-for="pattern in patterns" :key="`pattern:${pattern.id}`" type="button" class="cms-builder-block-item" :disabled="!canEdit||!record" @click="insertPattern(pattern)">
               <LIcon name="layout-template" :size="18"/><span><strong>{{ pattern.title }}</strong><small>{{ pattern.categories?.join(' · ') || pattern.id }}</small></span>
             </button>
           </div>
@@ -66,7 +100,8 @@
 
       <main class="cms-builder-canvas-wrap">
         <div class="cms-builder-canvas-frame" :data-viewport="viewport">
-          <div v-if="!document.blocks.length" class="cms-builder-empty-panel"><LIcon name="blocks" :size="32"/><strong>{{ t('builder_page.canvas_empty') }}</strong><p>{{ t('builder_page.add_block') }}</p></div>
+          <div v-if="!record" class="cms-builder-empty-panel"><LIcon name="folder-open" :size="32"/><strong>{{ t('builder_page.open_before_edit') }}</strong><p>{{ t('builder_page.open_before_edit_help') }}</p></div>
+          <div v-else-if="!document.blocks.length" class="cms-builder-empty-panel"><LIcon name="blocks" :size="32"/><strong>{{ t('builder_page.canvas_empty') }}</strong><p>{{ t('builder_page.add_first_block') }}</p></div>
           <div v-else class="cms-builder-canvas cms-builder-canvas--interactive">
             <BuilderNode v-for="(node,index) in document.blocks" :key="node.id" :node="node" :path="[index]" :selected-path="selectedPath" :start-drag="startDrag" :drop-class="dropClass" @select="selectedPath=$event" />
           </div>

@@ -239,7 +239,8 @@ export function createComponent(host){
       return h(LPage,{title:tr('routes.builder.title'),description:tr('routes.builder.lead')},{default:()=>h('div',{class:'cms-builder-center'},[
         message(h,this),
         h('div',{class:'cms-builder-toolbar'},[
-          h(LButton,{label:tr('builder_page.open_create'),severity:'secondary',disabled:this.busy,onClick:this.open}),
+          h(LButton,{label:tr('builder_page.open_existing'),severity:'secondary',disabled:this.busy||!this.targetReady,onClick:this.openExistingDocument}),
+          h(LButton,{label:tr('builder_page.create_override'),severity:'secondary',disabled:this.busy||!this.canEdit||!this.targetReady,onClick:this.createDocument}),
           h(LButton,{label:tr('builder_page.undo'),severity:'secondary',disabled:!this.canUndo,onClick:this.undo}),h(LButton,{label:tr('builder_page.redo'),severity:'secondary',disabled:!this.canRedo,onClick:this.redo}),
           h('div',{class:'grow'}),
           h('div',{role:'group','aria-label':tr('a11y.builder_viewport',tr('builder_page.viewport')),style:ui.row},['desktop','tablet','mobile'].map(v=>h(LButton,{label:v,severity:this.viewport===v?'primary':'secondary','aria-pressed':this.viewport===v,onClick:()=>this.viewport=v}))),
@@ -248,19 +249,32 @@ export function createComponent(host){
         h('div',{style:ui.grid},[
           h(LStatCard,{label:tr('builder_page.status'),value:status}),h(LStatCard,{label:tr('builder_page.version'),value:String(this.record?.version||'—')}),h(LStatCard,{label:tr('builder_page.blocks'),value:String(this.blockCount)}),h(LStatCard,{label:tr('builder_page.autosave'),value:String(this.lastAutosave||'—')}),
         ]),
-        h(LPanel,{title:tr('builder_page.target')},{default:()=>h('div',{style:ui.row},[
-          select(h,this.target.type,v=>this.target.type=v,[{value:'content',label:'Content'},{value:'template',label:'Template'},{value:'template_part',label:'Template Part'},{value:'site',label:'Site'}]),
-          input(h,this.target.key,v=>this.target.key=v,'text',{placeholder:'home / page:42',style:{maxWidth:'240px'}}),select(h,this.target.locale,v=>this.target.locale=v,localeOptions()),input(h,this.target.site_id,v=>this.target.site_id=Number(v)||1,'number',{min:1,style:{maxWidth:'90px'}}),
+        h(LPanel,{title:tr('builder_page.target')},{default:()=>h('div',{class:'cms-builder-target'},[
+          label(h,tr('builder_page.type'),select(h,this.target.type,v=>{this.target.type=v;this.resetTargetKey()},[
+            {value:'content',label:tr('builder_page.target_content')},{value:'template',label:tr('builder_page.target_template')},{value:'template_part',label:tr('builder_page.target_part')},{value:'site',label:tr('builder_page.target_site')}
+          ])),
+          this.target.type==='content'?h('div',{style:ui.page},[
+            label(h,tr('builder_page.content_target'),h('div',{class:'cms-builder-target-search'},[input(h,this.contentQuery,v=>this.contentQuery=v,'search',{placeholder:tr('builder_page.content_search_placeholder'),onKeyup:e=>{if(e.key==='Enter')this.loadContentTargets()}}),h(LButton,{label:tr('builder_page.search'),severity:'secondary',disabled:this.contentLoading,onClick:this.loadContentTargets})])),
+            select(h,this.target.key,v=>this.target.key=v,[{value:'',label:tr('builder_page.choose_content')},...this.contentTargets.map(item=>({value:(item.type||'content')+':'+item.id,label:(item.title||tr('builder_page.untitled_content','',{id:item.id}))+' · '+this.typeHuman(item.type)}))])
+          ]):this.target.type==='template'?label(h,tr('builder_page.template_target'),select(h,this.target.key,v=>this.target.key=v,this.templateTargets.map(item=>({value:item.key,label:item.label})))):this.target.type==='template_part'?label(h,tr('builder_page.part_target'),select(h,this.target.key,v=>this.target.key=v,this.partTargets.map(item=>({value:item.key,label:item.label})))):h('div',{class:'cms-builder-target-fixed'},[h('strong',{},tr('builder_page.site_target')),h('span',{},tr('builder_page.whole_site'))]),
+          label(h,tr('builder_page.language'),select(h,this.target.locale,v=>{this.target.locale=v;if(this.target.type==='content')this.loadContentTargets()},localeOptions())),
+          h('div',{class:'cms-builder-target-help'},[h('strong',{},this.targetSummary),h('small',{},tr('builder_page.target_effect'))]),
+          h('details',{class:'cms-content-technical'},[h('summary',{},tr('builder_page.technical_target')),h('code',{},(this.target.type||'—')+':'+(this.target.key||'—')+' · site '+this.target.site_id)]),
           this.record?h('div',{class:'cms-builder-status'},[h(LBadge,{label:this.dirty?tr('builder_page.unsaved'):tr('builder_page.synced'),severity:this.dirty?'warning':'success'}),h('code',{},`#${this.record.id}`)]):null,
         ])}),
+        !this.record?h(LPanel,{title:tr('builder_page.start_title')},{default:()=>h('div',{class:'cms-builder-onboarding'},[
+          h('div',{},[h('strong',{},tr('builder_page.start_step_1')),h('p',{},tr('builder_page.start_step_1_help'))]),
+          h('div',{},[h('strong',{},tr('builder_page.start_step_2')),h('p',{},tr('builder_page.start_step_2_help'))]),
+          h('div',{class:'cms-builder-actions'},[h(LButton,{label:tr('builder_page.open_existing'),severity:'secondary',disabled:this.busy||!this.targetReady,onClick:this.openExistingDocument}),h(LButton,{label:tr('builder_page.create_override'),disabled:this.busy||!this.canEdit||!this.targetReady,onClick:this.createDocument})])
+        ])}):null,
         h('div',{class:'cms-builder-shell'},[
           h('aside',{class:'cms-builder-side start'},[
             h(LPanel,{title:tr('builder_page.block_library')},{default:()=>h('div',{class:'cms-builder-library'},[
-              input(h,this.blockSearch,v=>this.blockSearch=v,'search',{placeholder:tr('builder_page.block_search'),'aria-label':tr('a11y.builder_block_search',tr('builder_page.block_search'))}),...this.filteredBlocks.map(b=>h('button',{type:'button',disabled:!this.canEdit,onClick:()=>this.insertBlock(b)},[h('strong',{},b.title||b.name),h('small',{},`${b.category||'block'} · ${b.name||b.id}`)])),
+              input(h,this.blockSearch,v=>this.blockSearch=v,'search',{placeholder:tr('builder_page.block_search'),'aria-label':tr('a11y.builder_block_search',tr('builder_page.block_search'))}),...this.filteredBlocks.map(b=>h('button',{type:'button',disabled:!this.canEdit||!this.record,onClick:()=>this.insertBlock(b)},[h('strong',{},b.title||b.name),h('small',{},`${b.category||'block'} · ${b.name||b.id}`)])),
             ])}),
             h(LPanel,{title:tr('builder_page.layers')},{default:()=>this.document.blocks.length?h('div',{},this.renderLayers(this.document.blocks)):h('p',{style:{opacity:.65}},tr('builder_page.document_empty'))}),
           ]),
-          h('main',{class:'cms-builder-canvas-wrap',onClick:()=>this.selectPath(null)},[h('div',{class:'cms-builder-frame','data-viewport':this.viewport},[...(this.document.blocks.length?this.renderCanvasNodes(this.document.blocks):[h('div',{class:'cms-builder-empty'},[h('strong',{},tr('builder_page.canvas_empty')),h('span',{},tr('builder_page.add_block'))])]),h('div',{class:`cms-builder-root-drop${this.drag.active&&this.drag.mode==='root'?' active':''}`,'data-builder-root-drop':'1'},this.drag.active?tr('builder_page.drop_root'):'')])]),
+          h('main',{class:'cms-builder-canvas-wrap',onClick:()=>this.selectPath(null)},[h('div',{class:'cms-builder-frame','data-viewport':this.viewport},[...(this.record?(this.document.blocks.length?this.renderCanvasNodes(this.document.blocks):[h('div',{class:'cms-builder-empty'},[h('strong',{},tr('builder_page.canvas_empty')),h('span',{},tr('builder_page.add_first_block'))])]):[h('div',{class:'cms-builder-empty'},[h('strong',{},tr('builder_page.open_before_edit')),h('span',{},tr('builder_page.open_before_edit_help'))])]),h('div',{class:`cms-builder-root-drop${this.drag.active&&this.drag.mode==='root'?' active':''}`,'data-builder-root-drop':'1'},this.drag.active?tr('builder_page.drop_root'):'')])]),
           h('aside',{class:'cms-builder-side end'},[
             h(LPanel,{title:`${tr('builder_page.inspector')} · ${this.viewport}`},{default:()=>this.renderInspector()}),
             h(LPanel,{title:tr('builder_page.revision_history')},{default:()=>h('div',{class:'cms-builder-revisions'},[

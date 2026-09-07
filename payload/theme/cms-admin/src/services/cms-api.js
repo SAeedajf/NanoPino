@@ -133,4 +133,7 @@ export const contentApi={
   trash:id=>cmsRequest(`/content/${id}`,{method:'DELETE'}),
   restore:id=>cmsRequest(`/content/${id}/restore`,{method:'POST',body:{}}),
 }
+export const taxonomyApi={
+  terms:(key,params={})=>{const q=new URLSearchParams();Object.entries(params).forEach(([k,v])=>v!==''&&v!=null&&q.set(k,String(v)));return cmsRequest(`/taxonomies/${encodeURIComponent(key)}/terms${q.size?`?${q}`:''}`)},
+}
 export const securityApi={status:()=>cmsRequest('/system/security')}

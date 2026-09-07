@@ -414,6 +414,29 @@ export function createComponent(host) {
           }
         }
       },
+      safeUrl(value){
+        try{const url=new URL(String(value||''),globalThis.location?.origin||'http://localhost');return ['http:','https:'].includes(url.protocol)?url.href:''}catch{return''}
+      },
+      safeRichHtml(value){
+        const html=String(value||'')
+        if(typeof DOMParser==='undefined')return html.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        const doc=new DOMParser().parseFromString('<div>'+html+'</div>','text/html'),root=doc.body.firstElementChild
+        const allowed=new Set(['DIV','P','BR','STRONG','B','EM','I','U','S','UL','OL','LI','A','H2','H3','H4','BLOCKQUOTE','CODE','PRE','IMG'])
+        for(const el of [...root.querySelectorAll('*')]){
+          if(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','SVG','MATH'].includes(el.tagName)){el.remove();continue}
+          if(!allowed.has(el.tagName)){el.replaceWith(...el.childNodes);continue}
+          const originalHref=el.getAttribute?.('href')||'',originalSrc=el.getAttribute?.('src')||'',originalAlt=el.getAttribute?.('alt')||''
+          for(const attr of [...el.attributes])el.removeAttribute(attr.name)
+          if(el.tagName==='A'){const href=this.safeUrl(originalHref);if(href){el.setAttribute('href',href);el.setAttribute('rel','noopener noreferrer')}}
+          if(el.tagName==='IMG'){const src=this.safeUrl(originalSrc);if(!src){el.remove();continue}el.setAttribute('src',src);el.setAttribute('alt',originalAlt.slice(0,300))}
+        }
+        return root.innerHTML
+      },
+      richEditor(fieldKey){return globalThis.document?.querySelector?.('[data-rich-field="'+fieldKey+'"]')||null},
+      syncRichEditor(fieldKey){const el=this.richEditor(fieldKey);if(el)this.form.fields={...(this.form.fields||{}),[fieldKey]:el.innerHTML}},
+      pastePlainText(fieldKey,event){event.preventDefault();const value=event.clipboardData?.getData('text/plain')||'';globalThis.document?.execCommand?.('insertText',false,value);this.syncRichEditor(fieldKey)},
+      formatRichText(fieldKey,command,value=null){const el=this.richEditor(fieldKey);if(!el)return;el.focus();globalThis.document?.execCommand?.(command,false,value);this.syncRichEditor(fieldKey)},
+      createRichLink(fieldKey){const raw=globalThis.prompt?.(tr('content_page.link_prompt'),'https://');if(!raw)return;const href=this.safeUrl(raw);if(!href){this.error=tr('content_page.link_invalid');return}this.formatRichText(fieldKey,'createLink',href)},
       fieldControl(field) {
         const value = this.form.fields?.[field.key]
         const set = (next) => { this.form.fields = { ...(this.form.fields || {}), [field.key]: next } }

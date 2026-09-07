@@ -87,6 +87,14 @@ If `apps/com_pinoox_cms` exists after a failed first install:
 - if there is no NanoPino migration history and no NanoPino schema, an orphaned extracted directory can be moved aside under a backup name before a clean reinstall;
 - if migration history or CMS tables exist, do **not** manually delete the application directory or tables. Use the native uninstall/recovery flow and retain a database/filesystem backup.
 
+## Late migration failure recovery
+
+Pincore 3.14.x does not promise an automatic filesystem/database rollback for every exception that occurs after PINX extraction. NanoPino therefore treats a late migration failure as a recoverable, inspectable state rather than assuming the install was atomic.
+
+Repository R16 fault-injection deliberately adds a final migration that throws after the normal NanoPino schema migrations. The release gate verifies that the failed migration is never recorded as successful. If Pincore leaves extracted files/schema behind, the native uninstall/recovery path must still be able to roll back NanoPino-owned migration batches, remove all NanoPino `cms_*` tables and remove the application directory.
+
+Operators should never manually delete only the app directory while NanoPino migration history or tables remain. Doing so can remove the code required for the native recovery path while leaving database state behind.
+
 ## Normal update policy
 
 A normal upgrade must not require `--force`. R15 CI installs the previous official 0.23.28 package and then installs 0.23.29 through the native update path without force.

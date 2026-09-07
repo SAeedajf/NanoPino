@@ -10,6 +10,10 @@ DB_PREFIX="${DB_PREFIX:-pinx_}"
 UPGRADE_BASE_REF="${NANOPINO_UPGRADE_BASE_REF:-}"
 BASE_ROOT="${RUNNER_TEMP:-/tmp}/nanopino-upgrade-base"
 BASE_OUTPUT="${RUNNER_TEMP:-/tmp}/NanoPino-upgrade-base.pinx"
+FAULT_ROOT="${RUNNER_TEMP:-/tmp}/nanopino-fault-injection"
+FAULT_OUTPUT="${RUNNER_TEMP:-/tmp}/NanoPino-fault-injection.pinx"
+FAULT_INJECTION="${NANOPINO_FAULT_INJECTION:-0}"
+FAULT_MIGRATION="2099_12_31_235959_ci_fault_injection"
 
 : "${DB_HOST:?DB_HOST is required}"
 : "${DB_PORT:?DB_PORT is required}"
@@ -23,6 +27,9 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 cleanup() {
   if git -C "$ROOT" worktree list --porcelain 2>/dev/null | grep -Fq "worktree $BASE_ROOT"; then
     git -C "$ROOT" worktree remove --force "$BASE_ROOT" >/dev/null 2>&1 || true
+  fi
+  if git -C "$ROOT" worktree list --porcelain 2>/dev/null | grep -Fq "worktree $FAULT_ROOT"; then
+    git -C "$ROOT" worktree remove --force "$FAULT_ROOT" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
@@ -144,6 +151,90 @@ uninstall_and_assert_clean() {
   printf 'uninstall_tables=%s\n' "$remaining"
 }
 
+build_fault_injection_package() {
+  [[ "$FAULT_INJECTION" == "1" ]] || return 0
+
+  rm -rf "$FAULT_ROOT"
+  git -C "$ROOT" worktree add --detach "$FAULT_ROOT" HEAD
+
+  rm -rf "$FAULT_ROOT/payload/theme/cms-admin/dist"
+  cp -a "$ROOT/payload/theme/cms-admin/dist" "$FAULT_ROOT/payload/theme/cms-admin/dist"
+
+  cat > "$FAULT_ROOT/payload/database/migrations/$FAULT_MIGRATION.php" <<'PHP'
+<?php
+declare(strict_types=1);
+
+use Pinoox\Component\Migration\MigrationBase;
+
+return new class extends MigrationBase
+{
+    public function up(): void
+    {
+        throw new RuntimeException('NanoPino R16 CI fault injection after normal schema migrations.');
+    }
+
+    public function down(): void
+    {
+        // The failing migration never completes and must never be recorded.
+    }
+};
+PHP
+
+  PHP_BIN="$PHP_BIN" "$FAULT_ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$FAULT_OUTPUT"
+  [[ -s "$FAULT_OUTPUT" ]] || fail "Fault-injection PINX output was not created."
+}
+
+run_fault_injection_recovery() {
+  [[ "$FAULT_INJECTION" == "1" ]] || return 0
+
+  cd "$PINOX_ROOT"
+  set +e
+  fault_log="$("$PHP_BIN" pinoox pinx:install "$FAULT_OUTPUT" 2>&1)"
+  fault_status=$?
+  set -e
+  printf '%s\n' "$fault_log"
+
+  [[ "$fault_status" -ne 0 ]] || fail "Fault-injection PINX unexpectedly installed successfully."
+  [[ "$fault_log" == *"NanoPino R16 CI fault injection"* ]] || fail "Fault-injection failure did not reach the intentional terminal migration."
+
+  fault_tables="$(cms_table_count)"
+  fault_preflight_records="$(migration_record_count '2026_09_01_000000_preflight_nanopino_environment')"
+  fault_terminal_records="$(migration_record_count "$FAULT_MIGRATION")"
+  fault_app_present=0
+  [[ -e "$PINOX_ROOT/apps/$PACKAGE" ]] && fault_app_present=1
+
+  [[ "$fault_terminal_records" -eq 0 ]] || fail "Failed migration was incorrectly recorded as successful."
+
+  printf 'fault_install_exit=%s\n' "$fault_status"
+  printf 'fault_app_present_before_recovery=%s\n' "$fault_app_present"
+  printf 'fault_tables_before_recovery=%s\n' "$fault_tables"
+  printf 'fault_preflight_records_before_recovery=%s\n' "$fault_preflight_records"
+  printf 'fault_terminal_records=%s\n' "$fault_terminal_records"
+
+  if [[ "$fault_app_present" -eq 0 && "$fault_tables" -eq 0 ]]; then
+    printf 'fault_recovery_mode=automatic\n'
+    return 0
+  fi
+
+  [[ "$fault_app_present" -eq 1 ]] || fail "Failed install left database state without a recoverable application directory."
+  [[ "$fault_tables" -ge "$expected_tables" ]] || fail "Late fault did not preserve the expected partial schema evidence."
+  [[ "$fault_preflight_records" -eq 1 ]] || fail "Preflight history is inconsistent after late migration failure."
+
+  "$PHP_BIN" pinoox pinx:uninstall "$PACKAGE" --force --yes
+
+  [[ ! -e "$PINOX_ROOT/apps/$PACKAGE" ]] || fail "Fault recovery left the application directory in place."
+  recovered_tables="$(cms_table_count)"
+  [[ "$recovered_tables" -eq 0 ]] || fail "Fault recovery left NanoPino CMS tables behind."
+
+  recovered_preflight_records="$(migration_record_count '2026_09_01_000000_preflight_nanopino_environment')"
+  [[ "$recovered_preflight_records" -eq 0 ]] || fail "Fault recovery left NanoPino migration history behind."
+
+  printf 'fault_recovery_mode=native-uninstall\n'
+  printf 'fault_tables_after_recovery=%s\n' "$recovered_tables"
+  printf 'fault_preflight_records_after_recovery=%s\n' "$recovered_preflight_records"
+  printf 'fault_injection_recovery=PASS\n'
+}
+
 build_upgrade_base
 build_current
 
@@ -189,5 +280,8 @@ fresh_preflight_records="$(migration_record_count '2026_09_01_000000_preflight_n
 printf 'fresh_installability_preflight_records=%s\n' "$fresh_preflight_records"
 
 uninstall_and_assert_clean
+
+build_fault_injection_package
+run_fault_injection_recovery
 
 printf 'pinoox_lifecycle=PASS pinx=%s\n' "$OUTPUT"

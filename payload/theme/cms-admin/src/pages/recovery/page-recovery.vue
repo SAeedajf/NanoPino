@@ -24,6 +24,10 @@
           </article>
         </div>
       </CmsPageState>
+      <div v-if="!data.recoveryPoints.length" class="cms-card-actions">
+        <LButton variant="outline" severity="neutral" shape="rounded" @click="router.push({name:'cms.extensions'})">{{ t('recovery_page.open_extensions') }}</LButton>
+        <LButton variant="outline" severity="neutral" shape="rounded" @click="router.push({name:'cms.updates'})">{{ t('recovery_page.open_updates') }}</LButton>
+      </div>
     </LPanel>
     <LPanel>
       <template #header>{{ t('recovery_page.safe_mode_control') }}</template>
@@ -49,12 +53,14 @@
 </template>
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { LBadge, LButton, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
 import SafeModeBanner from '../../components/safe-mode-banner.vue'
 import { readAdminBootData } from '../../services/admin-provider.js'
 import { recoveryApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
+const router = useRouter()
 const data = readAdminBootData()
 const center = data.recoveryCenter
 const safeMode = ref({ ...(data.safeMode || { enabled:false, quarantined:[] }) })

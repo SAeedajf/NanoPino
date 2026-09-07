@@ -21,3 +21,18 @@ Users may retain unsaved edits after a save or publish of an earlier snapshot. T
 ## Compatibility and verification
 
 No backend route, schema, package ID, Pincore or vendor changes. Rebuild canonical Vite assets and refresh runtime evidence. Behavioral tests cover delayed save/publish, partial settings writes, invalid JSON, cancelled drag, content retry, and bulk action stability. Authenticated browser and DB tests remain release gates.
+
+
+## 2026-09-07 extension
+
+The live Admin audit expanded this decision to every mutable Admin flow that can receive an out-of-order response.
+
+- Content type transitions preserve shared values and require explicit confirmation before dropping populated incompatible fields.
+- Content save/publish and schedule acknowledge a submitted draft signature; scheduling persists that exact content snapshot before changing workflow state.
+- Media detail reads use a monotonically increasing selection generation. A stale response is ignored.
+- Media metadata saves acknowledge only the submitted metadata snapshot; a newer local draft remains dirty.
+- Full Site Editor loads Builder documents and Design Tokens independently and does not expose fallback-looking editable tokens before a successful settings read.
+- Global Styles saves update the server version while leaving `styleDirty` true when local tokens changed after request start.
+- Extension package selection invalidates prior stage/review/approval state immediately; late inspection responses from an older file are ignored.
+
+These are interaction-state contracts only. They do not mask server failures, synthesize empty data, or replace target-runtime diagnosis for an observed HTTP 500.

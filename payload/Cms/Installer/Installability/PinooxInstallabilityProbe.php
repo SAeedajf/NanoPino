@@ -10,8 +10,8 @@ final class PinooxInstallabilityProbe
 {
     private const PACKAGE = 'com_pinoox_cms';
     private const MIN_PHP = '8.2.0';
-    private const MIN_PINCORE = '3.10.0';
-    private const MIN_PINCORE_CODE = 216;
+    private const MIN_PINCORE = '3.14.0';
+    private const MIN_PINCORE_CODE = 232;
     private const MIN_FREE_BYTES = 33_554_432;
 
     /** @var list<string> */

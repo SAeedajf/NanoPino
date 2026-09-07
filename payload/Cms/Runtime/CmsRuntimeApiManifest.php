@@ -39,6 +39,7 @@ final class CmsRuntimeApiManifest
                 self::route('DELETE','/content/{id}',[ContentRuntimeApiController::class,'trash'],'cms.content.trash','content.delete','cms.api.write',true,['id'=>'\d+']),
                 self::route('POST','/content/{id}/restore',[ContentRuntimeApiController::class,'restoreDraft'],'cms.content.restore','content.update','cms.api.write',true,['id'=>'\d+']),
                 self::route('GET','/content/{id}/revisions',[ContentRuntimeApiController::class,'revisions'],'cms.content.revisions','content.read','cms.api.read',false,['id'=>'\d+']),
+                self::route('GET','/content/{id}/revisions/{revisionId}',[ContentRuntimeApiController::class,'revision'],'cms.content.revision.show','content.read','cms.api.read',false,['id'=>'\d+','revisionId'=>'\d+']),
                 self::route('POST','/content/{id}/revisions/{revisionId}/restore',[ContentRuntimeApiController::class,'restoreRevision'],'cms.content.revision.restore','content.update','cms.api.write',true,['id'=>'\d+','revisionId'=>'\d+']),
 
                 // Taxonomy

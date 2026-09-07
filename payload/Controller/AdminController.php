@@ -450,6 +450,9 @@ final class AdminController extends Controller
             }
         }
 
+        $appMetadata = require dirname(__DIR__) . '/app.php';
+        $siteThemePackage = (string)($appMetadata['package'] ?? 'com_pinoox_cms');
+
         $themeRows = [];
         $activeThemesByPackage = [];
         try {
@@ -715,7 +718,8 @@ final class AdminController extends Controller
                         'mediaAssets' => $mediaAssets,
                         'themes' => $themeRows,
                         'appearance' => [
-                            'active' => null,
+                            'active' => $activeThemesByPackage[$siteThemePackage] ?? null,
+                            'sitePackage' => $siteThemePackage,
                             'activeByPackage' => $activeThemesByPackage,
                             'stack' => [],
                             'contexts' => [],

@@ -32,6 +32,10 @@
           <div><strong>{{ row.name }}</strong><small>{{ formatBytes(row.size) }}</small></div>
           <LBadge :severity="row.status==='done'?'success':row.status==='error'||row.status==='rejected'?'danger':'secondary'">{{ row.status }}</LBadge>
           <small v-if="row.error" class="cms-text-danger">{{ row.error }}</small>
+          <div class="cms-card-actions">
+            <LButton v-if="row.status==='error'" size="sm" variant="outline" :disabled="uploading" @click="retryUpload(row)">{{ t('media_page.retry_file') }}</LButton>
+            <LButton v-if="row.status==='queued'||row.status==='error'" size="sm" variant="outline" severity="neutral" :disabled="row.status==='uploading'" @click="cancelUpload(row)">{{ t('media_page.cancel_file') }}</LButton>
+          </div>
         </article>
       </div>
     </LPanel>
@@ -70,11 +74,11 @@
         <div v-else class="cms-media-list">
           <article v-for="asset in assets" :key="asset.id" class="cms-media-list-row" :class="{ selected:selected?.id===asset.id }" role="button" tabindex="0" :aria-pressed="selected?.id===asset.id ? 'true' : 'false'" @click="openAsset(asset)" @keydown.enter.prevent="openAsset(asset)" @keydown.space.prevent="openAsset(asset)">
             <div class="cms-media-list-thumb"><img v-if="asset.kind==='image' && (asset.thumb||asset.url)" :src="asset.thumb||asset.url" :alt="asset.alt||''"><LIcon v-else :name="kindIcon(asset.kind)" /></div>
-            <div><strong>{{ titleOf(asset) }}</strong><small>{{ asset.original_name }}</small></div>
+            <div><strong>{{ titleOf(asset) }}</strong><small>{{ asset.original_name }}</small><LBadge v-if="asset.kind==='image' && !asset.alt" severity="warning">{{ t('media_page.missing_alt') }}</LBadge></div>
             <span>{{ kindLabel(asset.kind) }}</span><span>{{ formatBytes(asset.size) }}</span>
           </article>
         </div>
-        <div class="cms-media-pagination"><LButton variant="outline" :disabled="pagination.offset<=0" @click="prevPage">{{ t('media_page.previous') }}</LButton><span>{{ t('media_page.range', { from: pagination.offset + 1, to: pagination.offset + (pagination.returned || assets.length), total: pagination.total ?? summary.total ?? 0 }) }}</span><LButton variant="outline" :disabled="!pagination.has_more" @click="nextPage">{{ t('media_page.next') }}</LButton></div>
+        <div class="cms-media-pagination"><LButton variant="outline" :disabled="pagination.offset<=0" @click="prevPage">{{ t('media_page.previous') }}</LButton><span>{{ mediaRange }}</span><LButton variant="outline" :disabled="!pagination.has_more" @click="nextPage">{{ t('media_page.next') }}</LButton></div>
       </section>
 
       <aside v-if="selected" class="cms-media-detail">
@@ -101,6 +105,7 @@ const assets=ref([]), summary=ref({}), policy=ref({allowed_extensions:[],max_mb:
 const query=ref(''), kind=ref(''), view=ref('grid'), loading=ref(false), libraryLoaded=ref(false), uploading=ref(false), dragging=ref(false), notice=ref(''), error=ref(''), fileInput=ref(null), uploadQueue=ref([]), selected=ref(null), saving=ref(false), draft=ref({title:'',alt:'',caption:'',description:''}), draftDirty=ref(false)
 let timer=null, libraryRequest=0, selectionRequest=0
 const accept=computed(()=>(policy.value.allowed_extensions||[]).map(v=>'.'+v).join(','))
+const mediaRange=computed(()=>{const total=Number(pagination.value.total??summary.value.total??0);if(total<=0)return t('media_page.range_empty');const from=Math.min(total,Number(pagination.value.offset||0)+1),to=Math.min(total,Number(pagination.value.offset||0)+Number(pagination.value.returned||assets.value.length||0));return t('media_page.range',{from,to,total})})
 onMounted(loadMedia)
 async function loadMedia(){const request=++libraryRequest;loading.value=true;error.value='';try{const response=await mediaApi.list({q:query.value,kind:kind.value,limit:pagination.value.limit,offset:pagination.value.offset});if(request!==libraryRequest)return;const data=response.data||{};assets.value=data.items||[];summary.value=data.summary||{};policy.value=data.upload_policy||policy.value;pagination.value={...pagination.value,...(data.pagination||{})};kinds.value=data.kinds||kinds.value;libraryLoaded.value=true}catch(e){if(request===libraryRequest)error.value=e.message}finally{if(request===libraryRequest)loading.value=false}}
 function queueSearch(){clearTimeout(timer);pagination.value.offset=0;timer=setTimeout(loadMedia,350)}
@@ -133,7 +138,9 @@ async function removeAsset(){if(!selected.value||!confirm(t('media_page.delete_c
 async function copyUrl(){if(!selected.value?.url)return;try{await navigator.clipboard.writeText(selected.value.url);notice.value=t('media_page.url_copied')}catch{error.value=t('media_page.url_copy_failed')}}
 function onDrop(event){dragging.value=false;addFiles([...(event.dataTransfer.files||[])])}function onFileChange(event){addFiles([...(event.target.files||[])]);event.target.value=''}
 function addFiles(files){const allowed=new Set((policy.value.allowed_extensions||[]).map(v=>String(v).toLowerCase()));const max=Number(policy.value.max_bytes||0);for(const file of files){const ext=String(file.name.split('.').pop()||'').toLowerCase();let status='queued',rowError='';if(allowed.size&&!allowed.has(ext)){status='rejected';rowError=t('media_page.extension_rejected')}else if(max&&file.size>max){status='rejected';rowError=t('media_page.size_rejected',{max:policy.value.max_mb||Math.round(max/1048576)})}uploadQueue.value.push({id:`${Date.now()}-${Math.random()}`,file,name:file.name,size:file.size,status,error:rowError})}runUploads()}
-async function runUploads(){if(uploading.value)return;uploading.value=true;let done=0;try{for(const row of uploadQueue.value){if(row.status!=='queued')continue;row.status='uploading';try{const form=new FormData();form.append('file',row.file,row.file.name);form.append('site_id','1');form.append('public','1');const response=await mediaApi.upload(form);row.assetId=response.data.id;row.status='done';done++}catch(e){row.status='error';row.error=e.message}}if(done){notice.value=t('media_page.uploaded_count',{count:done});pagination.value.offset=0;await loadMedia()}}finally{uploading.value=false}}
+async function runUploads(){if(uploading.value)return;uploading.value=true;let done=0;try{for(const row of uploadQueue.value){if(row.status!=='queued')continue;row.status='uploading';row.error='';try{const form=new FormData();form.append('file',row.file,row.file.name);form.append('site_id','1');form.append('public','1');const response=await mediaApi.upload(form);row.assetId=(response.data||response).id;row.status='done';done++}catch(e){row.status='error';row.error=e.message}}if(done){notice.value=t('media_page.uploaded_count',{count:done});pagination.value.offset=0;await loadMedia()}}finally{uploading.value=false}}
+function retryUpload(row){if(!row||row.status!=='error'||uploading.value)return;row.status='queued';row.error='';runUploads()}
+function cancelUpload(row){if(!row||row.status==='uploading')return;uploadQueue.value=uploadQueue.value.filter(item=>item.id!==row.id)}
 function nextPage(){if(!pagination.value.has_more||!confirmDiscardDraft())return;pagination.value.offset+=pagination.value.limit;clearSelection();loadMedia()}function prevPage(){if(!confirmDiscardDraft())return;pagination.value.offset=Math.max(0,pagination.value.offset-pagination.value.limit);clearSelection();loadMedia()}
 function titleOf(a){return a?.title||a?.original_name||`#${a?.id||'—'}`}function kindLabel(v){return({image:t('media_page.image'),video:t('media_page.video'),audio:t('media_page.audio'),document:t('media_page.document')})[v]||v}function kindIcon(v){return({image:'image',video:'video',audio:'audio-lines',document:'file-text'})[v]||'file'}function formatBytes(v){const n=Number(v||0);return n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:n<1073741824?`${(n/1048576).toFixed(1)} MB`:`${(n/1073741824).toFixed(2)} GB`}
 </script>

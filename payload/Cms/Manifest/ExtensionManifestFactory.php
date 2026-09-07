@@ -36,6 +36,9 @@ final readonly class ExtensionManifestFactory
         return new ExtensionManifest(
             schemaVersion: (int) $cms['schema'],
             identity: $identity,
+            name: trim((string)($pinx['name'] ?? '')) !== ''
+                ? trim((string)$pinx['name'])
+                : $identity->package,
             extensionType: $type,
             version: (string) $pinx['version_name'],
             versionCode: (int) $pinx['version_code'],

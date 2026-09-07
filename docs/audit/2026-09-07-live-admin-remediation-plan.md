@@ -89,3 +89,18 @@ P2 keeps Builder/Theme/Block behavior on existing Pinoox-native contracts and re
 - Decorative sample controls are visibly marked as preview-only.
 
 P2 remains open until regression tests, production Admin build/runtime parity, PHP matrix and PINX lifecycle gates pass.
+
+## P3 implementation notes
+
+P3 repairs items 41–50 without introducing a second Extension lifecycle.
+
+- Installed extension discovery preserves the human package name from Pinoox metadata through Manifest → Definition → Extension Center; technical IDs remain secondary.
+- Core Modules are protected in the Domain service from normal deactivate/uninstall, and Admin surfaces no longer present those destructive actions as ordinary controls.
+- Extension row operations have per-row busy state. PINX review is structured around trust, dependency issues, permission risk and package security instead of raw JSON; updates use the extension-specific update endpoint.
+- Update Center runtime and canonical Vue use the versioned Policy/History/Recovery APIs and render human status, timestamps and recovery context.
+- Recovery canonical/runtime use the versioned Recovery API. Empty state links to Extension/Update workflows, while Safe Mode exposes reason, quarantine and recovery context before exit.
+- Runtime navigation resolves paths from the registered Admin route manifest, preventing nested-section shortcuts from generating invalid mount paths.
+- SDK Starter Packages are executable: a capability-gated generator reuses the existing SDK scaffold service, returns bounded source and optional ZIP, and never generates Core Modules or installs packages.
+- Generated example Admin pages are explicitly marked as development examples and provide human route metadata.
+
+P3 remains open until source verification, production Admin build/runtime evidence, PHP matrix and PINX lifecycle gates pass.

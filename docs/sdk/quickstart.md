@@ -1,12 +1,16 @@
 # SDK Quickstart
 
-1. Build a normal Pinoox/PINX extension package.
-2. Give the package a stable `com_...` identifier.
-3. Declare the NanoPino semantic profile required by the extension.
-4. Register definitions through the NanoPino/Pinoox registries; do not modify core files.
-5. Package and inspect the PINX file through Extension Center.
-6. Review compatibility, dependencies, permissions and static-risk findings.
-7. Install only after review passes.
-8. Validate activation, API/admin surfaces and uninstall/recovery behavior.
+## Admin-first starter flow
 
-Use the machine SDK contract and extension manifest schema as the authoritative interface. Example packages are not considered supported unless their source exists and is covered by tests.
+1. Open **Developer → SDK** and choose the Extension type.
+2. Enter the stable `com_...` package ID, human name, publisher and version. Theme starters also require target app and theme name.
+3. Generate the starter. Download the ZIP when `ZipArchive` is available; otherwise download the generated source files individually.
+4. Extend only through SDK/Registry/Pinoox Native contracts. Do not modify NanoPino Core, Pincore or vendor.
+5. Run the generated test under `tests/` and add domain/API/UI tests for your real feature.
+6. Build the final package with official Pinoox PINX tooling.
+7. Upload the PINX in Extension Center and complete Inspect → Review → dependency/permission checks → controlled install/update.
+8. Validate activation, Admin/API surfaces, recovery and uninstall.
+
+Starter generation is intentionally separate from installation and does not require SSH. It is guarded by `system.developer.generate`; Core Module generation is not exposed from Admin.
+
+The authoritative interfaces are `payload/resources/sdk/sdk-contract-v1.json`, the extension manifest schema, and `payload/resources/api/developer-v1.json`. Generated examples are development scaffolds, not finished operational features.

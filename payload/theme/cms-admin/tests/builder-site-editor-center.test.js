@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createComponent as createBuilder } from '../runtime/builder.mjs'
 import { createComponent as createSiteEditor } from '../runtime/site-editor.mjs'
+import { navigate } from '../runtime/common.mjs'
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
 const fake = () => ({})
@@ -92,7 +93,33 @@ test('canonical Vue and API sources preserve the new builder and site-editor con
   assert.match(api, /list:\(params=\{\}\)=>\{const q=new URLSearchParams/)
 })
 
-test('nested runtime navigation keeps full site editor on its dedicated route', () => {
-  const common = read('runtime/common.mjs')
-  assert.match(common, /\['appearance\/site-editor','developer\/sdk'/)
+test('nested runtime navigation resolves registered paths from the active admin mount', () => {
+  const previousWindow = globalThis.window
+  const previousPopStateEvent = globalThis.PopStateEvent
+  const pushed = []
+  globalThis.PopStateEvent = class PopStateEvent { constructor(type) { this.type = type } }
+  globalThis.window = {
+    __PINOOX__: {
+      cmsAdmin: {
+        mountPath: '/manager',
+        manifest: {
+          routes: [
+            { id: 'cms.site_editor', name: 'cms.site_editor', path: '/appearance/site-editor' },
+            { id: 'cms.updates', name: 'cms.updates', path: '/extensions/updates' },
+          ],
+        },
+      },
+    },
+    history: { pushState: (_state, _title, path) => pushed.push(path) },
+    dispatchEvent: () => {},
+  }
+
+  try {
+    navigate('site-editor')
+    navigate('updates')
+    assert.deepEqual(pushed, ['/manager/appearance/site-editor', '/manager/extensions/updates'])
+  } finally {
+    globalThis.window = previousWindow
+    globalThis.PopStateEvent = previousPopStateEvent
+  }
 })

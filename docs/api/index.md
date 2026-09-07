@@ -21,3 +21,11 @@ The Admin authoring surfaces consume versioned runtime APIs instead of hard-code
 - Media and gallery pickers reuse the Media API. No second media catalog or storage path is introduced.
 
 The machine-readable contracts remain authoritative in `payload/resources/api/*.json`.
+
+## Developer starter API
+
+`POST /api/v1/cms/developer/starter` generates a bounded NanoPino SDK source scaffold. It requires `system.developer.generate`, mutation CSRF protection and the `cms.api.write` rate profile.
+
+The endpoint reuses `ExtensionPackageBlueprint` and `ExtensionScaffoldGenerator`. It does not install or activate anything. `core-module` is rejected; final packaging and lifecycle execution remain the responsibility of official PINX tooling and Extension Center.
+
+The response contains generated source files with byte count and SHA-256. An optional base64 ZIP is included only when the host provides `ZipArchive`. See `payload/resources/api/developer-v1.json`.

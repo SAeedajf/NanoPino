@@ -93,6 +93,9 @@ export const themeApi={
   patterns:(packageName,themeName)=>cmsRequest(`/themes/${encodeURIComponent(packageName)}/${encodeURIComponent(themeName)}/patterns`),
   activate:(packageName,themeName,context=null)=>cmsRequest('/themes/activate',{method:'POST',body:{package:packageName,theme:themeName,context}}),
 }
+export const developerApi={
+  generateStarter:payload=>cmsRequest('/developer/starter',{method:'POST',body:payload}),
+}
 export const recoveryApi={
   restore:id=>cmsRequest(`/recovery/points/${encodeURIComponent(id)}/restore`,{method:'POST',body:{}}),
   disableSafeMode:()=>cmsRequest('/recovery/safe-mode/disable',{method:'POST',body:{}}),

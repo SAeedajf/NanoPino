@@ -127,6 +127,9 @@ export const contentApi={
   update:(id,payload)=>cmsRequest(`/content/${id}`,{method:'PUT',body:payload}),
   publish:id=>cmsRequest(`/content/${id}/publish`,{method:'POST',body:{}}),
   schedule:(id,publishAt)=>cmsRequest(`/content/${id}/schedule`,{method:'POST',body:{publish_at:publishAt}}),
+  revisions:id=>cmsRequest(`/content/${id}/revisions`),
+  revision:(id,revisionId)=>cmsRequest(`/content/${id}/revisions/${revisionId}`),
+  restoreRevision:(id,revisionId)=>cmsRequest(`/content/${id}/revisions/${revisionId}/restore`,{method:'POST',body:{}}),
   trash:id=>cmsRequest(`/content/${id}`,{method:'DELETE'}),
   restore:id=>cmsRequest(`/content/${id}/restore`,{method:'POST',body:{}}),
 }

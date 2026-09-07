@@ -437,6 +437,21 @@ export function createComponent(host) {
       pastePlainText(fieldKey,event){event.preventDefault();const value=event.clipboardData?.getData('text/plain')||'';globalThis.document?.execCommand?.('insertText',false,value);this.syncRichEditor(fieldKey)},
       formatRichText(fieldKey,command,value=null){const el=this.richEditor(fieldKey);if(!el)return;el.focus();globalThis.document?.execCommand?.(command,false,value);this.syncRichEditor(fieldKey)},
       createRichLink(fieldKey){const raw=globalThis.prompt?.(tr('content_page.link_prompt'),'https://');if(!raw)return;const href=this.safeUrl(raw);if(!href){this.error=tr('content_page.link_invalid');return}this.formatRichText(fieldKey,'createLink',href)},
+      closePicker(){this.picker={open:false,kind:'',fieldKey:'',title:'',query:'',items:[],loading:false,error:'',multiple:false,taxonomy:'',targetTypes:[],selected:[],pagination:{limit:24,offset:0,total:0,has_more:false},richField:''}},
+      openPicker(config){
+        this.closePicker()
+        this.picker={...this.picker,open:true,...config,selected:(config.selected||[]).map(String),pagination:{limit:24,offset:0,total:0,has_more:false}}
+        this.$nextTick?.(()=>this.loadPicker(true))
+      },
+      openFieldPicker(field){
+        const current=this.selectedIds(field)
+        if(field.type==='media')return this.openPicker({kind:'media',fieldKey:field.key,title:field.label,multiple:Boolean(field.multiple),selected:current})
+        if(field.type==='gallery')return this.openPicker({kind:'media',fieldKey:field.key,title:field.label,multiple:true,selected:current})
+        if(field.type==='relation')return this.openPicker({kind:'content',fieldKey:field.key,title:field.label,multiple:Boolean(field.multiple),selected:current,targetTypes:field.target_types||[]})
+        if(field.type==='taxonomy')return this.openPicker({kind:'taxonomy',fieldKey:field.key,title:field.label,multiple:Boolean(field.multiple),selected:current,taxonomy:field.taxonomy||''})
+      },
+      openRichMedia(field){this.openPicker({kind:'rich-media',fieldKey:field.key,title:tr('content_page.insert_image'),multiple:false,richField:field.key})},
+      openParentPicker(){this.openPicker({kind:'parent',fieldKey:'parent_id',title:tr('content_page.choose_parent'),multiple:false,selected:this.form.parent_id?[String(this.form.parent_id)]:[]})},
       fieldControl(field) {
         const value = this.form.fields?.[field.key]
         const set = (next) => { this.form.fields = { ...(this.form.fields || {}), [field.key]: next } }

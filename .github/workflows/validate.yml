@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pincore: ['3.10.0', '3.14.4']
+        pincore: ['3.14.0', '3.14.4']
     permissions:
       contents: read
     services:

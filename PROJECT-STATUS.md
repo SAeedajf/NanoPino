@@ -15,10 +15,10 @@ NanoPino is a Pinoox CMS and extension platform with a Vue/Luma admin, runtime A
 - Native Pinoox/MySQL PINX build/install/update/uninstall lifecycle is exercised in CI.
 
 ## R15 candidate gates
-- Native minimum Pincore is raised to 3.10.0 / code 216.
+- Native minimum Pincore is raised to 3.14.0 / code 232.
 - PINX artifact structure and release metadata are audited after native build.
 - A read-only installability preflight runs before CMS schema-creating migrations.
-- CI exercises both Pincore 3.10.0 and 3.14.4.
+- CI exercises both Pincore 3.14.0 and 3.14.4.
 - The native update path is 0.23.28 → 0.23.29 without force.
 - A separate clean 0.23.29 install/uninstall cycle is required.
 - CMS table count must remain stable on update and return to zero after uninstall.

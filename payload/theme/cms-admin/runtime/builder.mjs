@@ -66,7 +66,7 @@ export function createComponent(host){
       this.syncAdvanced(true);this.autosaveTimer=setInterval(()=>this.backgroundAutosave({silent:true}),30000)
       this._pointerMove=e=>this.dragMove(e);this._pointerUp=e=>this.dragEnd(e);this._pointerCancel=e=>this.dragCancel(e);this._beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue=''}};this._visibility=()=>{if(document.visibilityState==='hidden')this.backgroundAutosave({silent:true,force:true})}
       globalThis.addEventListener?.('pointermove',this._pointerMove,{passive:false});globalThis.addEventListener?.('pointerup',this._pointerUp);globalThis.addEventListener?.('pointercancel',this._pointerCancel);globalThis.addEventListener?.('beforeunload',this._beforeUnload);document.addEventListener?.('visibilitychange',this._visibility)
-      if(this.target.type==='content')this.loadContentTargets();if(params.get('create')==='1')this.createDocument();else if(params.get('open')==='1')this.openExistingDocument()
+      if(params.get('type')&&!params.get('key'))this.resetTargetKey();if(this.target.type==='content')this.loadContentTargets();if(params.get('create')==='1')this.createDocument();else if(params.get('open')==='1')this.openExistingDocument()
     },
     beforeUnmount(){if(this.autosaveTimer)clearInterval(this.autosaveTimer);if(this.autosaveDebounce)clearTimeout(this.autosaveDebounce);if(this.advancedSyncTimer)clearTimeout(this.advancedSyncTimer);globalThis.removeEventListener?.('pointermove',this._pointerMove);globalThis.removeEventListener?.('pointerup',this._pointerUp);globalThis.removeEventListener?.('pointercancel',this._pointerCancel);globalThis.removeEventListener?.('beforeunload',this._beforeUnload);document.removeEventListener?.('visibilitychange',this._visibility)},
     methods:{
@@ -97,6 +97,7 @@ export function createComponent(host){
       styleValue(key){const node=this.selectedNode;if(!node)return '';const bag=this.viewport==='desktop'?(node.styles||{}):(node.responsive?.[this.viewport]||{});return bag[key]??''},
       viewportLabel(value){return ({desktop:tr('builder_page.desktop'),tablet:tr('builder_page.tablet'),mobile:tr('builder_page.mobile')})[value]||value},
       typeHuman(type){return ({post:tr('builder_page.content_post'),page:tr('builder_page.content_page')})[type]||type},
+      closeDocument(){if(this.dirty&&!confirmFa(tr('builder_page.close_dirty_confirm')))return;this.record=null;this.document={version:1,blocks:[]};this.selectedPath=null;this.undoStack=[];this.redoStack=[];this.dirty=false;this.previewHtml='';this.revisions=[];this.syncAdvanced(true)},
       resetTargetKey(){
         this.record=null;this.document={version:1,blocks:[]};this.selectedPath=null;this.dirty=false
         if(this.target.type==='template')this.target.key=this.templateTargets[0]?.key||'home'
@@ -242,7 +243,8 @@ export function createComponent(host){
         message(h,this),
         h('div',{class:'cms-builder-toolbar'},[
           h(LButton,{label:tr('builder_page.open_existing'),severity:'secondary',disabled:this.busy||!this.targetReady,onClick:this.openExistingDocument}),
-          h(LButton,{label:tr('builder_page.create_override'),severity:'secondary',disabled:this.busy||!this.canEdit||!this.targetReady,onClick:this.createDocument}),
+          h(LButton,{label:tr('builder_page.create_override'),severity:'secondary',disabled:this.busy||!this.canEdit||!this.targetReady||Boolean(this.record),onClick:this.createDocument}),
+          this.record?h(LButton,{label:tr('builder_page.close_document'),severity:'secondary',disabled:this.busy,onClick:this.closeDocument}):null,
           h(LButton,{label:tr('builder_page.undo'),severity:'secondary',disabled:!this.canUndo,onClick:this.undo}),h(LButton,{label:tr('builder_page.redo'),severity:'secondary',disabled:!this.canRedo,onClick:this.redo}),
           h('div',{class:'grow'}),
           h('div',{role:'group','aria-label':tr('a11y.builder_viewport',tr('builder_page.viewport')),style:ui.row},['desktop','tablet','mobile'].map(v=>h(LButton,{label:this.viewportLabel(v),severity:this.viewport===v?'primary':'secondary','aria-pressed':this.viewport===v,onClick:()=>this.viewport=v}))),
@@ -254,12 +256,12 @@ export function createComponent(host){
         h(LPanel,{title:tr('builder_page.target')},{default:()=>h('div',{class:'cms-builder-target'},[
           label(h,tr('builder_page.type'),select(h,this.target.type,v=>{this.target.type=v;this.resetTargetKey()},[
             {value:'content',label:tr('builder_page.target_content')},{value:'template',label:tr('builder_page.target_template')},{value:'template_part',label:tr('builder_page.target_part')},{value:'site',label:tr('builder_page.target_site')}
-          ])),
+          ],{disabled:Boolean(this.record)})),
           this.target.type==='content'?h('div',{style:ui.page},[
-            label(h,tr('builder_page.content_target'),h('div',{class:'cms-builder-target-search'},[input(h,this.contentQuery,v=>this.contentQuery=v,'search',{placeholder:tr('builder_page.content_search_placeholder'),onKeyup:e=>{if(e.key==='Enter')this.loadContentTargets()}}),h(LButton,{label:tr('builder_page.search'),severity:'secondary',disabled:this.contentLoading,onClick:this.loadContentTargets})])),
-            select(h,this.target.key,v=>this.target.key=v,[{value:'',label:tr('builder_page.choose_content')},...this.contentTargets.map(item=>({value:(item.type||'content')+':'+item.id,label:(item.title||tr('builder_page.untitled_content','',{id:item.id}))+' · '+this.typeHuman(item.type)}))])
-          ]):this.target.type==='template'?label(h,tr('builder_page.template_target'),select(h,this.target.key,v=>this.target.key=v,this.templateTargets.map(item=>({value:item.key,label:item.label})))):this.target.type==='template_part'?label(h,tr('builder_page.part_target'),select(h,this.target.key,v=>this.target.key=v,this.partTargets.map(item=>({value:item.key,label:item.label})))):h('div',{class:'cms-builder-target-fixed'},[h('strong',{},tr('builder_page.site_target')),h('span',{},tr('builder_page.whole_site'))]),
-          label(h,tr('builder_page.language'),select(h,this.target.locale,v=>{this.target.locale=v;if(this.target.type==='content')this.loadContentTargets()},localeOptions())),
+            label(h,tr('builder_page.content_target'),h('div',{class:'cms-builder-target-search'},[input(h,this.contentQuery,v=>this.contentQuery=v,'search',{placeholder:tr('builder_page.content_search_placeholder'),disabled:Boolean(this.record),onKeyup:e=>{if(e.key==='Enter')this.loadContentTargets()}}),h(LButton,{label:tr('builder_page.search'),severity:'secondary',disabled:this.contentLoading||Boolean(this.record),onClick:this.loadContentTargets})])),
+            select(h,this.target.key,v=>this.target.key=v,[{value:'',label:tr('builder_page.choose_content')},...this.contentTargets.map(item=>({value:(item.type||'content')+':'+item.id,label:(item.title||tr('builder_page.untitled_content','',{id:item.id}))+' · '+this.typeHuman(item.type)}))],{disabled:Boolean(this.record)})
+          ]):this.target.type==='template'?label(h,tr('builder_page.template_target'),select(h,this.target.key,v=>this.target.key=v,this.templateTargets.map(item=>({value:item.key,label:item.label})),{disabled:Boolean(this.record)})):this.target.type==='template_part'?label(h,tr('builder_page.part_target'),select(h,this.target.key,v=>this.target.key=v,this.partTargets.map(item=>({value:item.key,label:item.label})),{disabled:Boolean(this.record)})):h('div',{class:'cms-builder-target-fixed'},[h('strong',{},tr('builder_page.site_target')),h('span',{},tr('builder_page.whole_site'))]),
+          label(h,tr('builder_page.language'),select(h,this.target.locale,v=>{this.target.locale=v;if(this.target.type==='content')this.loadContentTargets()},localeOptions(),{disabled:Boolean(this.record)})),
           h('div',{class:'cms-builder-target-help'},[h('strong',{},this.targetSummary),h('small',{},tr('builder_page.target_effect'))]),
           h('details',{class:'cms-content-technical'},[h('summary',{},tr('builder_page.technical_target')),h('code',{},(this.target.type||'—')+':'+(this.target.key||'—')+' · site '+this.target.site_id)]),
           this.record?h('div',{class:'cms-builder-status'},[h(LBadge,{label:this.dirty?tr('builder_page.unsaved'):tr('builder_page.synced'),severity:this.dirty?'warning':'success'}),h('code',{},`#${this.record.id}`)]):null,

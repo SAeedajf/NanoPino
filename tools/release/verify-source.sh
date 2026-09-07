@@ -56,6 +56,7 @@ sys.exit(1 if bad else 0)
 PY
 
 "$PHP_BIN" "$ROOT/tests/php/run.php"
+node --test "$ROOT"/tests/release/*.test.mjs
 
 cd "$ADMIN"
 node run-tests.mjs

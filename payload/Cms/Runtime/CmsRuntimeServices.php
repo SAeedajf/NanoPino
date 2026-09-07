@@ -78,6 +78,7 @@ use App\com_pinoox_cms\Cms\Settings\SettingsService;
 use App\com_pinoox_cms\Cms\Support\CmsRelease;
 use App\com_pinoox_cms\Cms\Support\SupportBundleBuilder;
 use App\com_pinoox_cms\Cms\Taxonomy\PinooxTermRepository;
+use App\com_pinoox_cms\Cms\Taxonomy\TaxonomyService;
 use App\com_pinoox_cms\Cms\Theme\PinooxNativeThemeGateway;
 use App\com_pinoox_cms\Cms\Theme\PinooxThemeActivationGateway;
 use App\com_pinoox_cms\Cms\Theme\ThemeCompatibilityChecker;
@@ -132,6 +133,7 @@ final class CmsRuntimeServices
     private static ?GlobalBlockService $globalBlocks = null;
     private static ?ContentService $content = null;
     private static ?RevisionService $revisions = null;
+    private static ?TaxonomyService $taxonomy = null;
     private static ?PinooxInstalledExtensionDiscovery $extensionDiscovery = null;
     private static ?ExtensionStagingStore $extensionStaging = null;
     private static ?UserAdministrationService $userAdministration = null;
@@ -310,6 +312,17 @@ final class CmsRuntimeServices
             self::audit(),
             revisions: self::revisions(),
             users: new PinooxUserLookup(),
+        );
+    }
+
+    public static function taxonomy(): TaxonomyService
+    {
+        self::actorId();
+        return self::$taxonomy ??= new TaxonomyService(
+            self::kernel()->taxonomies,
+            new PinooxTermRepository(),
+            self::authorization(),
+            self::audit(),
         );
     }
 
@@ -659,6 +672,7 @@ final class CmsRuntimeServices
         self::$globalBlocks = null;
         self::$content = null;
         self::$revisions = null;
+        self::$taxonomy = null;
         self::$userAdministration = null;
         self::$searchApi = null;
         self::$infrastructureApi = null;

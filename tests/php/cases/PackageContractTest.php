@@ -117,7 +117,10 @@ return [
         np_assert_contains('pinoox-lifecycle:', $workflow);
         np_assert_contains('mysql:8.4', $workflow);
         np_assert_contains('PINOOX_E2E_REF:', $workflow);
-        np_assert_contains("pincore: ['3.14.0', '3.14.4']", $workflow);
+        np_assert_contains("pincore: '3.14.0'", $workflow);
+        np_assert_contains("pincore: '3.14.4'", $workflow);
+        np_assert_contains("fault_injection: '1'", $workflow);
+        np_assert_contains('NANOPINO_FAULT_INJECTION:', $workflow);
         np_assert_contains('NANOPINO_UPGRADE_BASE_REF:', $workflow);
         np_assert_contains('actions/download-artifact@v4', $workflow);
         np_assert_contains('include-hidden-files: true', $workflow);
@@ -133,6 +136,10 @@ return [
         np_assert_contains('installability_preflight_records=', $lifecycle);
         np_assert_contains('fresh_install_tables=', $lifecycle);
         np_assert_contains('uninstall_tables=', $lifecycle);
+        np_assert_contains('NanoPino R16 CI fault injection', $lifecycle);
+        np_assert_contains('fault_terminal_records=', $lifecycle);
+        np_assert_contains('fault_recovery_mode=', $lifecycle);
+        np_assert_contains('fault_injection_recovery=PASS', $lifecycle);
     },
 
     'Release tooling verifies source before invoking native Pinoox PINX build' => static function (): void {

@@ -27,7 +27,7 @@
     <LPanel v-if="missingEssentials.length" class="cms-inline-callout">
       <template #header>{{ t('blocks_page.extend_library') }}</template>
       <p>{{ t('blocks_page.extend_library_help') }}</p>
-      <div class="cms-capability-cloud"><LBadge v-for="name in missingEssentials" :key="name" severity="secondary">{{ essentialLabel(name) }}</LBadge></div>
+      <div class="cms-capability-cloud"><LBadge v-for="item in missingEssentials" :key="item.key" severity="secondary">{{ essentialLabel(item) }}</LBadge></div>
       <LButton size="sm" variant="outline" @click="router.push('/extensions')">{{ t('blocks_page.install_block_pack') }}</LButton>
     </LPanel>
 
@@ -98,7 +98,13 @@ import { t } from '../../i18n/index.js'
 const data = readAdminBootData()
 const router = useRouter()
 const query = ref('')
-const essentialBlocks=['core/image','core/gallery','core/video','core/navigation','core/form']
+const essentialBlocks=[
+  {key:'image',tokens:['image']},
+  {key:'gallery',tokens:['gallery']},
+  {key:'video',tokens:['video']},
+  {key:'navigation',tokens:['navigation','menu']},
+  {key:'form',tokens:['form']},
+]
 
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -121,17 +127,17 @@ const responsiveCount = computed(() =>
 )
 
 const missingEssentials = computed(() => {
-  const names = new Set(data.blockDefinitions.map((block) => block.name || block.id))
-  return essentialBlocks.filter((name) => !names.has(name))
+  const searchable=data.blockDefinitions.map(block=>`${block.name||''} ${block.title||''} ${block.category||''}`.toLowerCase())
+  return essentialBlocks.filter(item=>!searchable.some(text=>item.tokens.some(token=>text.includes(token))))
 })
-function essentialLabel(name){
+function essentialLabel(item){
   return ({
-    'core/image':t('blocks_page.essential_image'),
-    'core/gallery':t('blocks_page.essential_gallery'),
-    'core/video':t('blocks_page.essential_video'),
-    'core/navigation':t('blocks_page.essential_navigation'),
-    'core/form':t('blocks_page.essential_form'),
-  })[name] || name
+    image:t('blocks_page.essential_image'),
+    gallery:t('blocks_page.essential_gallery'),
+    video:t('blocks_page.essential_video'),
+    navigation:t('blocks_page.essential_navigation'),
+    form:t('blocks_page.essential_form'),
+  })[item.key] || item.key
 }
 function previewKind(block){
   const name=String(block.name||'')

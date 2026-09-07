@@ -13,6 +13,8 @@ function validContentId(value) {
   const id = Number(value)
   return Number.isSafeInteger(id) && id > 0 ? String(id) : ''
 }
+function clone(value){return JSON.parse(JSON.stringify(value))}
+function meaningful(value){if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.keys(value).length>0;return String(value??'').trim()!==''}
 
 function parseJson(value, labelText) {
   if (value === '' || value === null || value === undefined) return {}
@@ -77,6 +79,7 @@ export function createComponent(host) {
         editorOpen: false,
         editing: null,
         scheduleAt: '',
+        previousType: 'post',
         form: {
           site_id: 1, type: 'post', title: '', slug: '', excerpt: '', locale: 'fa', parent_id: '', fields: {}, metadataJson: '{}',
         },
@@ -103,6 +106,10 @@ export function createComponent(host) {
         this.form = this.emptyForm(typeKey)
         this.editing = null
         this.scheduleAt = ''
+        this.previousType = this.form.type
+      },
+      draftSignature() {
+        return JSON.stringify({ ...clone(this.form), scheduleAt: this.scheduleAt })
       },
       async load(resetOffset = false) {
         if (resetOffset) this.pagination.offset = 0
@@ -167,6 +174,7 @@ export function createComponent(host) {
         const fields = {}
         for (const field of descriptor?.fields || []) fields[field.key] = this.fieldValueFromItem(item, field)
         this.editing = id
+        this.previousType = item.type || this.types?.[0]?.key || 'post'
         this.form = {
           site_id: item.site_id || 1,
           type: item.type || this.types?.[0]?.key || 'post',
@@ -190,7 +198,26 @@ export function createComponent(host) {
       },
       changeFormType(value) {
         if (this.editing) return
-        this.form = this.emptyForm(value)
+        const next = value || this.previousType
+        const previous = this.previousType || this.form.type || next
+        if (next === previous) return
+        const previousDescriptor = this.typeDescriptor(previous)
+        const nextDescriptor = this.typeDescriptor(next)
+        const nextKeys = new Set((nextDescriptor?.fields || []).map((field) => field.key))
+        const removed = (previousDescriptor?.fields || []).filter((field) => !nextKeys.has(field.key) && meaningful(this.form.fields?.[field.key]))
+        const dropsParent = Boolean(this.form.parent_id) && !nextDescriptor?.hierarchical
+        if ((removed.length || dropsParent) && !confirmFa(tr('content_page.change_type_confirm', '', { count: removed.length + (dropsParent ? 1 : 0) }))) return
+        const current = clone(this.form)
+        const fields = {}
+        for (const field of nextDescriptor?.fields || []) {
+          if (Object.prototype.hasOwnProperty.call(current.fields || {}, field.key)) fields[field.key] = current.fields[field.key]
+          else if (field.default !== null && field.default !== undefined) fields[field.key] = field.multiple && !Array.isArray(field.default) ? [field.default] : field.default
+          else if (field.multiple) fields[field.key] = []
+          else if (field.type === 'boolean') fields[field.key] = false
+          else fields[field.key] = ''
+        }
+        this.form = { ...current, type: next, parent_id: nextDescriptor?.hierarchical ? current.parent_id : '', fields }
+        this.previousType = next
       },
       normalizeField(field, value) {
         if (field.multiple || ['relation', 'gallery', 'taxonomy'].includes(field.type)) return csvIds(value)
@@ -234,6 +261,7 @@ export function createComponent(host) {
         this.saving = true
         this.error = ''
         this.notice = ''
+        const submittedDraft = this.draftSignature()
         try {
           const payload = this.payload()
           const editingId = validContentId(this.editing)
@@ -252,8 +280,13 @@ export function createComponent(host) {
           const currentStatus = record?.status || this.items.find((item) => validContentId(item.id) === id)?.status || 'draft'
           if (publishAfter && id && currentStatus !== 'published') await api(`/content/${id}/publish`, { method: 'POST', body: {} })
           this.notice = publishAfter ? (currentStatus === 'published' ? tr('content_page.saved_published') : tr('content_page.saved_publish')) : tr('content_page.saved')
-          this.editorOpen = false
-          this.resetForm(this.type || this.types?.[0]?.key || 'post')
+          const unchanged = this.draftSignature() === submittedDraft
+          if (unchanged) {
+            this.editorOpen = false
+            this.resetForm(this.type || this.types?.[0]?.key || 'post')
+          } else {
+            this.notice = tr('content_page.saved_newer_draft')
+          }
           await this.load()
         } catch (e) {
           this.error = e.message
@@ -264,13 +297,23 @@ export function createComponent(host) {
       async schedule() {
         const id = validContentId(this.editing)
         if (!id) return
+        if (this.saving) return
         if (!this.scheduleAt) { this.error = tr('content_page.schedule_required'); return }
+        this.saving = true
         this.error = ''
+        this.notice = ''
+        const submittedDraft = this.draftSignature()
+        const publishAt = new Date(this.scheduleAt).toISOString()
         try {
-          await api(`/content/${id}/schedule`, { method: 'POST', body: { publish_at: new Date(this.scheduleAt).toISOString() } })
-          this.notice = tr('content_page.scheduled_notice')
+          const payload = this.payload()
+          const record = await api(`/content/${id}`, { method: 'PUT', body: payload })
+          const index = this.items.findIndex((item) => validContentId(item.id) === id)
+          if (index >= 0) this.items.splice(index, 1, { ...this.items[index], ...record, id: Number(id) })
+          await api(`/content/${id}/schedule`, { method: 'POST', body: { publish_at: publishAt } })
+          this.notice = this.draftSignature() === submittedDraft ? tr('content_page.scheduled_notice') : tr('content_page.scheduled_newer_draft')
           await this.load()
         } catch (e) { this.error = e.message }
+        finally { this.saving = false }
       },
       async act(id, action, skipConfirm = false) {
         const contentId = validContentId(id)

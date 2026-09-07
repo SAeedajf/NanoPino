@@ -110,6 +110,8 @@ export function createComponent(host) {
         this.editing = null
         this.scheduleAt = ''
         this.previousType = this.form.type
+        this.parentLabel = ''
+        this.closePicker()
       },
       draftSignature() {
         return JSON.stringify({ ...clone(this.form), scheduleAt: this.scheduleAt })
@@ -158,16 +160,16 @@ export function createComponent(host) {
         return this.items.filter((item) => item.status === value).length
       },
       startCreate() {
+        if(this.status==='trash'){this.status='';this.notice=tr('content_page.create_left_trash')}
         this.resetForm(this.type || this.types?.[0]?.key || 'post')
         this.editorOpen = true
-        this.notice = ''
         this.error = ''
         globalThis.window?.scrollTo?.({ top: 0, behavior: 'smooth' })
       },
       fieldValueFromItem(item, field) {
         if (field.storage === 'document') return item.document?.[field.key] ?? field.default ?? ''
         if (field.storage === 'relation') return item.relations?.[field.key] ?? []
-        if (field.storage === 'taxonomy') return item.terms?.[field.key] ?? []
+        if (field.storage === 'taxonomy') return item.terms?.[field.taxonomy || field.key] ?? item.terms?.[field.key] ?? []
         return item.fields?.[field.key] ?? field.default ?? (field.multiple ? [] : '')
       },
       edit(item) {
@@ -178,6 +180,7 @@ export function createComponent(host) {
         for (const field of descriptor?.fields || []) fields[field.key] = this.fieldValueFromItem(item, field)
         this.editing = id
         this.previousType = item.type || this.types?.[0]?.key || 'post'
+        this.parentLabel = ''
         this.form = {
           site_id: item.site_id || 1,
           type: item.type || this.types?.[0]?.key || 'post',
@@ -193,6 +196,8 @@ export function createComponent(host) {
         this.editorOpen = true
         this.error = ''
         this.notice = ''
+        if(this.form.parent_id)this.hydrateParent(this.form.parent_id)
+        this.hydrateMediaFields()
         globalThis.window?.scrollTo?.({ top: 0, behavior: 'smooth' })
       },
       closeEditor() {

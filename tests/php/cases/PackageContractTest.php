@@ -15,8 +15,8 @@ return [
         np_assert_same($app['package'], $manifest['package'] ?? null);
         np_assert_same($app['version-name'], $manifest['version_name'] ?? null);
         np_assert_same($app['version-code'], $manifest['version_code'] ?? null);
-        np_assert_same(216, $app['minpin'] ?? null);
-        np_assert_same(216, $manifest['minpin'] ?? null);
+        np_assert_same(232, $app['minpin'] ?? null);
+        np_assert_same(232, $manifest['minpin'] ?? null);
     },
 
     'Package keeps boot and access cutovers fail-closed for the current release' => static function (): void {
@@ -80,10 +80,10 @@ return [
             JSON_THROW_ON_ERROR,
         );
 
-        np_assert_same(216, $app['minpin'] ?? null);
-        np_assert_same(216, $app['pinx']['minpin'] ?? null);
-        np_assert_same('>=3.10.0', $app['cms']['requires']['pincore'] ?? null);
-        np_assert_same('>=3.10.0', $manifest['cms']['requires']['pincore'] ?? null);
+        np_assert_same(232, $app['minpin'] ?? null);
+        np_assert_same(232, $app['pinx']['minpin'] ?? null);
+        np_assert_same('>=3.14.0', $app['cms']['requires']['pincore'] ?? null);
+        np_assert_same('>=3.14.0', $manifest['cms']['requires']['pincore'] ?? null);
 
         $migrations = glob(NANOPINO_ROOT . '/payload/database/migrations/*.php') ?: [];
         sort($migrations, SORT_STRING);
@@ -117,7 +117,7 @@ return [
         np_assert_contains('pinoox-lifecycle:', $workflow);
         np_assert_contains('mysql:8.4', $workflow);
         np_assert_contains('PINOOX_E2E_REF:', $workflow);
-        np_assert_contains("pincore: ['3.10.0', '3.14.4']", $workflow);
+        np_assert_contains("pincore: ['3.14.0', '3.14.4']", $workflow);
         np_assert_contains('NANOPINO_UPGRADE_BASE_REF:', $workflow);
         np_assert_contains('actions/download-artifact@v4', $workflow);
         np_assert_contains('include-hidden-files: true', $workflow);

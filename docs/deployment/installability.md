@@ -103,6 +103,33 @@ Force is reserved for controlled recovery/testing cases where the operator under
 
 ## Artifact integrity gate
 
+### Safe build output
+
+Run the builder on a development/CI machine with PHP, Node/npm, Python 3,
+rsync and GNU coreutils; the shared host does not need these build tools.
+Use a disposable Pinoox build root with no installed `com_pinoox_cms` app:
+
+```bash
+tools/release/build-pinx.sh /path/to/pinoox-build ../output/NanoPino.pinx
+```
+
+Relative output paths are resolved from the directory where the command was
+invoked. Output must be outside both this repository and the Pinoox build root.
+Directories and symlinks are rejected as output destinations. Existing apps,
+including dangling app symlinks, are never overwritten or cleaned up.
+
+The native builder writes into a private temporary directory beside the final
+output. Only after native inspection and the installability verifier succeed is
+the file atomically moved to its final name. An existing release remains intact
+if copying, building, inspection or verification fails. Temporary build files are
+cleaned on ordinary exit, SIGINT and SIGTERM; SIGKILL or power loss can leave
+temporary files behind and require inspection before retrying.
+
+`node --test tests/release/*.test.mjs` exercises this shell orchestration with
+controlled native-command doubles, including injected build/inspection/verifier
+failures. These tests do not replace the real Pincore lifecycle CI matrix or
+shared-host installation checks. The source verification gate runs both suites.
+
 Every release PINX built through `tools/release/build-pinx.sh` must pass `tools/release/verify-pinx-installability.php`.
 
 The gate verifies:

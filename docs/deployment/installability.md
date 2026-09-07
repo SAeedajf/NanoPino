@@ -9,8 +9,8 @@ NanoPino installation and update must use the native Pinoox PINX lifecycle. Do n
 | Package | `com_pinoox_cms` |
 | Version | `0.23.29` / code `2329` |
 | PHP | `>= 8.2` |
-| Pincore | `>= 3.10.0` |
-| Native minpin | `216` |
+| Pincore | `>= 3.14.0` |
+| Native minpin | `232` |
 | Database | MySQL/MariaDB package connection |
 | Tested CI database | MySQL 8.4 |
 | Required CMS tables | 16 |
@@ -25,7 +25,7 @@ NanoPino installation and update must use the native Pinoox PINX lifecycle. Do n
 
 GD or Imagick is recommended for image processing. OPcache is recommended in production. Their absence is reported as a warning rather than an installation blocker.
 
-The repository CI executes the PINX lifecycle against Pincore 3.10.0 and 3.14.4. A target shared-hosting environment must still be validated independently because hosting policy, PHP builds, permissions and database privileges can differ.
+The repository CI executes the PINX lifecycle against Pincore 3.14.0 and 3.14.4. A target shared-hosting environment must still be validated independently because hosting policy, PHP builds, permissions and database privileges can differ.
 
 ## Native installation sequence
 
@@ -36,7 +36,7 @@ The repository CI executes the PINX lifecycle against Pincore 3.10.0 and 3.14.4.
 5. Pinoox runs package patches/lifecycle hooks and rebuilds runtime caches.
 6. Post-install health checks can validate the resulting runtime.
 
-The native `minpin=216` check intentionally rejects Pincore older than 3.10.0 before package extraction. The first NanoPino migration then catches environment problems that cannot be expressed through PINX metadata before CMS schema mutation.
+The native `minpin=232` check intentionally rejects Pincore older than 3.14.0 before package extraction. The first NanoPino migration then catches environment problems that cannot be expressed through PINX metadata before CMS schema mutation.
 
 ## What the self-preflight blocks
 
@@ -53,7 +53,7 @@ Installation is stopped when any of the following is true:
 - the configured database driver is not MySQL/MariaDB.
 - `pdo_mysql` is unavailable for MySQL/MariaDB.
 - InnoDB is known to be unavailable.
-- the detected Pincore version is older than 3.10.0.
+- the detected Pincore version is older than 3.14.0.
 
 Warnings are emitted for low-but-usable memory, small HTTP upload limits, short execution windows, database versions below the tested production baseline, non-`utf8mb4` database defaults, unavailable OPcache, unavailable GD/Imagick, or an InnoDB capability probe that the database account is not permitted to inspect.
 
@@ -61,7 +61,7 @@ Warnings are emitted for low-but-usable memory, small HTTP upload limits, short 
 
 | Symptom / code | Meaning | Correct recovery |
 |---|---|---|
-| Pinoox reports minimum kernel/minpin failure | Pincore is older than 3.10.0 / code 216 | Upgrade Pincore. Do not bypass the check with a force install. |
+| Pinoox reports minimum kernel/minpin failure | Pincore is older than 3.14.0 / code 232 | Upgrade Pincore. Do not bypass the check with a force install. |
 | `install.php_extensions_missing` | One or more PHP extensions are unavailable | Enable the listed extensions in the hosting control panel/PHP selector, then retry the same PINX. |
 | `install.pdo_mysql_missing` | MySQL is configured but PDO MySQL is absent | Enable `pdo_mysql`, then retry. |
 | `install.php_memory_critical` | PHP memory limit is below 32 MiB | Raise the PHP memory limit before retrying. 128 MiB+ is recommended. |

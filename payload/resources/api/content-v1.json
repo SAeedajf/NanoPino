@@ -73,6 +73,12 @@
       "capability": "content.read"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/cms/content/{id}/revisions/{revisionId}",
+      "capability": "content.read",
+      "response": ["id", "kind", "checksum", "actor_id", "source_revision_id", "created_at", "snapshot"]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/cms/content/{id}/revisions/{revisionId}/restore",
       "capability": "content.update"

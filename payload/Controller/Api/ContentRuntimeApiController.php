@@ -279,6 +279,15 @@ final class ContentRuntimeApiController extends ApiController
                     'multiple' => $field->multiple,
                     'default' => $field->default,
                     'choices' => $choices,
+                    'taxonomy' => $field->type->value === 'taxonomy'
+                        ? (string) ($field->options['taxonomy'] ?? '')
+                        : null,
+                    'target_types' => is_array($field->options['target_types'] ?? null)
+                        ? array_values($field->options['target_types'])
+                        : [],
+                    'max_items' => isset($field->options['max_items'])
+                        ? (int) $field->options['max_items']
+                        : null,
                     'ui' => [
                         'component' => (string) ($field->ui['component'] ?? $field->type->value),
                         'order' => (int) ($field->ui['order'] ?? 100),

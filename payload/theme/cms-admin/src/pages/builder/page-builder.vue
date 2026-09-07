@@ -111,7 +111,7 @@
 
       <aside class="cms-builder-sidebar cms-builder-sidebar--end is-mobile-active">
         <div class="cms-builder-panel-scroll">
-          <div class="cms-builder-panel-head"><strong>{{ t('builder_page.inspector') }}</strong><LBadge severity="secondary">{{ viewport }}</LBadge></div>
+          <div class="cms-builder-panel-head"><strong>{{ t('builder_page.inspector') }}</strong><LBadge severity="secondary">{{ viewportLabel(viewport) }}</LBadge></div>
           <template v-if="selectedNode && selectedDefinition">
             <div class="cms-stack">
               <label v-for="field in selectedDefinition.attributes||[]" :key="field.name">{{ field.name }}
@@ -131,7 +131,7 @@
             <div class="cms-card-actions"><LButton size="sm" variant="outline" :disabled="!canEdit" :aria-label="t('a11y.builder_move_up')" @click="moveSelected(-1)">↑</LButton><LButton size="sm" variant="outline" :disabled="!canEdit" :aria-label="t('a11y.builder_move_down')" @click="moveSelected(1)">↓</LButton><LButton size="sm" variant="outline" :disabled="!canEdit" @click="nestIntoPrevious">{{ t('builder_page.nest') }}</LButton><LButton size="sm" variant="outline" :disabled="!canEdit" @click="moveOut">{{ t('builder_page.move_out') }}</LButton><LButton size="sm" variant="outline" :disabled="!canEdit" @click="duplicateSelected">{{ t('builder_page.duplicate') }}</LButton><LButton size="sm" severity="danger" variant="outline" :disabled="!canEdit" @click="removeSelected">{{ t('builder_page.delete') }}</LButton></div>
           </template>
           <p v-else class="cms-muted">{{ t('builder_page.select_block') }}</p>
-          <div class="cms-builder-viewports" role="group" :aria-label="t('a11y.builder_viewport')"><LButton v-for="v in viewports" :key="v" size="sm" shape="rounded" :variant="viewport===v?'solid':'outline'" :aria-pressed="viewport===v" @click="viewport=v">{{ v }}</LButton></div>
+          <div class="cms-builder-viewports" role="group" :aria-label="t('a11y.builder_viewport')"><LButton v-for="v in viewports" :key="v" size="sm" shape="rounded" :variant="viewport===v?'solid':'outline'" :aria-pressed="viewport===v" @click="viewport=v">{{ viewportLabel(v) }}</LButton></div>
         </div>
       </aside>
     </div>
@@ -150,6 +150,7 @@ const partTargets=computed(()=>Array.from(new Set(boot.fullSiteEditor?.templateP
 const targetReady=computed(()=>Number(target.site_id)>0&&['content','template','template_part','site'].includes(target.type)&&Boolean(String(target.key||'').trim()))
 const targetSummary=computed(()=>{if(target.type==='content'){const id=String(target.key||'').split(':').at(-1),row=contentTargets.value.find(item=>String(item.id)===id);return row?.title||t('builder_page.content_target_selected')}if(target.type==='template')return templateTargets.value.find(item=>item.key===target.key)?.label||target.key;if(target.type==='template_part')return partTargets.value.find(item=>item.key===target.key)?.label||target.key;return t('builder_page.whole_site')})
 const pathKey=p=>Array.isArray(p)?p.join('.'):'';const filteredBlocks=computed(()=>{const q=blockSearch.value.toLowerCase();return (boot.blockDefinitions||[]).filter(b=>!q||`${b.title} ${b.name} ${b.category}`.toLowerCase().includes(q))});const flatLayers=computed(()=>{const rows=[];const walk=(xs,d=0,path=[])=>(xs||[]).forEach((n,i)=>{const p=[...path,i];rows.push({node:n,depth:d,path:p});walk(n.children,d+1,p)});walk(document.blocks);return rows});const selectedNode=computed(()=>nodeAt(selectedPath.value));const selectedDefinition=computed(()=>(boot.blockDefinitions||[]).find(b=>(b.name||b.id)===selectedNode.value?.type)||null);const blockCount=computed(()=>flatLayers.value.length),canUndo=computed(()=>undoStack.value.length>0&&canEdit.value),canRedo=computed(()=>redoStack.value.length>0&&canEdit.value)
+function viewportLabel(v){return ({desktop:t('builder_page.desktop'),tablet:t('builder_page.tablet'),mobile:t('builder_page.mobile')})[v]||v}
 function typeHuman(type){return ({post:t('builder_page.content_post'),page:t('builder_page.content_page')})[type]||type}
 function resetTargetKey(){record.value=null;document.blocks.splice(0,document.blocks.length);selectedPath.value=null;dirty.value=false;if(target.type==='template')target.key=templateTargets.value[0]?.key||'home';else if(target.type==='template_part')target.key=partTargets.value[0]?.key||'header';else if(target.type==='site')target.key='site';else{target.key='';loadContentTargets()}}
 async function loadContentTargets(){if(target.type!=='content')return;contentLoading.value=true;error.value='';try{const r=await contentApi.list({search:contentQuery.value,site_id:target.site_id,locale:target.locale,limit:50,projection:'list'});contentTargets.value=(r.data||r).items||[]}catch(e){error.value=e.message;contentTargets.value=[]}finally{contentLoading.value=false}}

@@ -3,8 +3,8 @@
   "sdk_version": "v1",
   "minimum": {
     "php": ">=8.2",
-    "pincore": ">=3.10.0",
-    "kernel_code": 216,
+    "pincore": ">=3.14.0",
+    "kernel_code": 232,
     "cms": ">=0.21.0",
     "luma": ">=0.4.10"
   },

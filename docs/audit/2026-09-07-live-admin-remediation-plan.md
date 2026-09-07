@@ -70,4 +70,22 @@ P1 replaces daily authoring fields that exposed numeric IDs or infrastructure te
 - Revision restore is preceded by an integrity-verified snapshot preview and a current-vs-revision diff.
 - Media upload failures can be retried or removed per file, and zero-result pagination no longer fabricates a 1-to-0 range.
 
-P1 remains open until Admin build, runtime parity, API-contract verification, behavior tests and PINX lifecycle gates pass.
+P1 closed on 2026-09-07 after Admin build/runtime parity, API-contract verification, behavior tests, PHP 8.2–8.5 and PINX lifecycle gates on Pincore 3.14.0/3.14.4 passed; PR #10 was merged.
+
+
+## P2 implementation notes
+
+P2 keeps Builder/Theme/Block behavior on existing Pinoox-native contracts and removes ambiguity from the admin workflows.
+
+- Builder target selection is author-facing: content, template, template part and whole-site targets use named selectors; raw target keys are secondary technical detail.
+- Opening an existing Builder document is read-only with respect to creation. Creating a new document is a separate explicit action using the create route. A document target is locked while open and dirty close requires confirmation.
+- The Block Library is unavailable until a concrete document is open, so the not-open state no longer instructs users to perform disabled editing actions.
+- Primary Builder controls and viewport names are localized; status uses the localized not-open state.
+- Pinoox theme activation remains per package. Theme Center identifies the NanoPino site package separately from other application theme stacks and exposes Builder/Site Editor actions only for the site-package active theme.
+- Theme cards use supplied cover previews and an explicit no-preview state when a theme provides no cover.
+- Block Catalog adds searchable previews, capability badges and a direct Block Pack installation path. The Core remains small; missing image/gallery/video/navigation/form capability can be supplied by any registered third-party namespace.
+- Global Styles preview now reflects base font size as well as colors, fonts, spacing, radius and content width.
+- Responsive Contract is shown only when breakpoints exist and explains their fallback role.
+- Decorative sample controls are visibly marked as preview-only.
+
+P2 remains open until regression tests, production Admin build/runtime parity, PHP matrix and PINX lifecycle gates pass.

@@ -87,6 +87,14 @@ If `apps/com_pinoox_cms` exists after a failed first install:
 - if there is no NanoPino migration history and no NanoPino schema, an orphaned extracted directory can be moved aside under a backup name before a clean reinstall;
 - if migration history or CMS tables exist, do **not** manually delete the application directory or tables. Use the native uninstall/recovery flow and retain a database/filesystem backup.
 
+## Late migration failure recovery
+
+Pincore 3.14.x does not promise an automatic filesystem/database rollback for every exception that occurs after PINX extraction. NanoPino therefore treats a late migration failure as a recoverable, inspectable state rather than assuming the install was atomic.
+
+Repository R16 fault-injection deliberately adds a final migration that throws after the normal NanoPino schema migrations. The release gate verifies that the failed migration is never recorded as successful. If Pincore leaves extracted files/schema behind, the native uninstall/recovery path must still be able to roll back NanoPino-owned migration batches, remove all NanoPino `cms_*` tables and remove the application directory.
+
+Operators should never manually delete only the app directory while NanoPino migration history or tables remain. Doing so can remove the code required for the native recovery path while leaving database state behind.
+
 ## Normal update policy
 
 A normal upgrade must not require `--force`. R15 CI installs the previous official 0.23.28 package and then installs 0.23.29 through the native update path without force.
@@ -94,6 +102,33 @@ A normal upgrade must not require `--force`. R15 CI installs the previous offici
 Force is reserved for controlled recovery/testing cases where the operator understands the consequences. It is not the normal update procedure.
 
 ## Artifact integrity gate
+
+### Safe build output
+
+Run the builder on a development/CI machine with PHP, Node/npm, Python 3,
+rsync and GNU coreutils; the shared host does not need these build tools.
+Use a disposable Pinoox build root with no installed `com_pinoox_cms` app:
+
+```bash
+tools/release/build-pinx.sh /path/to/pinoox-build ../output/NanoPino.pinx
+```
+
+Relative output paths are resolved from the directory where the command was
+invoked. Output must be outside both this repository and the Pinoox build root.
+Directories and symlinks are rejected as output destinations. Existing apps,
+including dangling app symlinks, are never overwritten or cleaned up.
+
+The native builder writes into a private temporary directory beside the final
+output. Only after native inspection and the installability verifier succeed is
+the file atomically moved to its final name. An existing release remains intact
+if copying, building, inspection or verification fails. Temporary build files are
+cleaned on ordinary exit, SIGINT and SIGTERM; SIGKILL or power loss can leave
+temporary files behind and require inspection before retrying.
+
+`node --test tests/release/*.test.mjs` exercises this shell orchestration with
+controlled native-command doubles, including injected build/inspection/verifier
+failures. These tests do not replace the real Pincore lifecycle CI matrix or
+shared-host installation checks. The source verification gate runs both suites.
 
 Every release PINX built through `tools/release/build-pinx.sh` must pass `tools/release/verify-pinx-installability.php`.
 

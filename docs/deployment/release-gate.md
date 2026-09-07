@@ -44,3 +44,17 @@ Release packaging is additionally blocked unless the built PINX passes the R15 a
 NanoPino also ships a read-only environment preflight as the first package migration. This runs before CMS schema-creating migrations and blocks unsupported PHP/Pincore/database/filesystem conditions.
 
 R15 materially strengthens installability evidence but does not close signed PINX trust-chain validation, fault-injected database/filesystem recovery, authenticated browser/mobile/WCAG E2E or exact target shared-hosting validation.
+
+
+## R16 fault-injected install recovery gate
+
+The canonical Pincore 3.14.4 lifecycle additionally builds a test-only NanoPino PINX containing a final migration that intentionally throws after the normal schema migrations have completed.
+
+The gate requires the failed migration to remain absent from Pinoox migration history. It then accepts either of two safe outcomes:
+
+- Pincore has already removed the extracted application and restored NanoPino database state automatically; or
+- the failed install remains recoverable through the native NanoPino/Pinoox uninstall path, which must remove the application directory, all NanoPino `cms_*` tables and NanoPino migration history.
+
+A state where database changes remain but the application directory needed for native recovery is missing is a release failure.
+
+This gate deliberately does not patch Pincore or claim transactionality that the native installer does not provide. It proves that NanoPino remains recoverable after a late package-migration failure in the controlled CI environment.

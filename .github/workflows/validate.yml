@@ -70,7 +70,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pincore: ['3.14.0', '3.14.4']
+        include:
+          - pincore: '3.14.0'
+            fault_injection: '0'
+          - pincore: '3.14.4'
+            fault_injection: '1'
     permissions:
       contents: read
     services:
@@ -97,6 +101,7 @@ jobs:
       DB_PREFIX: pinx_
       PINOOX_E2E_REF: 5e7d65bb4c6c71edbf0e0b47735479f620640d07
       PINCORE_E2E_VERSION: ${{ matrix.pincore }}
+      NANOPINO_FAULT_INJECTION: ${{ matrix.fault_injection }}
       NANOPINO_UPGRADE_BASE_REF: 6f251890a503fa9968dcbe36c6d8e8604f00618b
     steps:
       - uses: actions/checkout@v4

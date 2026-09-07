@@ -104,3 +104,26 @@ P3 repairs items 41–50 without introducing a second Extension lifecycle.
 - Generated example Admin pages are explicitly marked as development examples and provide human route metadata.
 
 P3 remains open until source verification, production Admin build/runtime evidence, PHP matrix and PINX lifecycle gates pass.
+
+## P4a — audit investigation presentation
+
+This follow-up is independent of the open P3 PR #12. P0/P1/P2 implementation is
+already on main; it does not reimplement their work or claim target-host closure.
+
+Audit findings #54 and #55 are partially addressed:
+- Desktop and mobile audit views show the event's Unix-seconds timestamp with an
+  explicit UTC display and a machine-readable ISO time. Missing/invalid values
+  remain unknown rather than becoming the Unix epoch or the current time.
+- Search has a native label and now includes actor ID, scope, event ID and UTC
+  date in addition to action, owner, target and correlation.
+- Column labels have Persian/English translations. Actor names and translated
+  action descriptions remain pending; no identity data is invented.
+
+Validation: 121 Node tests passed (including timestamp/search behavior), production
+Vite build passed, source/dist parity passed, 56 emitted assets verified.
+PHP lint and target-host browser checks were not run for this follow-up. No
+migration, deployment or PINX version increment is included.
+
+Remaining sequence: finish/review P3 -> P4 identity and observability integration
+-> P5 accessibility/mobile -> P6 target-host and native lifecycle verification.
+P4a is a reviewable slice, not completion of P4 or all 76 findings.

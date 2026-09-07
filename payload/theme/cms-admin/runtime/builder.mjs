@@ -94,20 +94,46 @@ export function createComponent(host){
       styleBag(){const node=this.selectedNode;if(!node)return null;if(this.viewport==='desktop'){node.styles=node.styles||{};return node.styles}node.responsive=node.responsive||{};node.responsive[this.viewport]=node.responsive[this.viewport]||{};return node.responsive[this.viewport]},
       updateStyle(key,value){const node=this.selectedNode;if(!node)return;this.mutation(()=>{const bag=this.styleBag();if(value===''||value===null||value===undefined)delete bag[key];else bag[key]=value},`style:${node.id}:${this.viewport}:${key}`)},
       styleValue(key){const node=this.selectedNode;if(!node)return '';const bag=this.viewport==='desktop'?(node.styles||{}):(node.responsive?.[this.viewport]||{});return bag[key]??''},
-      async run(fn){this.busy=true;this.error='';try{return await fn()}catch(e){this.error=e.message;throw e}finally{this.busy=false}},
-      async open(){
+      typeHuman(type){return ({post:tr('builder_page.content_post'),page:tr('builder_page.content_page')})[type]||type},
+      resetTargetKey(){
+        this.record=null;this.document={version:1,blocks:[]};this.selectedPath=null;this.dirty=false
+        if(this.target.type==='template')this.target.key=this.templateTargets[0]?.key||'home'
+        else if(this.target.type==='template_part')this.target.key=this.partTargets[0]?.key||'header'
+        else if(this.target.type==='site')this.target.key='site'
+        else{this.target.key='';this.loadContentTargets()}
+      },
+      async loadContentTargets(){
+        if(this.target.type!=='content')return
+        this.contentLoading=true;this.error=''
         try{
-          const list=await this.run(()=>api(`/builder?site_id=${Number(this.target.site_id||1)}&type=${encodeURIComponent(this.target.type)}&locale=${encodeURIComponent(this.target.locale||'fa')}&limit=200`))
-          const existing=(list?.items||[]).find(x=>x.target?.key===this.target.key)
-          let record
-          if(existing?.id)record=await api(`/builder/${existing.id}`)
-          else{
-            if(!this.canEdit)throw new Error(tr('builder_page.override_create_denied'))
-            record=await api('/builder/open',{method:'POST',body:{target:{...this.target},document:{version:1,blocks:[]}}})
-          }
-          if(!record?.id)throw new Error(tr('builder_page.invalid_response'))
-          this.record=record;this.target={...record.target};this.document=clone(record.document||{version:1,blocks:[]});this.selectedPath=null;this.undoStack=[];this.redoStack=[];this.dirty=false;this.lastAutosaveSignature=this.documentSignature();this.syncAdvanced(true);this.notice=tr('builder_page.opened','',{id:record.id});await this.loadRevisions()
-        }catch(e){this.error=e.message}
+          const q=new URLSearchParams({site_id:String(this.target.site_id||1),locale:this.target.locale||'fa',limit:'50',projection:'list'})
+          if(this.contentQuery.trim())q.set('search',this.contentQuery.trim())
+          const result=await api('/content?'+q)
+          this.contentTargets=result.items||[]
+        }catch(e){this.error=e.message;this.contentTargets=[]}finally{this.contentLoading=false}
+      },
+      applyOpenedRecord(record){
+        if(!record?.id)throw new Error(tr('builder_page.invalid_response'))
+        this.record=record;this.target={...record.target};this.document=clone(record.document||{version:1,blocks:[]});this.selectedPath=null;this.undoStack=[];this.redoStack=[];this.dirty=false;this.lastAutosaveSignature=this.documentSignature();this.syncAdvanced(true)
+      },
+      async run(fn){this.busy=true;this.error='';try{return await fn()}catch(e){this.error=e.message;throw e}finally{this.busy=false}},
+      async findExistingTarget(){
+        if(!this.targetReady)throw new Error(tr('builder_page.target_required'))
+        const list=await api(`/builder?site_id=${Number(this.target.site_id||1)}&type=${encodeURIComponent(this.target.type)}&locale=${encodeURIComponent(this.target.locale||'fa')}&limit=200`)
+        return (list?.items||[]).find(x=>x.target?.key===this.target.key&&x.target?.type===this.target.type&&x.target?.locale===this.target.locale)||null
+      },
+      async openExistingDocument(){
+        try{
+          await this.run(async()=>{const existing=await this.findExistingTarget();if(!existing)throw new Error(tr('builder_page.no_existing_target'));const record=await api(`/builder/${existing.id}`);this.applyOpenedRecord(record)})
+          this.notice=tr('builder_page.existing_opened');await this.loadRevisions()
+        }catch{}
+      },
+      async createDocument(){
+        if(!this.canEdit){this.error=tr('builder_page.edit_permission');return}
+        try{
+          await this.run(async()=>{const existing=await this.findExistingTarget();if(existing)throw new Error(tr('builder_page.target_already_exists'));const record=await api('/builder',{method:'POST',body:{target:{...this.target},document:{version:1,blocks:[]}}});this.applyOpenedRecord(record)})
+          this.notice=tr('builder_page.override_created');await this.loadRevisions()
+        }catch{}
       },
       // A response acknowledges the submitted snapshot, never edits made while it was pending.
       acceptSavedRecord(record,submitted,recordId){

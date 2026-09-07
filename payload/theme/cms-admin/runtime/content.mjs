@@ -489,6 +489,20 @@ export function createComponent(host) {
         if(this.picker.kind==='media'||this.picker.kind==='rich-media')return item.mime||tr('content_page.media_item','',{id:item.id})
         return this.typeLabel(item.type)+' · #'+item.id
       },
+      togglePickerItem(item){
+        const id=String(item.id)
+        if(this.picker.kind==='parent'){this.form.parent_id=id;this.parentLabel=item.title||tr('content_page.parent_item','',{id});this.rememberResource('content',item);this.closePicker();return}
+        if(this.picker.kind==='rich-media'){
+          const src=this.safeUrl(item.url||item.thumb)
+          if(src){const alt=String(item.alt||'').replace(/[<>"&]/g,'');this.form.fields={...(this.form.fields||{}),[this.picker.richField]:String(this.form.fields?.[this.picker.richField]||'')+'<p><img src="'+src+'" alt="'+alt+'"></p>'}}
+          this.closePicker();return
+        }
+        if(!this.picker.multiple){const field=(this.typeDescriptor()?.fields||[]).find(row=>row.key===this.picker.fieldKey);if(field)this.form.fields={...(this.form.fields||{}),[field.key]:Number(item.id)};this.closePicker();return}
+        this.picker.selected=this.picker.selected.includes(id)?this.picker.selected.filter(value=>value!==id):[...this.picker.selected,id]
+      },
+      applyPicker(){const field=(this.typeDescriptor()?.fields||[]).find(row=>row.key===this.picker.fieldKey);if(field)this.form.fields={...(this.form.fields||{}),[field.key]:this.picker.selected.map(Number)};this.closePicker()},
+      pickerNext(){if(!this.picker.pagination.has_more||this.picker.loading)return;this.picker.pagination.offset+=this.picker.pagination.limit;this.loadPicker()},
+      pickerPrev(){if(this.picker.pagination.offset<=0||this.picker.loading)return;this.picker.pagination.offset=Math.max(0,this.picker.pagination.offset-this.picker.pagination.limit);this.loadPicker()},
       fieldControl(field) {
         const value = this.form.fields?.[field.key]
         const set = (next) => { this.form.fields = { ...(this.form.fields || {}), [field.key]: next } }

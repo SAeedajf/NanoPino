@@ -45,7 +45,7 @@ export function createComponent(host){
   return {
     name:'CmsVisualSiteBuilderCenter',
     data(){return{
-      record:null,target:{site_id:1,type:'template',key:'home',locale:'fa'},document:{version:1,blocks:[]},blocks:data().blockDefinitions||[],revisions:[],previewHtml:'',viewport:'desktop',selectedPath:null,blockSearch:'',panel:'blocks',error:'',notice:'',busy:false,dirty:false,undoStack:[],redoStack:[],lastAutosave:null,advancedJson:'',jsonValid:true,autosaveInFlight:false,autosaveTimer:null,autosaveDebounce:null,advancedSyncTimer:null,lastAutosaveSignature:'',lastAutosaveAt:0,lastMutationKey:'',lastSnapshotAt:0,drag:{active:false,sourceId:null,overId:null,mode:null,pointerId:null},
+      record:null,target:{site_id:1,type:'template',key:'home',locale:'fa'},document:{version:1,blocks:[]},blocks:data().blockDefinitions||[],revisions:[],previewHtml:'',viewport:'desktop',selectedPath:null,blockSearch:'',panel:'blocks',error:'',notice:'',busy:false,dirty:false,undoStack:[],redoStack:[],lastAutosave:null,advancedJson:'',jsonValid:true,autosaveInFlight:false,autosaveTimer:null,autosaveDebounce:null,advancedSyncTimer:null,lastAutosaveSignature:'',lastAutosaveAt:0,lastMutationKey:'',lastSnapshotAt:0,contentTargets:[],contentQuery:'',contentLoading:false,drag:{active:false,sourceId:null,overId:null,mode:null,pointerId:null},
     }},
     computed:{
       selectedNode(){return this.nodeAt(this.selectedPath)},
@@ -54,6 +54,10 @@ export function createComponent(host){
       canUndo(){return this.undoStack.length>0&&this.canEdit},canRedo(){return this.redoStack.length>0&&this.canEdit},
       canEdit(){return hasAbility('builder.edit')},canPublish(){return hasAbility('builder.publish')},canPreview(){return hasAbility('builder.preview')},
       blockCount(){let n=0;const walk=xs=>(xs||[]).forEach(x=>{n++;walk(x.children)});walk(this.document.blocks);return n},
+      templateTargets(){return [...new Set(data().fullSiteEditor?.templateKinds||['index','home','page','single','archive','taxonomy','search','404'])].map(key=>({key,label:({index:tr('site_editor_page.index'),home:tr('site_editor_page.home'),page:tr('site_editor_page.page'),single:tr('site_editor_page.single'),archive:tr('site_editor_page.archive'),taxonomy:tr('site_editor_page.taxonomy'),search:tr('site_editor_page.search'),'404':'404'})[key]||key}))},
+      partTargets(){return [...new Set(data().fullSiteEditor?.templateParts||['header','footer'])].map(key=>({key,label:key==='header'?tr('site_editor_page.header'):key==='footer'?tr('site_editor_page.footer'):key}))},
+      targetReady(){return Number(this.target.site_id)>0&&['content','template','template_part','site'].includes(this.target.type)&&Boolean(String(this.target.key||'').trim())},
+      targetSummary(){if(this.target.type==='content'){const id=String(this.target.key||'').split(':').at(-1),row=this.contentTargets.find(item=>String(item.id)===id);return row?.title||tr('builder_page.content_target_selected')}if(this.target.type==='template')return this.templateTargets.find(item=>item.key===this.target.key)?.label||this.target.key;if(this.target.type==='template_part')return this.partTargets.find(item=>item.key===this.target.key)?.label||this.target.key;return tr('builder_page.whole_site')},
     },
     mounted(){
       if(!document.getElementById('cms-builder-center-css')){const s=document.createElement('style');s.id='cms-builder-center-css';s.textContent=CSS;document.head.appendChild(s)}
@@ -61,7 +65,7 @@ export function createComponent(host){
       this.syncAdvanced(true);this.autosaveTimer=setInterval(()=>this.backgroundAutosave({silent:true}),30000)
       this._pointerMove=e=>this.dragMove(e);this._pointerUp=e=>this.dragEnd(e);this._pointerCancel=e=>this.dragCancel(e);this._beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue=''}};this._visibility=()=>{if(document.visibilityState==='hidden')this.backgroundAutosave({silent:true,force:true})}
       globalThis.addEventListener?.('pointermove',this._pointerMove,{passive:false});globalThis.addEventListener?.('pointerup',this._pointerUp);globalThis.addEventListener?.('pointercancel',this._pointerCancel);globalThis.addEventListener?.('beforeunload',this._beforeUnload);document.addEventListener?.('visibilitychange',this._visibility)
-      if(params.get('open')==='1'||params.get('type')||params.get('key'))this.open()
+      if(this.target.type==='content')this.loadContentTargets();if(params.get('create')==='1')this.createDocument();else if(params.get('open')==='1')this.openExistingDocument()
     },
     beforeUnmount(){if(this.autosaveTimer)clearInterval(this.autosaveTimer);if(this.autosaveDebounce)clearTimeout(this.autosaveDebounce);if(this.advancedSyncTimer)clearTimeout(this.advancedSyncTimer);globalThis.removeEventListener?.('pointermove',this._pointerMove);globalThis.removeEventListener?.('pointerup',this._pointerUp);globalThis.removeEventListener?.('pointercancel',this._pointerCancel);globalThis.removeEventListener?.('beforeunload',this._beforeUnload);document.removeEventListener?.('visibilitychange',this._visibility)},
     methods:{

@@ -506,18 +506,45 @@ export function createComponent(host) {
       fieldControl(field) {
         const value = this.form.fields?.[field.key]
         const set = (next) => { this.form.fields = { ...(this.form.fields || {}), [field.key]: next } }
-        if (field.type === 'boolean') {
-          return h('input', { type: 'checkbox', checked: Boolean(value), style: { width: '22px', height: '22px' }, onChange: (e) => set(e.target.checked) })
+        if (field.type === 'boolean') return h('input', { type:'checkbox',checked:Boolean(value),style:{width:'22px',height:'22px'},onChange:e=>set(e.target.checked) })
+        if (field.type === 'select' && field.choices && Object.keys(field.choices).length) return select(h,value??'',set,Object.entries(field.choices).map(([key,text])=>({value:key,label:String(text)})))
+        if (field.type === 'richtext') return h('div',{class:'cms-richtext'},[
+          h('div',{class:'cms-richtext-toolbar',role:'toolbar','aria-label':tr('content_page.richtext_toolbar')},[
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.formatRichText(field.key,'bold')}},'B'),
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.formatRichText(field.key,'italic')}},'I'),
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.formatRichText(field.key,'insertUnorderedList')}},'• '+tr('content_page.list_short')),
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.formatRichText(field.key,'insertOrderedList')}},'1. '+tr('content_page.list_short')),
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.createRichLink(field.key)}},tr('content_page.link')),
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.openRichMedia(field)}},tr('content_page.insert_image')),
+            h('button',{type:'button',onMousedown:e=>{e.preventDefault();this.formatRichText(field.key,'removeFormat')}},tr('content_page.clear_format'))
+          ]),
+          h('div',{class:'cms-richtext-editor',contenteditable:'true',role:'textbox','aria-multiline':'true','aria-label':field.label,'data-rich-field':field.key,innerHTML:this.safeRichHtml(value??''),onBlur:e=>set(e.currentTarget.innerHTML),onPaste:e=>this.pastePlainText(field.key,e)})
+        ])
+        if (field.type === 'textarea') return textarea(h,value??'',set,{rows:5})
+        if (field.type === 'media' || field.type === 'gallery') {
+          const selected=this.selectedIds(field)
+          return h('div',{class:'cms-resource-value'},[
+            selected.length?h('div',{class:'cms-resource-chips'},selected.map(id=>h('span',{class:'cms-resource-chip',key:id},[
+              this.resourceInfo('media',id)?.thumb||this.resourceInfo('media',id)?.url?h('img',{src:this.resourceInfo('media',id)?.thumb||this.resourceInfo('media',id)?.url,alt:''}):null,
+              h('span',{},this.resourceInfo('media',id)?.title||this.resourceInfo('media',id)?.original_name||tr('content_page.media_item','',{id})),
+              h('button',{type:'button','aria-label':tr('content_page.remove_selection'),onClick:()=>this.removeFieldSelection(field,id)},'×')
+            ]))):null,
+            h(LButton,{label:field.type==='gallery'?tr('content_page.choose_media_multiple'):tr('content_page.choose_featured_media'),severity:'secondary',onClick:()=>this.openFieldPicker(field)})
+          ])
         }
-        if (field.type === 'select' && field.choices && Object.keys(field.choices).length) {
-          return select(h, value ?? '', set, Object.entries(field.choices).map(([key, text]) => ({ value: key, label: String(text) })))
+        if (field.type === 'relation' || field.type === 'taxonomy') {
+          const selected=this.selectedIds(field)
+          return h('div',{class:'cms-resource-value'},[
+            selected.length?h('div',{class:'cms-resource-chips'},selected.map(id=>h('span',{class:'cms-resource-chip',key:id},[
+              h('span',{},this.selectedResourceLabel(field,id)),h('button',{type:'button','aria-label':tr('content_page.remove_selection'),onClick:()=>this.removeFieldSelection(field,id)},'×')
+            ]))):null,
+            h(LButton,{label:field.type==='taxonomy'?tr('content_page.choose_terms'):tr('content_page.choose_related'),severity:'secondary',onClick:()=>this.openFieldPicker(field)})
+          ])
         }
-        if (['richtext', 'textarea'].includes(field.type)) return textarea(h, value ?? '', set, { rows: field.type === 'richtext' ? 10 : 5 })
-        if (['json', 'repeater', 'group'].includes(field.type)) return textarea(h, typeof value === 'string' ? value : JSON.stringify(value ?? (field.type === 'repeater' ? [] : {}), null, 2), set, { style: ui.mono })
-        if (field.multiple || ['relation', 'gallery', 'taxonomy'].includes(field.type)) return input(h, Array.isArray(value) ? value.join(', ') : value ?? '', set, 'text', { placeholder: tr('content_page.ids_csv') })
-        if (['number', 'media'].includes(field.type)) return input(h, value ?? '', set, 'number', { min: field.type === 'media' ? '1' : undefined })
-        if (field.type === 'date') return input(h, toLocalDateTime(value), set, 'datetime-local')
-        return input(h, value ?? '', set)
+        if (['json','repeater','group'].includes(field.type)) return textarea(h,typeof value==='string'?value:JSON.stringify(value??(field.type==='repeater'?[]:{}),null,2),set,{style:ui.mono})
+        if (field.type === 'number') return input(h,value??'',set,'number')
+        if (field.type === 'date') return input(h,toLocalDateTime(value),set,'datetime-local')
+        return input(h,value??'',set)
       },
     },
     render() {

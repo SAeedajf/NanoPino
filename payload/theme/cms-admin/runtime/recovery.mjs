@@ -1,4 +1,4 @@
-import { api, data, ui, message, confirmFa, tr} from './common.mjs'
+import { api, data, ui, message, confirmFa, routeButton, tr} from './common.mjs'
 
 export function createComponent(host) {
   const { h, LPage, LPanel, LButton, LBadge, LStatCard } = host
@@ -55,7 +55,8 @@ export function createComponent(host) {
             h(LStatCard, { label: tr('recovery_page.safe_mode'), value: this.safeMode.enabled ? tr('recovery_page.on','On') : tr('recovery_page.off','Off') }),
           ]),
           h(LPanel, { title: tr('recovery_page.points','Recovery Points') }, {
-            default: () => h('div', { style: ui.grid }, this.points.map((point) =>
+            default: () => this.points.length
+              ? h('div', { style: ui.grid }, this.points.map((point) =>
               h('article', { style: ui.card, key: point.id }, [
                 h('strong', {}, this.extensionName(point.extensionId || point.extension_id || point.id)),
                 h('div', { style: ui.row }, [
@@ -69,7 +70,14 @@ export function createComponent(host) {
                   onClick: () => this.restore(point),
                 }),
               ]),
-            )),
+            ))
+              : h('div',{style:ui.page},[
+                  h('p',{},tr('recovery_page.empty_message','Recovery Points created by sensitive operations appear here.')),
+                  h('div',{style:ui.row},[
+                    routeButton(h,LButton,tr('recovery_page.open_extensions'),'extensions'),
+                    routeButton(h,LButton,tr('recovery_page.open_updates'),'updates'),
+                  ]),
+                ]),
           }),
           h(LPanel, { title: tr('recovery_page.safe_mode') }, {
             default: () => h('div', { style: ui.page }, [

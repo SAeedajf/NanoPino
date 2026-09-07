@@ -62,10 +62,16 @@
         },
         "extension_type": {
           "enum": [
-            "plugin",
+            "core-module",
             "module",
+            "plugin",
+            "integration",
             "theme",
-            "block-package"
+            "admin-extension",
+            "block",
+            "block-package",
+            "driver",
+            "language-pack"
           ]
         },
         "publisher": {
@@ -181,6 +187,41 @@
             "directory"
           ],
           "additionalProperties": false
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "theme": {
+          "type": "object"
+        },
+        "paths": {
+          "type": "object"
+        },
+        "features": {
+          "type": [
+            "object",
+            "array"
+          ]
+        },
+        "minimum_cms": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "maximum_cms": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template_extensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]{1,12}$"
+          },
+          "uniqueItems": true
         }
       },
       "additionalProperties": true
@@ -225,9 +266,15 @@
             "properties": {
               "extension_type": {
                 "enum": [
-                  "plugin",
+                  "core-module",
                   "module",
-                  "block-package"
+                  "plugin",
+                  "integration",
+                  "admin-extension",
+                  "block",
+                  "block-package",
+                  "driver",
+                  "language-pack"
                 ]
               }
             }
@@ -241,7 +288,10 @@
           "cms": {
             "properties": {
               "extension_type": {
-                "const": "block-package"
+                "enum": [
+                  "block",
+                  "block-package"
+                ]
               }
             },
             "required": [
@@ -256,6 +306,59 @@
             "required": [
               "blocks"
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cms": {
+            "properties": {
+              "extension_type": {
+                "not": {
+                  "const": "core-module"
+                }
+              }
+            },
+            "required": [
+              "extension_type"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cms": {
+            "propertyNames": {
+              "enum": [
+                "schema",
+                "extension_type",
+                "publisher",
+                "requires",
+                "dependencies",
+                "optional_dependencies",
+                "conflicts",
+                "provides",
+                "replaces",
+                "permissions",
+                "services",
+                "capabilities",
+                "abilities",
+                "hooks",
+                "admin",
+                "api",
+                "frontend",
+                "blocks",
+                "theme",
+                "metadata",
+                "paths",
+                "features",
+                "minimum_cms",
+                "maximum_cms",
+                "template_extensions"
+              ]
+            }
           }
         }
       }

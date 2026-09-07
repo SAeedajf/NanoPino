@@ -29,6 +29,7 @@ final readonly class ExtensionManifest implements ExtensionManifestInterface
     public function __construct(
         private int $schemaVersion,
         private ExtensionIdentity $identity,
+        private string $name,
         private ExtensionType $extensionType,
         private string $version,
         private int $versionCode,
@@ -54,6 +55,7 @@ final readonly class ExtensionManifest implements ExtensionManifestInterface
 
     public function schemaVersion(): int { return $this->schemaVersion; }
     public function identifier(): string { return $this->identity->identifier; }
+    public function name(): string { return $this->name; }
     public function owner(): string { return $this->identity->owner; }
     public function package(): string { return $this->identity->package; }
     public function targetApp(): ?string { return $this->identity->targetApp; }
@@ -101,6 +103,7 @@ final readonly class ExtensionManifest implements ExtensionManifestInterface
         return [
             'schema' => $this->schemaVersion,
             'identifier' => $this->identifier(),
+            'name' => $this->name(),
             'owner' => $this->owner(),
             'package' => $this->package(),
             'target_app' => $this->targetApp(),

@@ -227,28 +227,32 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import Column from 'primevue/column'
 import { LBadge, LButton, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
-import { contentApi } from '../../services/cms-api.js'
+import { contentApi, mediaApi, taxonomyApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
-const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref(''),previousType=ref('post')
+const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref(''),previousType=ref('post'),pickerSearchInput=ref(null),parentLabel=ref('')
 const pagination=reactive({limit:50,offset:0,returned:0,has_more:false})
 const form=reactive({site_id:1,type:'post',title:'',slug:'',excerpt:'',locale:'fa',parent_id:'',fields:{},metadataJson:'{}'})
+const resourceCache=reactive({})
+const picker=reactive({open:false,kind:'',fieldKey:'',title:'',query:'',items:[],loading:false,error:'',multiple:false,taxonomy:'',targetTypes:[],selected:[],pagination:{limit:24,offset:0,total:0,has_more:false},richField:''})
 const statusTabs=[{value:'',label:t('content_page.all')},{value:'draft',label:t('content_page.draft')},{value:'scheduled',label:t('content_page.scheduled')},{value:'published',label:t('content_page.published')},{value:'trash',label:t('content_page.trash_short')}]
 const currentType=computed(()=>types.value.find(item=>item.key===form.type)||null)
 const currentFields=computed(()=>currentType.value?.fields||[])
 const currentEditing=computed(()=>items.value.find(item=>String(item.id)===String(editingId.value))||null)
-const parentOptions=computed(()=>items.value.filter(item=>item.type===form.type&&String(item.id)!==String(editingId.value)))
+const parentDisplay=computed(()=>parentLabel.value||resourceInfo('content',form.parent_id)?.title||(form.parent_id?t('content_page.parent_item',{id:form.parent_id}):t('content_page.no_parent')))
+const pickerPlaceholder=computed(()=>picker.kind==='media'?t('content_page.search_media_placeholder'):picker.kind==='taxonomy'?t('content_page.search_terms_placeholder'):t('content_page.search_content_placeholder'))
+const pickerRange=computed(()=>{const total=Number(picker.pagination.total||0);if(total<=0)return t('content_page.resource_range_empty');const from=Math.min(total,picker.pagination.offset+1),to=Math.min(total,picker.pagination.offset+picker.items.length);return t('content_page.resource_range',{from,to,total})})
 const allSelected=computed(()=>items.value.length>0&&items.value.every(item=>selected.value.includes(String(item.id))))
 function message(e){return e?.message||t('content_page.unexpected_error')}
 function clone(value){return JSON.parse(JSON.stringify(value))}
 function meaningful(value){if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.keys(value).length>0;return String(value??'').trim()!==''}
 function draftSignature(){return JSON.stringify({site_id:form.site_id,type:form.type,title:form.title,slug:form.slug,excerpt:form.excerpt,locale:form.locale,parent_id:form.parent_id,fields:clone(form.fields),metadataJson:form.metadataJson,scheduleAt:scheduleAt.value})}
 function defaultValue(field){if(field.default!==null&&field.default!==undefined)return field.default;if(field.multiple)return[];if(field.type==='boolean')return false;if(['json','group'].includes(field.type))return'{}';if(field.type==='repeater')return'[]';return''}
-function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value='';previousType.value=key}
+function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value='';previousType.value=key;parentLabel.value='';closePicker()}
 async function loadContents(resetOffset=false){if(resetOffset)pagination.offset=0;loading.value=true;error.value='';try{const r=await contentApi.list({search:query.value,type:typeFilter.value,status:statusFilter.value,locale:localeFilter.value,limit:pagination.limit,offset:pagination.offset});items.value=r.data?.items||[];types.value=r.data?.types||types.value;Object.assign(pagination,r.data?.pagination||{});selected.value=selected.value.filter(id=>items.value.some(item=>String(item.id)===id));if(!types.value.some(item=>item.key===form.type))resetForm(types.value[0]?.key||'post')}catch(e){error.value=message(e)}finally{loading.value=false}}
 function moveStatusTab(event, delta) {
   const tabs = [...(event.currentTarget?.parentElement?.querySelectorAll('[role=\"tab\"]') || [])]
@@ -262,7 +266,7 @@ function moveStatusTab(event, delta) {
 }
 function setStatus(value){statusFilter.value=value;loadContents(true)}
 function applyFilters(){loadContents(true)}
-function startCreate(){resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';notice.value='';window.scrollTo({top:0,behavior:'smooth'})}
+function startCreate(){if(statusFilter.value==='trash'){statusFilter.value='';notice.value=t('content_page.create_left_trash')}resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';window.scrollTo({top:0,behavior:'smooth'})}
 function changeType(){
   if(editingId.value)return
   const next=form.type,previous=previousType.value||next
@@ -279,10 +283,10 @@ function changeType(){
   if(!nextDescriptor?.hierarchical)form.parent_id=''
   previousType.value=next
 }
-function extractValue(item,field){if(field.storage==='document')return item.document?.[field.key]??defaultValue(field);if(field.storage==='relation')return (item.relations?.[field.key]||[]).join(', ');if(field.storage==='taxonomy')return (item.terms?.[field.key]||[]).join(', ');const value=item.fields?.[field.key]??defaultValue(field);return ['json','repeater','group'].includes(field.type)&&typeof value!=='string'?JSON.stringify(value,null,2):Array.isArray(value)?value.join(', '):value}
-function editContent(item){editingId.value=item.id;form.site_id=item.site_id||1;form.type=item.type;previousType.value=item.type;form.title=item.title||'';form.slug=item.slug||'';form.excerpt=item.excerpt||'';form.locale=item.locale||'fa';form.parent_id=item.parent_id?String(item.parent_id):'';form.metadataJson=JSON.stringify(item.metadata||{},null,2);form.fields={};const descriptor=types.value.find(type=>type.key===item.type);for(const field of descriptor?.fields||[])form.fields[field.key]=extractValue(item,field);scheduleAt.value=item.scheduled_at?String(item.scheduled_at).slice(0,16):'';editorOpen.value=true;window.scrollTo({top:0,behavior:'smooth'})}
+function extractValue(item,field){if(field.storage==='document')return item.document?.[field.key]??defaultValue(field);if(field.storage==='relation')return [...(item.relations?.[field.key]||[])];if(field.storage==='taxonomy'){const taxonomy=field.taxonomy||field.key;return [...(item.terms?.[taxonomy]||item.terms?.[field.key]||[])]}const value=item.fields?.[field.key]??defaultValue(field);return ['json','repeater','group'].includes(field.type)&&typeof value!=='string'?JSON.stringify(value,null,2):Array.isArray(value)?[...value]:value}
+async function editContent(item){editingId.value=item.id;form.site_id=item.site_id||1;form.type=item.type;previousType.value=item.type;form.title=item.title||'';form.slug=item.slug||'';form.excerpt=item.excerpt||'';form.locale=item.locale||'fa';form.parent_id=item.parent_id?String(item.parent_id):'';parentLabel.value='';form.metadataJson=JSON.stringify(item.metadata||{},null,2);form.fields={};const descriptor=types.value.find(type=>type.key===item.type);for(const field of descriptor?.fields||[])form.fields[field.key]=extractValue(item,field);scheduleAt.value=item.scheduled_at?String(item.scheduled_at).slice(0,16):'';editorOpen.value=true;error.value='';if(form.parent_id)hydrateParent(form.parent_id);hydrateMediaFields();window.scrollTo({top:0,behavior:'smooth'})}
 function closeEditor(){editorOpen.value=false;resetForm(typeFilter.value||types.value[0]?.key||'post')}
-function ids(value){return String(value||'').split(',').map(v=>Number(v.trim())).filter(v=>Number.isSafeInteger(v)&&v>0)}
+function ids(value){const source=Array.isArray(value)?value:String(value||'').split(',');return source.map(v=>Number(String(v).trim())).filter(v=>Number.isSafeInteger(v)&&v>0)}
 function normalizeField(field,value){if(field.multiple||['relation','gallery','taxonomy'].includes(field.type))return ids(value);if(field.type==='media')return value===''?null:Number(value);if(field.type==='number')return value===''?null:Number(value);if(field.type==='boolean')return Boolean(value);if(['json','repeater','group'].includes(field.type)){try{return JSON.parse(value|| (field.type==='repeater'?'[]':'{}'))}catch{throw new Error(t('content_page.json_invalid',{field:field.label}))}}return value}
 function payload(){if(!form.title.trim())throw new Error(t('content_page.title_required'));let metadata={};try{metadata=form.metadataJson.trim()?JSON.parse(form.metadataJson):{}}catch{throw new Error(t('content_page.metadata_invalid'))}const fields={};for(const field of currentFields.value){const value=form.fields[field.key];const blank=value===''||value===null||value===undefined;if(!editingId.value&&blank&&!field.required)continue;fields[field.key]=normalizeField(field,value)}return{site_id:Number(form.site_id||1),type:form.type,title:form.title.trim(),slug:form.slug.trim(),excerpt:form.excerpt,locale:form.locale.trim()||'fa',parent_id:form.parent_id?Number(form.parent_id):null,fields,metadata}}
 async function saveContent(publishAfter) {

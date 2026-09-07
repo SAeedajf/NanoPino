@@ -9,10 +9,10 @@ export function createComponent(host) {
     },
     computed:{
       filtered(){const q=this.query.trim().toLowerCase();return this.items.filter(block=>!q||[block.name,block.title,block.category,block.owner].filter(Boolean).some(value=>String(value).toLowerCase().includes(q)))},
-      missingEssentials(){const names=new Set(this.items.map(block=>block.name||block.id));return ['core/image','core/gallery','core/video','core/navigation','core/form'].filter(name=>!names.has(name))},
+      missingEssentials(){const definitions=[{key:'image',tokens:['image']},{key:'gallery',tokens:['gallery']},{key:'video',tokens:['video']},{key:'navigation',tokens:['navigation','menu']},{key:'form',tokens:['form']}],searchable=this.items.map(block=>`${block.name||''} ${block.title||''} ${block.category||''}`.toLowerCase());return definitions.filter(item=>!searchable.some(text=>item.tokens.some(token=>text.includes(token))))},
     },
     methods:{
-      essentialLabel(name){return ({'core/image':tr('blocks_page.essential_image'),'core/gallery':tr('blocks_page.essential_gallery'),'core/video':tr('blocks_page.essential_video'),'core/navigation':tr('blocks_page.essential_navigation'),'core/form':tr('blocks_page.essential_form')})[name]||name},
+      essentialLabel(item){return ({image:tr('blocks_page.essential_image'),gallery:tr('blocks_page.essential_gallery'),video:tr('blocks_page.essential_video'),navigation:tr('blocks_page.essential_navigation'),form:tr('blocks_page.essential_form')})[item.key]||item.key},
       previewKind(block){const name=String(block.name||'');if(name.includes('heading')||name.includes('paragraph'))return'text';if(name.includes('button'))return'button';if(name.includes('section'))return'layout';return'generic'},
     },
     render() {
@@ -34,7 +34,7 @@ export function createComponent(host) {
             ]),
           }),
           this.missingEssentials.length?h(LPanel,{title:tr('blocks_page.extend_library')},{default:()=>h('div',{style:ui.page},[
-            h('p',{},tr('blocks_page.extend_library_help')),h('div',{style:ui.row},this.missingEssentials.map(name=>h(LBadge,{label:this.essentialLabel(name),severity:'secondary'}))),routeButton(h,LButton,tr('blocks_page.install_block_pack'),'extensions')
+            h('p',{},tr('blocks_page.extend_library_help')),h('div',{style:ui.row},this.missingEssentials.map(item=>h(LBadge,{label:this.essentialLabel(item),severity:'secondary'}))),routeButton(h,LButton,tr('blocks_page.install_block_pack'),'extensions')
           ])}):null,
           input(h,this.query,v=>this.query=v,'search',{placeholder:tr('blocks_page.search_placeholder'),'aria-label':tr('blocks_page.search')}),
           h('div', { style: ui.grid }, this.filtered.map((block) =>

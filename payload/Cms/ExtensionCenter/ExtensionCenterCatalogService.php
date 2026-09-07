@@ -14,6 +14,13 @@ final readonly class ExtensionCenterCatalogService
         private ExtensionCenterSignalProviderInterface $signals,
     ) {}
 
+    public function isCoreModule(string $extensionId): bool
+    {
+        $definition = $this->extensions->extension($extensionId);
+        return $definition instanceof ExtensionDefinition
+            && $definition->type() === \App\com_pinoox_cms\Cms\Extension\ExtensionType::CoreModule;
+    }
+
     /** @return list<ExtensionCenterItem> */
     public function catalog(?SafeModeState $safeMode = null): array
     {
@@ -47,7 +54,7 @@ final readonly class ExtensionCenterCatalogService
             $items[] = new ExtensionCenterItem(
                 $definition->identifier(),
                 $definition->package(),
-                $definition->package(),
+                $definition->name(),
                 $definition->type(),
                 $definition->version(),
                 $definition->publisher(),

@@ -124,3 +124,12 @@ Source-confirmed follow-up to #58 and the P0 truthful-failure contract:
 - Eight behavior tests exercise all three adapters, malformed success, structured failures, HTTP 204, normal data and non-JSON HTTP failures. Full Admin suite: 129/129 passed.
 
 This is a scoped implementation/test result, not closure of all P4 findings. Live failure injection, mobile/desktop rendering and the full role/health/infrastructure matrix remain unverified. The previous host upgrade to Pincore 3.14.4 and NanoPino 0.23.29 does not include this follow-up until its PR is reviewed and deployed.
+
+### P4b packaging correction
+
+The first PR #16 CI run failed both native lifecycle jobs because the regenerated
+`payload/resources/release/admin-runtime-v1.json` was omitted from the commit.
+The rebuilt dist therefore described 17 runtime modules while the committed
+release manifest still described 16. The corrected manifest is included, and CI
+now checks the committed runtime fingerprint before running any build that can
+regenerate it. No integrity check is bypassed or weakened.

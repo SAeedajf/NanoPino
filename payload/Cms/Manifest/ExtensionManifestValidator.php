@@ -13,6 +13,15 @@ final class ExtensionManifestValidator
     private const PINX_FORMAT = 'pinx';
     private const PINX_TYPES = ['app', 'theme'];
     private const REQUIRE_KEYS = ['php', 'pinoox', 'pincore', 'cms', 'luma'];
+    private const THIRD_PARTY_CMS_KEYS = [
+        'schema', 'extension_type', 'publisher', 'requires', 'dependencies',
+        'optional_dependencies', 'conflicts', 'provides', 'replaces',
+        'permissions', 'services', 'capabilities', 'abilities', 'hooks',
+        'admin', 'api', 'frontend', 'blocks', 'theme', 'metadata',
+        // Deprecated 0.x flat CMS theme profile keys. Keep until the documented
+        // theme-profile migration window closes.
+        'paths', 'features', 'minimum_cms', 'maximum_cms', 'template_extensions',
+    ];
 
     /** @param array<string,mixed> $pinx */
     public function validate(array $pinx): void
@@ -55,6 +64,12 @@ final class ExtensionManifestValidator
         $type = ExtensionType::tryFrom($typeValue);
         if ($type === null) {
             $errors[] = 'cms.extension_type is invalid.';
+        } elseif ($type !== ExtensionType::CoreModule) {
+            foreach (array_keys($cms) as $key) {
+                if (!is_string($key) || !in_array($key, self::THIRD_PARTY_CMS_KEYS, true)) {
+                    $errors[] = 'cms contains unsupported property: ' . (string)$key . '. Put extension-specific data under cms.metadata.';
+                }
+            }
         }
 
         $publisher = trim((string) ($cms['publisher'] ?? ''));
@@ -140,7 +155,7 @@ final class ExtensionManifestValidator
             }
         }
 
-        foreach (['admin', 'api', 'frontend'] as $field) {
+        foreach (['admin', 'api', 'frontend', 'theme', 'metadata'] as $field) {
             if (isset($cms[$field]) && !is_array($cms[$field])) {
                 $errors[] = 'cms.' . $field . ' must be an object/map.';
             }
@@ -149,7 +164,7 @@ final class ExtensionManifestValidator
         if ($type !== null && $type->requiresBlocksProfile()) {
             $blocks = $cms['blocks'] ?? null;
             if (!is_array($blocks)) {
-                $errors[] = 'cms.blocks is required for block-package extensions.';
+                $errors[] = 'cms.blocks is required for block and block-package extensions.';
             } else {
                 $directory = trim((string)($blocks['directory'] ?? ''));
                 if (

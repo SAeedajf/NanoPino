@@ -1,3 +1,4 @@
+import { readApiResponse } from './api-response.mjs'
 export function boot(){return globalThis.window?.__PINOOX__||{}}
 export function data(){return boot().cmsAdmin?.data||{}}
 
@@ -32,15 +33,7 @@ export async function api(path,{method='GET',body=null,form=null}={}){
   if(form)options.body=form
   else if(body!==null&&body!==undefined){headers['Content-Type']='application/json';options.body=JSON.stringify(body)}
   const res=await fetch(`${apiBase()}${path}`,options)
-  let payload=null
-  try{payload=await res.json()}catch{}
-  if(!res.ok||payload?.success===false){
-    const details=payload?.error?.details||null
-    const base=payload?.error?.message||payload?.message||`${tr('common.api_error','API error')} (${res.status})`
-    const trace=details?.error_id?` [${details.error_id}${details?.category?` / ${details.category}`:''}]`:''
-    const err=new Error(`${base}${trace}`)
-    err.code=payload?.error?.code||'CMS_API_ERROR';err.status=res.status;err.details=details;throw err
-  }
+  const payload=await readApiResponse(res,tr,{method})
   return payload?.data??payload??{}
 }
 export const ui={

@@ -47,6 +47,10 @@ jobs:
         working-directory: payload/theme/cms-admin
         run: npm ci
 
+      - name: Verify committed runtime fingerprint before rebuilding
+        working-directory: payload/theme/cms-admin
+        run: node runtime-fingerprint.mjs --check
+
       - name: Build production admin
         working-directory: payload/theme/cms-admin
         run: npm run build

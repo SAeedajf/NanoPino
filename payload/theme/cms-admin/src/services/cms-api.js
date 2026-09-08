@@ -1,3 +1,5 @@
+import { readApiResponse } from '../../runtime/api-response.mjs'
+import { t } from '../i18n/index.js'
 function boot(){return typeof window!=='undefined'?(window.__PINOOX__||{}):{}}
 export function cmsApiBase(){
   const b=boot()
@@ -24,13 +26,7 @@ export async function cmsRequest(path,{method='GET',body=null,headers={},signal}
     options.body=JSON.stringify(body)
   }
   const response=await fetch(`${cmsApiBase()}${path}`,options)
-  let payload=null
-  try{payload=await response.json()}catch{}
-  if(!response.ok||payload?.success===false){
-    const error=new Error(payload?.error?.message||payload?.message||`CMS API request failed (${response.status})`)
-    error.code=payload?.error?.code||'CMS_API_ERROR';error.status=response.status;error.details=payload?.error?.details||null
-    throw error
-  }
+  const payload=await readApiResponse(response,(key,fallback)=>t(key,{},fallback),{method})
   return{status:response.status,data:payload?.data??payload,body:payload,headers:response.headers}
 }
 export const mediaApi={

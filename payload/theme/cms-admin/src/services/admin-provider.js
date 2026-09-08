@@ -1,3 +1,4 @@
+import { readApiResponse } from '../../runtime/api-response.mjs'
 import { t } from '../i18n/index.js'
 
 const fallback = {
@@ -299,10 +300,5 @@ export async function performAdminAction(action, payload = {}) {
     body: JSON.stringify(payload),
   })
 
-  const result = await response.json()
-  if (!response.ok || result?.success === false) {
-    throw new Error(result?.error?.message || t('common.operation_failed', {}, 'Operation failed.'))
-  }
-
-  return result
+  return readApiResponse(response, (key, fallback) => t(key, {}, fallback), { method: 'POST' })
 }

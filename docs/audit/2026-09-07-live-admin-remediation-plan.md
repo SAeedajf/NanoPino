@@ -112,3 +112,15 @@ migration, deployment or PINX version increment is included.
 Remaining sequence: finish/review P3 -> P4 identity and observability integration
 -> P5 accessibility/mobile -> P6 target-host and native lifecycle verification.
 P4a is a reviewable slice, not completion of P4 or all 76 findings.
+
+## P4b — truthful API responses and incident correlation (2026-09-08)
+
+Source-confirmed follow-up to #58 and the P0 truthful-failure contract:
+
+- A shared response decoder is used by Vue, directly served runtime and admin actions.
+- Malformed/HTML/null/primitive HTTP 200 responses reject with `CMS_INVALID_RESPONSE` instead of acknowledging a save/upload or presenting an empty list. The message asks the user to check current state before retrying; mutations are never automatically retried.
+- HTTP 204 and HEAD retain their valid empty-response semantics. Existing data envelopes, status, error code and detail payloads remain available to callers.
+- Errors retain bounded error/correlation IDs; the user-visible message includes the server's tracking ID with bidi isolation. Diagnostic detail payloads and response HTML are never appended to the message.
+- Eight behavior tests exercise all three adapters, malformed success, structured failures, HTTP 204, normal data and non-JSON HTTP failures. Full Admin suite: 129/129 passed.
+
+This is a scoped implementation/test result, not closure of all P4 findings. Live failure injection, mobile/desktop rendering and the full role/health/infrastructure matrix remain unverified. The previous host upgrade to Pincore 3.14.4 and NanoPino 0.23.29 does not include this follow-up until its PR is reviewed and deployed.

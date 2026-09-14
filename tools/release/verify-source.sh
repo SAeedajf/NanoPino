@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${NANOPINO_SOURCE_ROOT:-$SCRIPT_ROOT}"
 ADMIN="$ROOT/payload/theme/cms-admin"
 
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }

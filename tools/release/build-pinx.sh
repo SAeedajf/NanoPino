@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${NANOPINO_SOURCE_ROOT:-$SCRIPT_ROOT}"
+TOOL_ROOT="${NANOPINO_TOOL_ROOT:-$SCRIPT_ROOT}"
 PACKAGE="com_pinoox_cms"
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -18,7 +20,7 @@ export PHP_BIN
 for dependency in "$PHP_BIN" node npm python3 rsync sha256sum mktemp; do
   command -v "$dependency" >/dev/null || { echo "Required build tool unavailable: $dependency" >&2; exit 69; }
 done
-"$ROOT/tools/release/verify-source.sh"
+NANOPINO_SOURCE_ROOT="$ROOT" "$TOOL_ROOT/tools/release/verify-source.sh"
 
 version_name="$("$PHP_BIN" -r '
 if (!function_exists("env")) {
@@ -75,7 +77,7 @@ rsync -a --delete --exclude 'node_modules/' "$ROOT/payload/" "$PINOX_ROOT/apps/$
 cd "$PINOX_ROOT"
 "$PHP_BIN" pinoox pinx:build "$PACKAGE" --output="$CANDIDATE" --no-sign --yes
 "$PHP_BIN" pinoox pinx:info "$CANDIDATE"
-"$PHP_BIN" "$ROOT/tools/release/verify-pinx-installability.php" "$CANDIDATE"
+NANOPINO_SOURCE_ROOT="$ROOT" "$PHP_BIN" "$TOOL_ROOT/tools/release/verify-pinx-installability.php" "$CANDIDATE"
 [[ -s "$CANDIDATE" && ! -L "$CANDIDATE" ]] || { echo 'Native build produced no regular PINX artifact.' >&2; exit 70; }
 # Staging is on the destination filesystem: publish only after every gate passes.
 mv -fT -- "$CANDIDATE" "$OUTPUT"

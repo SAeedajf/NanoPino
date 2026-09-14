@@ -6,7 +6,8 @@ if ($argc < 2) {
     exit(64);
 }
 
-$root = dirname(__DIR__, 2);
+$root = getenv('NANOPINO_SOURCE_ROOT');
+$root = is_string($root) && $root !== '' ? rtrim($root, DIRECTORY_SEPARATOR) : dirname(__DIR__, 2);
 $path = $argv[1];
 $maxPinxBytes = 16 * 1024 * 1024;
 $maxUncompressedBytes = 64 * 1024 * 1024;

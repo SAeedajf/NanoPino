@@ -45,6 +45,8 @@ use App\com_pinoox_cms\Cms\Security\Posture\SecurityPostureService;
 use App\com_pinoox_cms\Cms\Security\Posture\SecurityRuntimeState;
 use App\com_pinoox_cms\Cms\Security\Http\PinooxSessionCsrfTokenManager;
 use App\com_pinoox_cms\Cms\Security\Http\CspPolicy;
+use App\com_pinoox_cms\Cms\Security\Http\SecurityHeadersPolicy;
+use App\com_pinoox_cms\Cms\Security\Http\PinooxSecurityResponseListener;
 use App\com_pinoox_cms\Cms\Security\Access\PlatformSuperTransitionReadiness;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Runtime\RuntimeBindingState;
@@ -796,6 +798,17 @@ final class AdminController extends Controller
         );
 
         $response = View::response('main', $viewData, 'text/html', 'UTF-8');
+
+        // AppResponseEvent may receive a request clone without controller
+        // attributes. Emit the complete policy on this response now so the
+        // HTML nonce and the CSP nonce can never diverge.
+        foreach ((new SecurityHeadersPolicy($cspPolicy))->headers(
+            $cspNonce,
+            $request->isSecure(),
+            PinooxSecurityResponseListener::allowsSameOriginFrame($request->getPathInfo()),
+        ) as $name => $value) {
+            $response->headers->set($name, $value);
+        }
 
         return $adminResponses->decorate($response,$adminFrontend);
     }

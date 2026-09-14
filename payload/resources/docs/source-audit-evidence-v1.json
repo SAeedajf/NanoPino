@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "status": "passed",
-  "release_version": "0.23.73",
-  "release_version_code": 2373,
-  "documentation_manifest_sha256": "310e096ea5bfcdc3b84add8b7f4fbdf6ee2ce9a5ef10ed9b578c0c854959f22c",
+  "release_version": "0.23.74",
+  "release_version_code": 2374,
+  "documentation_manifest_sha256": "26c9cdb4baf52a6640ad864c717ff2e4263c5b5b81488226d912e66ebfa0b081",
   "required_docs": 33,
   "machine_contracts": 25,
   "adr_count": 2,
   "markdown_files": 67,
   "internal_links": 38,
   "source_audit_completed_at": "2026-09-14T09:10:54Z",
-  "reason": "Source documentation audit passed for the 0.23.73 candidate after fixing same-origin Pinoox Manager app-view framing. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
+  "reason": "Source documentation audit passed for the 0.23.74 candidate after fixing the response CSP nonce boundary exposed by live Pinoox Manager app-view verification. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
 }

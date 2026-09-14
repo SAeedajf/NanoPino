@@ -52,6 +52,12 @@ The verifier fails closed when:
 
 `pinx:build` does not accept an arbitrary source path, so NanoPino uses a dedicated Pinoox build root.
 
+For signed releases, build the archive unsigned, enrich the CMS profile if required,
+then run `tools/release/sign-pinx.php`. The helper canonicalizes payload hashes in
+the same sorted order used by the Pinoox verifier and performs a native verifier
+check before publishing the signed output. This closes an insertion-order edge
+case in older native builders; `pinx:info` alone is not a signature verification.
+
 Use the dedicated `tools/release/build-pinx.sh` helper to stage the repository
 payload into the disposable Pinoox build root, run the native builder, and
 execute the archive verifier. Do not treat a manually renamed ZIP as a PINX.

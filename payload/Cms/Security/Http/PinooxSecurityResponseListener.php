@@ -26,7 +26,7 @@ final readonly class PinooxSecurityResponseListener
         }
 
         $https = $event->request->isSecure();
-        $allowSameOriginFrame = $this->isTrustedManagerAppMount($event->request->getPathInfo());
+        $allowSameOriginFrame = self::allowsSameOriginFrame($event->request->getPathInfo());
         foreach ($this->policy->headers($nonce, $https, $allowSameOriginFrame) as $name => $value) {
             if (!$event->response->headers->has($name)) {
                 $event->response->headers->set($name, $value);
@@ -40,7 +40,7 @@ final readonly class PinooxSecurityResponseListener
      * the Manager has already authenticated the request, while the CMS only
      * needs to recognize the platform-owned route for response framing.
      */
-    private function isTrustedManagerAppMount(string $path): bool
+    public static function allowsSameOriginFrame(string $path): bool
     {
         return preg_match('#^/manager/app/com_pinoox_cms(?:/|$)#', $path) === 1;
     }

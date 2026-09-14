@@ -34,19 +34,25 @@ final class CmsRuntimeErrorReporter
         $errorId = 'cms-' . gmdate('YmdHis') . '-' . substr($correlation->value, 0, 10);
         $category = self::category($exception);
 
+        // Schema probing is useful for database faults, but doing nine database
+        // probes for every validation, routing, or adapter error makes the
+        // error boundary slow and can mask the original failure on a degraded
+        // connection. Keep non-database failures side-effect-light.
         $missing = null;
-        try {
-            $missing = CmsRuntimeSchemaReconciler::missingTables();
-        } catch (Throwable) {
-            // Diagnostics must never replace the original exception.
-        }
-
         $storage = [];
-        foreach (['contents','settings','media_assets','media_usages','media_variants','builder_documents','builder_revisions','global_blocks','theme_previews'] as $table) {
+        if ($category === 'database') {
             try {
-                $storage[$table] = CmsDatabase::diagnostic($table);
+                $missing = CmsRuntimeSchemaReconciler::missingTables();
             } catch (Throwable) {
-                $storage[$table] = ['logical' => $table, 'exists' => null];
+                // Diagnostics must never replace the original exception.
+            }
+
+            foreach (['contents','settings','media_assets','media_usages','media_variants','builder_documents','builder_revisions','global_blocks','theme_previews'] as $table) {
+                try {
+                    $storage[$table] = CmsDatabase::diagnostic($table);
+                } catch (Throwable) {
+                    $storage[$table] = ['logical' => $table, 'exists' => null];
+                }
             }
         }
 
@@ -101,6 +107,7 @@ final class CmsRuntimeErrorReporter
         $response = CmsApiResponse::error($code, $publicMessage, $status, $details);
         $response->headers->set('X-CMS-Error-ID', $errorId);
         $response->headers->set('X-CMS-Error-Category', $category);
+        $response->headers->set('X-Correlation-ID', $correlation->value);
 
         return $response;
     }

@@ -55,7 +55,7 @@ final readonly class ExtensionCenterService
         int $size,
         ?int $actorId = null,
         array $currentlyGrantedPermissions = [],
-        bool $requireSignature = false,
+        bool $requireSignature = true,
         bool $isUpdate = false,
         bool $isDowngrade = false,
     ): ExtensionReviewProjection {
@@ -75,7 +75,7 @@ final readonly class ExtensionCenterService
             $this->installed,
             $inspection->trust,
             $currentlyGrantedPermissions,
-            $requireSignature,
+            true,
             $isUpdate,
             $isDowngrade,
             $inspection->security,
@@ -97,7 +97,7 @@ final readonly class ExtensionCenterService
         bool $approved,
         ?int $actorId = null,
         array $currentlyGrantedPermissions = [],
-        bool $requireSignature = false,
+        bool $requireSignature = true,
         bool $isUpdate = false,
         bool $isDowngrade = false,
     ): array {
@@ -138,7 +138,7 @@ final readonly class ExtensionCenterService
         string $reviewToken,
         ?int $actorId = null,
         array $currentlyGrantedPermissions = [],
-        bool $requireSignature = false,
+        bool $requireSignature = true,
         bool $isDowngrade = false,
     ): ExtensionOperationRecord {
         if (!in_array($type, [ExtensionOperationType::Install, ExtensionOperationType::Update], true)) {
@@ -164,7 +164,7 @@ final readonly class ExtensionCenterService
             $this->installed,
             $inspection->trust,
             $currentlyGrantedPermissions,
-            $requireSignature,
+            true,
             $type === ExtensionOperationType::Update,
             $isDowngrade,
             $inspection->security,
@@ -174,7 +174,7 @@ final readonly class ExtensionCenterService
             throw new \RuntimeException('Extension review is now blocked.');
         }
 
-        $this->tickets->consume(
+        $ticket = $this->tickets->consume(
             $reviewToken,
             $reference,
             $inspection->manifest->identifier(),
@@ -182,7 +182,7 @@ final readonly class ExtensionCenterService
 
         $operationOptions = [
             'actor_id' => $actorId,
-            'require_signature' => $requireSignature,
+            'require_signature' => true,
         ];
         if ($type === ExtensionOperationType::Update) {
             $installedMatches = $this->installed->find($inspection->manifest->identifier());
@@ -202,7 +202,7 @@ final readonly class ExtensionCenterService
                 options: $operationOptions,
             ),
             $review,
-            true,
+            $ticket->approved,
         );
 
         if ($operation->status->value === 'succeeded' && $this->grants !== null) {

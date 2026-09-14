@@ -5,6 +5,8 @@ namespace App\com_pinoox_cms\Cms\Content;
 
 final class Slugger
 {
+    private const MAX_LENGTH = 160;
+
     public function slug(string $value): string
     {
         $value = trim($value);
@@ -16,7 +18,7 @@ final class Slugger
         $value = preg_replace('/[^\p{L}\p{N}]+/u', '-', $value) ?? '';
         $value = trim($value, '-');
         $value = preg_replace('/-+/', '-', $value) ?? $value;
-        $value = $this->truncate($value, 160);
+        $value = $this->truncate($value, self::MAX_LENGTH);
 
         return $value !== '' ? $value : 'untitled';
     }
@@ -48,7 +50,7 @@ final class Slugger
         $suffix = 2;
 
         while ($repository->slugExists($siteId, $type, $locale, $slug, $excludeId)) {
-            $slug = $base . '-' . $suffix;
+            $slug = $this->withSuffix($base, $suffix);
             ++$suffix;
         }
 
@@ -68,10 +70,16 @@ final class Slugger
         $suffix = 2;
 
         while ($repository->slugExists($siteId, $taxonomy, $locale, $slug, $excludeId)) {
-            $slug = $base . '-' . $suffix;
+            $slug = $this->withSuffix($base, $suffix);
             ++$suffix;
         }
 
         return $slug;
+    }
+
+    private function withSuffix(string $base, int $suffix): string
+    {
+        $suffixText = '-' . $suffix;
+        return $this->truncate($base, self::MAX_LENGTH - strlen($suffixText)) . $suffixText;
     }
 }

@@ -25,6 +25,7 @@ final class DocumentationAuditService
         }
 
         $manifestFile = $root . '/' . self::MANIFEST_PATH;
+        $artifactMode = !is_dir($root . '/docs');
         if (!is_file($manifestFile) || is_link($manifestFile)) {
             return new DocumentationAuditReport(
                 [new DocumentationAuditIssue('docs.manifest_missing', 'Documentation manifest is missing.', self::MANIFEST_PATH)],
@@ -33,6 +34,8 @@ final class DocumentationAuditService
                 0,
                 0,
                 0,
+                $artifactMode ? 'artifact' : 'source',
+                $artifactMode ? 'missing' : 'not-required',
             );
         }
 
@@ -47,6 +50,8 @@ final class DocumentationAuditService
                 0,
                 0,
                 0,
+                $artifactMode ? 'artifact' : 'source',
+                $artifactMode ? 'invalid' : 'not-required',
             );
         }
 
@@ -58,6 +63,8 @@ final class DocumentationAuditService
                 0,
                 0,
                 0,
+                $artifactMode ? 'artifact' : 'source',
+                $artifactMode ? 'invalid' : 'not-required',
             );
         }
 
@@ -339,7 +346,7 @@ final class DocumentationAuditService
                 if ($pathPart === '') {
                     continue;
                 }
-                if (!$this->safeRelative($pathPart)) {
+                if (!$this->safeLinkTarget($pathPart)) {
                     $issues[] = new DocumentationAuditIssue(
                         'docs.link_unsafe',
                         'Documentation link is unsafe.',
@@ -402,6 +409,26 @@ final class DocumentationAuditService
         }
 
         return !in_array('..', explode('/', $normalized), true);
+    }
+
+    private function safeLinkTarget(string $path): bool
+    {
+        if ($path === '' || str_contains($path, "\0")) {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+        if (
+            str_starts_with($normalized, '/')
+            || preg_match('/^[A-Za-z]:/', $normalized) === 1
+            || str_contains($path, '\\')
+        ) {
+            return false;
+        }
+
+        // Parent segments are valid in Markdown links. realpath() and the
+        // package-root boundary check below decide whether they escape docs.
+        return true;
     }
 
     private function relative(string $root, string $path): string

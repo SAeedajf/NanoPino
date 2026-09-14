@@ -31,6 +31,7 @@ test('runtime builder defaults to a valid Pinoox CMS target and rejects the lega
 
 test('runtime builder has read inventory path, schema inspector, responsive styles and safe publish', () => {
   const runtime = read('runtime/builder.mjs')
+  assert.match(runtime, /Object\.values\(attrs\)/)
   assert.match(runtime, /api\(`\/builder\?site_id=/)
   assert.match(runtime, /selectedDefinition/)
   assert.match(runtime, /responsive\[this\.viewport\]/)
@@ -85,6 +86,7 @@ test('canonical Vue and API sources preserve the new builder and site-editor con
   const sitePage = read('src/pages/site-editor/page-site-editor.vue')
   const api = read('src/services/cms-api.js')
   assert.match(builderPage, /builderApi\.list/)
+  assert.match(builderPage, /Object\.values\(attrs\)/)
   assert.match(builderPage, /setInterval\(\(\)=>autosave\(true\),30000\)/)
   assert.match(builderPage, /if\(dirty\.value\)await saveInternal\(\)/)
   assert.match(sitePage, /builderApi\.list/)

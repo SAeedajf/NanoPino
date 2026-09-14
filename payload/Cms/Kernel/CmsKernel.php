@@ -51,6 +51,7 @@ use App\com_pinoox_cms\Cms\Admin\CoreDeveloperAdminDefinitions;
 use App\com_pinoox_cms\Cms\Driver\DriverRegistry;
 use App\com_pinoox_cms\Cms\Driver\CoreDrivers;
 use App\com_pinoox_cms\Cms\Queue\QueueRegistry;
+use App\com_pinoox_cms\Cms\Queue\CoreQueueJobs;
 use App\com_pinoox_cms\Cms\Performance\PerformanceBudgetRegistry;
 use App\com_pinoox_cms\Cms\Performance\CorePerformanceBudgets;
 
@@ -122,6 +123,7 @@ final class CmsKernel
         $this->drivers = new DriverRegistry();
         CoreDrivers::register($this->drivers);
         $this->queueJobs = new QueueRegistry();
+        CoreQueueJobs::register($this->queueJobs);
         $this->performanceBudgets = new PerformanceBudgetRegistry();
         CorePerformanceBudgets::register($this->performanceBudgets);
         $this->admin = new AdminRegistrySet();

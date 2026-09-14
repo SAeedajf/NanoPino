@@ -26,5 +26,7 @@
     "migration_preservation_required": true
   },
   "runtime_evidence": "external_local_update_validation_required",
-  "stable": false
+  "stable": false,
+  "evidence_status": "historical_snapshot",
+  "historical_reason": "RC11 lifecycle evidence; it does not describe the current 0.23.72 candidate."
 }

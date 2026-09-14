@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "name": "NanoPino Performance and Scalability Phase 19 gate",
+  "captured_at": "2026-09-14T08:47:18Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "content_list_projection": "explicit list projection on canonical Admin collection",
+    "scheduled_publish": "compare-and-set claim with bounded batch reread and hydration",
+    "frontend_budget_script": "theme/cms-admin/performance-budget.mjs"
+  },
+  "verification": {
+    "frontend_tests": "212/212",
+    "php_tests": "72/72",
+    "php_syntax": true,
+    "vite_build": true,
+    "reachable_assets": 62,
+    "source_dist_parity": true,
+    "raw_javascript_bytes": 1858212,
+    "raw_css_bytes": 221991,
+    "largest_javascript_bytes": 676324,
+    "largest_css_bytes": 126609,
+    "synthetic_benchmark_p95_ms": 0.000216,
+    "synthetic_benchmark_is_production_workload": false,
+    "target_mutations": "not executed"
+  },
+  "budgets": {
+    "total_javascript_bytes": 2200000,
+    "total_css_bytes": 300000,
+    "largest_javascript_bytes": 750000,
+    "largest_css_bytes": 150000
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "manager": "read-only reachable; authentication state not changed",
+    "cms_admin": "401 without an authenticated session",
+    "public_site": "read-only /qwe/site reachable",
+    "authenticated_performance_workload": "pending",
+    "load_test": "pending",
+    "production_database_cache_queue_measurement": "pending"
+  },
+  "gate": {
+    "source_scalability_controls": true,
+    "backend_contracts": true,
+    "frontend_budget": true,
+    "local_build": true,
+    "target_authenticated_measurement": false,
+    "production_ready": false
+  }
+}

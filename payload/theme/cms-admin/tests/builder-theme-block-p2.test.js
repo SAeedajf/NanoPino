@@ -34,6 +34,22 @@ test('P2 builder does not enable authoring before a document is open',()=>{
   assert.match(runtime,/close_dirty_confirm/)
 })
 
+test('P2 builder API uses the Pinoox request binding expected by the route container',()=>{
+  const controller=readPackage('Controller/Api/BuilderRuntimeApiController.php')
+  assert.match(controller,/use Pinoox\\Component\\Http\\Request;/)
+  assert.doesNotMatch(controller,/use Symfony\\Component\\HttpFoundation\\Request;/)
+  assert.doesNotMatch(controller,/function (?:index|open|create|save|autosave|publish|revisions|restore|preview)\(Request \$q/)
+  assert.match(controller,/function index\(Request \$request\)/)
+})
+
+test('P2 request-bound media and global block APIs use the Pinoox request binding',()=>{
+  for(const file of ['Controller/Api/MediaApiController.php','Controller/Api/GlobalBlockRuntimeApiController.php']){
+    const controller=readPackage(file)
+    assert.match(controller,/use Pinoox\\Component\\Http\\Request;/)
+    assert.doesNotMatch(controller,/use Symfony\\Component\\HttpFoundation\\Request;/)
+  }
+})
+
 test('P2 builder target UI hides raw target keys behind named selectors and technical details',()=>{
   const vue=read('src/pages/builder/page-builder.vue')
   const runtime=read('runtime/builder.mjs')

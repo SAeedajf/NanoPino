@@ -6,9 +6,13 @@ namespace App\com_pinoox_cms\Cms\Taxonomy;
 use App\com_pinoox_cms\Model\ContentTermModel;
 use App\com_pinoox_cms\Model\TermModel;
 use App\com_pinoox_cms\Cms\Database\CmsDatabase;
+use App\com_pinoox_cms\Cms\Support\SearchTerm;
+use App\com_pinoox_cms\Cms\Support\QueryBounds;
 
 final class PinooxTermRepository implements TermRepositoryInterface
 {
+    private const MAX_BATCH_IDS = 5000;
+
     public function create(
         int $siteId,
         string $taxonomy,
@@ -39,6 +43,50 @@ final class PinooxTermRepository implements TermRepositoryInterface
         return $model ? $this->hydrate($model) : null;
     }
 
+    public function findBySlug(int $siteId, string $taxonomy, string $locale, string $slug): ?TermRecord
+    {
+        $model = TermModel::query()
+            ->where('site_id', $siteId)
+            ->where('taxonomy', $taxonomy)
+            ->where('locale', $locale)
+            ->where('slug', $slug)
+            ->first();
+
+        return $model ? $this->hydrate($model) : null;
+    }
+
+    public function update(int $id, array $changes): ?TermRecord
+    {
+        $model = TermModel::find($id);
+        if ($model === null) {
+            return null;
+        }
+
+        $model->fill($changes);
+        $model->save();
+
+        return $this->hydrate($model->fresh() ?? $model);
+    }
+
+    public function delete(int $id): bool
+    {
+        $model = TermModel::find($id);
+        if ($model === null) {
+            return false;
+        }
+
+        if ($model->contentRelations()->exists()) {
+            return false;
+        }
+
+        return (bool)$model->delete();
+    }
+
+    public function hasChildren(int $id): bool
+    {
+        return TermModel::query()->where('parent_id', $id)->exists();
+    }
+
     public function findMany(array $ids): array
     {
         $ids = array_values(array_unique(array_filter(
@@ -48,11 +96,18 @@ final class PinooxTermRepository implements TermRepositoryInterface
         if ($ids === []) {
             return [];
         }
+        if (count($ids) > self::MAX_BATCH_IDS) {
+            throw new \InvalidArgumentException(
+                'Term batch lookup cannot contain more than ' . self::MAX_BATCH_IDS . ' IDs.',
+            );
+        }
 
         $result = [];
-        foreach (TermModel::query()->whereIn('id', $ids)->get() as $model) {
-            $record = $this->hydrate($model);
-            $result[$record->id] = $record;
+        foreach (array_chunk($ids, 500) as $chunk) {
+            foreach (TermModel::query()->whereIn('id', $chunk)->get() as $model) {
+                $record = $this->hydrate($model);
+                $result[$record->id] = $record;
+            }
         }
 
         return $result;
@@ -83,12 +138,11 @@ final class PinooxTermRepository implements TermRepositoryInterface
             ->where('taxonomy', $taxonomy)
             ->where('locale', $locale);
 
-        $search = trim((string)$search);
-        if ($search !== '') {
-            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
-            $query->where(static function ($builder) use ($escaped): void {
-                $builder->where('name', 'like', '%' . $escaped . '%')
-                    ->orWhere('slug', 'like', '%' . $escaped . '%');
+        $needle = SearchTerm::contains($search);
+        if ($needle !== null) {
+            $query->where(static function ($builder) use ($needle): void {
+                $builder->where('name', 'like', $needle)
+                    ->orWhere('slug', 'like', $needle);
             });
         }
 
@@ -96,7 +150,7 @@ final class PinooxTermRepository implements TermRepositoryInterface
             ->orderBy('name')
             ->orderBy('id')
             ->limit(max(1, min(100, $limit)))
-            ->offset(max(0, min(100000, $offset)))
+            ->offset(QueryBounds::offset($offset))
             ->get()
             ->map(fn (TermModel $model): TermRecord => $this->hydrate($model))
             ->all();
@@ -113,12 +167,11 @@ final class PinooxTermRepository implements TermRepositoryInterface
             ->where('taxonomy', $taxonomy)
             ->where('locale', $locale);
 
-        $search = trim((string)$search);
-        if ($search !== '') {
-            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
-            $query->where(static function ($builder) use ($escaped): void {
-                $builder->where('name', 'like', '%' . $escaped . '%')
-                    ->orWhere('slug', 'like', '%' . $escaped . '%');
+        $needle = SearchTerm::contains($search);
+        if ($needle !== null) {
+            $query->where(static function ($builder) use ($needle): void {
+                $builder->where('name', 'like', $needle)
+                    ->orWhere('slug', 'like', $needle);
             });
         }
 
@@ -153,14 +206,25 @@ final class PinooxTermRepository implements TermRepositoryInterface
                 ->where('taxonomy', $taxonomy)
                 ->delete();
 
-            foreach (array_values(array_unique(array_map('intval', $termIds))) as $order => $termId) {
-                ContentTermModel::create([
+            $termIds = array_values(array_unique(array_map('intval', $termIds)));
+            if ($termIds === []) {
+                return;
+            }
+
+            $now = gmdate('Y-m-d H:i:s');
+            $rows = [];
+            foreach ($termIds as $order => $termId) {
+                $rows[] = [
                     'content_id' => $contentId,
                     'term_id' => $termId,
                     'taxonomy' => $taxonomy,
                     'sort_order' => $order,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
+
+            ContentTermModel::query()->insert($rows);
         });
     }
 

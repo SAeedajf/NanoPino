@@ -22,7 +22,7 @@ final class CoreRoleTemplates
                 self::OWNER,
                 'Author',
                 'Create content and manage own work. Resource ownership is enforced by policies.',
-                ['cms.admin', 'content.read', 'content.create', 'content.update', 'taxonomy.read', 'media.read', 'media.upload'],
+                ['cms.admin', 'content.read', 'content.create', 'content.update', 'content.submit_review', 'taxonomy.read', 'media.read', 'media.upload'],
             ),
             new RoleTemplateDefinition(
                 'cms_media_manager',

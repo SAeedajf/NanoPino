@@ -129,6 +129,33 @@ final readonly class FileQueueRepository implements QueueRepositoryInterface
         }
     }
 
+    /**
+     * Requeue jobs left in processing after a worker crash or request timeout.
+     *
+     * This is intentionally a concrete capability so older third-party queue
+     * repositories implementing QueueRepositoryInterface remain compatible.
+     */
+    public function recoverStaleProcessing(int $leaseSeconds=3600,?float $now=null): int
+    {
+        $leaseSeconds=max(60,min(86400,$leaseSeconds));
+        $now??=microtime(true);
+        $cutoff=$now-$leaseSeconds;
+
+        return $this->withLock(function () use ($now,$cutoff): int {
+            $recovered=0;
+            foreach ($this->loadAllUnlocked() as $job) {
+                if ($job->status!==QueueJobStatus::Processing || $job->updatedAt>$cutoff) continue;
+                $job->status=QueueJobStatus::Failed;
+                $job->availableAt=$now;
+                $job->updatedAt=$now;
+                $job->lastError='Recovered stale processing lease after worker interruption.';
+                $this->writeJob($job);
+                ++$recovered;
+            }
+            return $recovered;
+        });
+    }
+
     public function recent(int $limit=100): array
     {
         $jobs=$this->loadAll();

@@ -75,6 +75,30 @@ final class InMemoryBuilderDocumentRepository implements BuilderDocumentReposito
         return array_slice($items, max(0, $offset), max(1, $limit));
     }
 
+    /** @return list<BuilderDocumentSummary> */
+    public function listSummaries(
+        int $siteId,
+        ?BuilderTargetType $type = null,
+        ?string $locale = null,
+        int $limit = 100,
+        int $offset = 0,
+    ): array {
+        return array_map(
+            static fn (BuilderDocumentRecord $record): BuilderDocumentSummary => new BuilderDocumentSummary(
+                $record->id,
+                $record->target,
+                $record->status,
+                $record->checksum,
+                $record->version,
+                $record->actorId,
+                $record->publishedAt,
+                $record->createdAt,
+                $record->updatedAt,
+            ),
+            $this->list($siteId, $type, $locale, $limit, $offset),
+        );
+    }
+
     public function count(
         int $siteId,
         ?BuilderTargetType $type = null,

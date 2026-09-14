@@ -3,15 +3,18 @@ declare(strict_types=1);
 
 namespace App\com_pinoox_cms\Controller\Api;
 
-use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
+use App\com_pinoox_cms\Cms\Runtime\{CmsApiControllerResponder,CmsRuntimeServices};
 use Pinoox\Component\Http\JsonResponse;
 use Pinoox\Component\Http\Request;
 use Pinoox\Component\Kernel\Controller\ApiController;
 
 final class SearchRuntimeApiController extends ApiController
 {
+    use CmsApiControllerResponder;
+
     public function index(Request $request): JsonResponse
     {
+        $startedNs = hrtime(true);
         $siteId = max(1, (int)$request->query->get('site_id', 1));
         $text = trim((string)$request->query->get('q', ''));
         $locale = trim((string)$request->query->get('locale', '')) ?: null;
@@ -20,19 +23,23 @@ final class SearchRuntimeApiController extends ApiController
         $typesRaw = trim((string)$request->query->get('types', ''));
         $types = $typesRaw === '' ? [] : array_values(array_filter(array_map('trim', explode(',', $typesRaw))));
 
-        return $this->respond(CmsRuntimeServices::searchApi()->search(
-            $siteId,
-            $text,
-            $types,
-            $locale,
-            $limit,
-            $offset,
-            CmsRuntimeServices::actorId(),
-        ));
-    }
-
-    private function respond($response): JsonResponse
-    {
-        return new JsonResponse($response->body, $response->status);
+        try {
+            return $this->facadeResponse(
+                fn () => CmsRuntimeServices::searchApi()->search(
+                    $siteId,
+                    $text,
+                    $types,
+                    $locale,
+                    $limit,
+                    $offset,
+                    CmsRuntimeServices::actorId(),
+                ),
+                'SEARCH_FAILED',
+                'Search could not be completed.',
+                'search.index',
+            );
+        } finally {
+            CmsRuntimeServices::recordSearchTiming('search.index', $startedNs);
+        }
     }
 }

@@ -19,12 +19,12 @@
         </button>
       </aside>
 
-      <main class="settings-main">
+      <section class="settings-main" aria-labelledby="settings-main-heading" :aria-busy="loading ? 'true' : 'false'">
         <select v-model="activeGroup" class="settings-mobile-select" :aria-label="t('a11y.settings_group_mobile')">
           <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.label }} ({{ group.count }})</option>
         </select>
         <div class="settings-heading">
-          <div><h2>{{ search ? t('settings_page.search_results') : activeMeta.label }}</h2><p>{{ search ? t('settings_page.results_for', { query: search }) : activeMeta.description }}</p></div>
+          <div><h2 id="settings-main-heading">{{ search ? t('settings_page.search_results') : activeMeta.label }}</h2><p>{{ search ? t('settings_page.results_for', { query: search }) : activeMeta.description }}</p></div>
           <div class="settings-badges"><LBadge severity="secondary">{{ t('settings_page.setting_count', { count: filtered.length }) }}</LBadge><LBadge :severity="dirtyCount ? 'warning' : 'success'">{{ dirtyCount ? t('settings_page.unsaved_count', { count: dirtyCount }) : t('settings_page.all_saved') }}</LBadge></div>
         </div>
 
@@ -52,7 +52,7 @@
 
         <div v-if="!loading && !filtered.length" class="settings-empty">{{ t('settings_page.empty') }}</div>
         <div v-if="loading" class="settings-empty" role="status" aria-live="polite">{{ t('settings_page.loading') }}</div>
-      </main>
+      </section>
     </div>
   </LPage>
 </template>

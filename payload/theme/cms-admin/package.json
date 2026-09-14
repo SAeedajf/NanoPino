@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node source-fingerprint.mjs --write-build-evidence && node runtime-fingerprint.mjs && node source-fingerprint.mjs && node verify-dist.mjs",
+    "build": "vite build && node performance-budget.mjs && node source-fingerprint.mjs --write-build-evidence && node runtime-fingerprint.mjs && node source-fingerprint.mjs && node verify-dist.mjs",
     "preview": "vite preview",
     "test": "node run-tests.mjs"
   },

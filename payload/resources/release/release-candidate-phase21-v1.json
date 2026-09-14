@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "name": "NanoPino Final Release Candidate Phase 21",
+  "captured_at": "2026-09-14T08:57:54Z",
+  "release": {
+    "package": "com_pinoox_cms",
+    "product": "NanoPino",
+    "version": "0.23.72",
+    "version_code": 2372,
+    "minimum_pincore": "3.14.0",
+    "minimum_kernel_code": 232,
+    "artifact": "releases/NanoPino-0.23.72-phase21-final-release-candidate.pinx",
+    "signed": false
+  },
+  "phase_coverage": {
+    "canonical_matrix": "phases 1-21",
+    "completed_source_phases": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+    "phase_20_threat_register": 11,
+    "phase_19_performance_budgets": true
+  },
+  "verification": {
+    "frontend_tests": "223/223",
+    "php_tests": "72/72",
+    "documentation_audit": {
+      "status": "passed",
+      "required_docs": 31,
+      "machine_contracts": 23,
+      "markdown_files": 63,
+      "internal_links": 34
+    },
+    "vite_build": true,
+    "reachable_assets": 62,
+    "admin_source_dist_parity": true,
+    "admin_runtime_parity": true,
+    "release_metadata_parity": true,
+    "phase20_security_preflight": {
+      "status": "passed",
+      "high_findings": 0,
+      "warnings": 2
+    },
+    "archive_integrity": "verified after final build",
+    "target_mutations": "not executed"
+  },
+  "release_gate": {
+    "local_technical_candidate": true,
+    "production_release_gate": false,
+    "declared_open_blockers": [
+      "target shared-hosting Pinoox integration E2E",
+      "production Luma/Vite dist build and browser WCAG E2E",
+      "signed PINX lifecycle E2E",
+      "target database migration evidence",
+      "persistent native Theme activation integration",
+      "Safe Mode real boot-order integration",
+      "deployment Health probes",
+      "production security verification",
+      "production performance evidence",
+      "Admin i18n public contract"
+    ],
+    "stable": false
+  },
+  "target_read_only": {
+    "base_url": "https://test.boxpdf.ir",
+    "manager": "HTTP 200 after redirect; no state changed",
+    "cms_mount_without_session": "HTTP 401",
+    "public_site": "HTTP 200 with enforced CSP and defensive security headers",
+    "authenticated_admin_e2e": "pending",
+    "deployment": "not executed"
+  }
+}

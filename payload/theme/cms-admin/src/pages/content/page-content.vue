@@ -3,19 +3,40 @@
     <template #actions>
       <div class="cms-card-actions">
         <LButton icon="refresh-cw" variant="outline" shape="rounded" :disabled="loading" @click="loadContents()">{{ t('content_page.refresh') }}</LButton>
-        <LButton icon="plus" shape="rounded" @click="startCreate">{{ t('content_page.add') }}</LButton>
+        <LButton icon="plus" shape="rounded" :disabled="!canCreate" @click="startCreate">{{ t('content_page.add') }}</LButton>
       </div>
     </template>
 
     <LPanel v-if="error" class="cms-inline-callout cms-inline-callout--danger" role="alert" aria-live="assertive"><strong>{{ t('content_page.operation_failed') }}</strong><p>{{ error }}</p></LPanel>
     <LPanel v-if="notice" class="cms-inline-callout" role="status" aria-live="polite"><strong>{{ notice }}</strong></LPanel>
 
-    <div class="cms-stat-grid">
+    <div class="cms-stat-grid cms-stat-grid--five">
       <LStatCard :label="t('content_page.current_view')" :value="items.length" icon="files" />
       <LStatCard :label="t('content_page.published')" :value="statusCount('published')" icon="circle-check" />
       <LStatCard :label="t('content_page.draft')" :value="statusCount('draft')" icon="file-pen" />
-      <LStatCard label="Content Type" :value="types.length" icon="boxes" />
+      <LStatCard :label="t('content_page.pending_review')" :value="statusCount('pending_review')" icon="message-circle-warning" />
+      <LStatCard :label="t('content_page.content_type')" :value="types.length" icon="boxes" />
     </div>
+
+    <section class="cms-editorial-workflow" aria-labelledby="editorial-workflow-heading">
+      <div class="cms-editorial-workflow__header">
+        <div>
+          <h2 id="editorial-workflow-heading">{{ t('content_page.workflow_title') }}</h2>
+          <p class="cms-muted">{{ t('content_page.workflow_help') }}</p>
+        </div>
+        <div class="cms-editorial-workflow__current" role="status" aria-live="polite">
+          <span class="cms-muted">{{ t('content_page.workflow_status') }}</span>
+          <LBadge :severity="workflowSeverity">{{ workflowCurrentLabel }}</LBadge>
+        </div>
+      </div>
+      <ol class="cms-editorial-workflow__steps" :aria-label="t('content_page.workflow_steps_aria')">
+        <li v-for="(step,index) in workflowSteps" :key="step.key" class="cms-editorial-workflow__step" :data-state="index===workflowStage?'current':index<workflowStage?'complete':'upcoming'" :aria-current="index===workflowStage?'step':undefined">
+          <span class="cms-editorial-workflow__step-number" aria-hidden="true">{{ index + 1 }}</span>
+          <strong>{{ step.label }}</strong>
+          <small>{{ step.hint }}</small>
+        </li>
+      </ol>
+    </section>
 
     <div class="cms-content-tabs" role="tablist" :aria-label="t('a11y.content_status')">
       <button v-for="item in statusTabs" :key="item.value" type="button" role="tab" class="cms-content-tab" :data-active="statusFilter===item.value" :aria-selected="statusFilter===item.value ? 'true' : 'false'" :tabindex="statusFilter===item.value ? 0 : -1" @click="setStatus(item.value)" @keydown.left.prevent="moveStatusTab($event, -1)" @keydown.right.prevent="moveStatusTab($event, 1)">{{ item.label }}</button>
@@ -97,7 +118,7 @@
 
           <details class="cms-content-advanced cms-control-form__wide">
             <summary>{{ t('content_page.advanced') }}</summary>
-            <label>Metadata JSON
+            <label>{{ t('content_page.metadata_json') }}
               <textarea v-model="form.metadataJson" rows="7" dir="ltr" spellcheck="false" />
             </label>
           </details>
@@ -109,15 +130,18 @@
             <p v-if="!editingId" class="cms-muted">{{ t('content_page.new_is_draft') }}</p>
             <div v-else class="cms-definition-head"><span>{{ t('content_page.status') }}</span><LBadge :severity="statusSeverity(currentEditing?.status)">{{ statusLabel(currentEditing?.status||'draft') }}</LBadge></div>
             <div class="cms-card-actions cms-card-actions--wrap">
-              <LButton icon="save" shape="rounded" :disabled="saving" @click="saveContent(false)">{{ saving ? t('content_page.saving') : (editingId ? t('content_page.save_changes') : t('content_page.save_draft')) }}</LButton>
-              <LButton v-if="currentEditing?.status !== 'trash'" icon="send" shape="rounded" :disabled="saving" @click="saveContent(true)">{{ currentEditing?.status === 'published' ? t('content_page.save_published') : t('content_page.save_publish') }}</LButton>
+              <LButton icon="save" shape="rounded" :disabled="saving || (editingId ? !canUpdate : !canCreate)" @click="saveContent(false)">{{ saving ? t('content_page.saving') : (editingId ? t('content_page.save_changes') : t('content_page.save_draft')) }}</LButton>
+              <LButton v-if="currentEditing?.status !== 'trash'" icon="send" shape="rounded" :disabled="saving || !canPublish" @click="saveContent(true)">{{ currentEditing?.status === 'published' ? t('content_page.save_published') : t('content_page.save_publish') }}</LButton>
+              <LButton v-if="currentEditing?.status === 'draft' && canSubmitReview" variant="outline" shape="rounded" :disabled="saving" @click="submitReviewContent(currentEditing)">{{ t('content_page.submit_review') }}</LButton>
+              <LButton v-if="currentEditing?.status === 'pending_review' && canApprove" variant="outline" shape="rounded" :disabled="saving" @click="approveContent(currentEditing)">{{ t('content_page.approve') }}</LButton>
+              <LButton v-if="['published','approved'].includes(currentEditing?.status) && canArchive" variant="outline" shape="rounded" :disabled="saving" @click="archiveContent(currentEditing)">{{ t('content_page.archive') }}</LButton>
               <LButton variant="outline" severity="neutral" shape="rounded" @click="closeEditor">{{ t('content_page.cancel') }}</LButton>
             </div>
             <template v-if="editingId">
               <label class="cms-schedule-field">{{ t('content_page.schedule_label') }}
                 <input v-model="scheduleAt" type="datetime-local">
               </label>
-              <LButton variant="outline" shape="rounded" @click="scheduleContent">{{ t('content_page.schedule_action') }}</LButton>
+              <LButton variant="outline" shape="rounded" :disabled="!canPublish" @click="scheduleContent">{{ t('content_page.schedule_action') }}</LButton>
             </template>
           </LPanel>
 
@@ -146,6 +170,10 @@
                 <div>{{ t('content_page.revision_support') }}: {{ currentType?.revisions ? t('content_page.enabled') : t('content_page.disabled') }}</div>
                 <div>{{ t('content_page.taxonomies') }}: {{ currentType?.taxonomies?.join(t('common.list_separator')) || t('content_page.none') }}</div>
               </details>
+              <div v-if="editingId && currentEditing?.status==='published' && currentEditing?.public_url" class="cms-public-url">
+                <strong>{{ t('content_page.public_url') }}</strong>
+                <a :href="currentEditing.public_url" target="_blank" rel="noopener noreferrer">{{ currentEditing.public_url }}</a>
+              </div>
             </div>
           </LPanel>
         </aside>
@@ -190,11 +218,12 @@
         <LButton icon="search" variant="outline" shape="rounded" :disabled="loading" @click="applyFilters">{{ t('content_page.apply_filter') }}</LButton>
       </div>
 
-      <div class="cms-content-bulk">
+      <div class="cms-content-bulk" role="region" :aria-labelledby="content-bulk-heading">
+        <span id="content-bulk-heading" class="cms-sr-only">{{ t('content_page.bulk_action') }}</span>
         <input type="checkbox" class="cms-check-input" :disabled="bulkBusy" :checked="allSelected" :aria-label="t('a11y.select_all_content')" @change="toggleAll">
         <strong>{{ t('content_page.selected', { count: selected.length }) }}</strong>
-        <select v-model="bulkAction" :disabled="bulkBusy" :aria-label="t('a11y.bulk_action')"><option value="">{{ t('content_page.bulk_action') }}</option><option value="publish">{{ t('content_page.bulk_publish') }}</option><option value="restore">{{ t('content_page.bulk_restore') }}</option><option value="trash">{{ t('content_page.bulk_trash') }}</option></select>
-        <LButton size="sm" shape="rounded" :disabled="bulkBusy || !bulkAction || !selected.length" @click="runBulk">{{ bulkBusy ? t('content_page.executing') : t('content_page.execute') }}</LButton>
+        <select v-model="bulkAction" :disabled="bulkBusy" :aria-label="t('a11y.bulk_action')"><option value="">{{ t('content_page.bulk_action') }}</option><option value="submit-review">{{ t('content_page.submit_review') }}</option><option value="approve">{{ t('content_page.approve') }}</option><option value="publish">{{ t('content_page.bulk_publish') }}</option><option value="archive">{{ t('content_page.archive') }}</option><option value="restore">{{ t('content_page.bulk_restore') }}</option><option value="trash">{{ t('content_page.bulk_trash') }}</option></select>
+        <LButton size="sm" shape="rounded" :disabled="bulkBusy || !bulkAction || !selected.length || !bulkAllowed" @click="runBulk">{{ bulkBusy ? t('content_page.executing') : t('content_page.execute') }}</LButton>
       </div>
 
       <CmsPageState :state="loading ? 'loading' : items.length ? 'ready' : 'empty'" empty-icon="file-plus-2" :empty-title="t('content_page.empty_title')" :empty-message="t('content_page.empty_message')">
@@ -205,18 +234,19 @@
               <div><strong>{{ item.title || t('content_page.untitled', { id: item.id }) }}</strong><small>{{ typeLabel(item.type) }} · {{ item.slug || `#${item.id}` }}</small></div>
               <LBadge :severity="statusSeverity(item.status)">{{ statusLabel(item.status) }}</LBadge>
             </div>
+            <a v-if="item.status==='published'&&item.public_url" class="cms-public-link" :href="item.public_url" target="_blank" rel="noopener noreferrer">{{ t('content_page.view_public') }}</a>
             <small class="cms-muted">{{ t('content_page.last_change', { date: item.updated_at || '—' }) }}</small>
-            <div class="cms-card-actions cms-card-actions--wrap"><LButton size="sm" variant="outline" shape="rounded" @click="editContent(item)">{{ t('content_page.edit').split(' :type')[0] }}</LButton><LButton size="sm" variant="outline" shape="rounded" @click="openHistory(item)">{{ t('content_page.history') }}</LButton><LButton v-if="item.status!=='published'&&item.status!=='trash'" size="sm" shape="rounded" @click="publishContent(item)">{{ t('content_page.bulk_publish') }}</LButton><LButton v-if="item.status==='trash'" size="sm" shape="rounded" @click="restoreContent(item)">{{ t('content_page.restore') }}</LButton><LButton v-else size="sm" variant="outline" severity="danger" shape="rounded" @click="trashContent(item)">{{ t('content_page.trash_short') }}</LButton></div>
+            <div class="cms-card-actions cms-card-actions--wrap"><LButton v-if="canUpdate" size="sm" variant="outline" shape="rounded" @click="editContent(item)">{{ t('content_page.edit').split(' :type')[0] }}</LButton><LButton size="sm" variant="outline" shape="rounded" @click="openHistory(item)">{{ t('content_page.history') }}</LButton><LButton v-if="item.status==='draft'&&canSubmitReview" size="sm" shape="rounded" @click="submitReviewContent(item)">{{ t('content_page.submit_review') }}</LButton><LButton v-if="item.status==='pending_review'&&canApprove" size="sm" shape="rounded" @click="approveContent(item)">{{ t('content_page.approve') }}</LButton><LButton v-if="['draft','approved','scheduled'].includes(item.status)&&canPublish" size="sm" shape="rounded" @click="publishContent(item)">{{ t('content_page.bulk_publish') }}</LButton><LButton v-if="['published','approved'].includes(item.status)&&canArchive" size="sm" variant="outline" shape="rounded" @click="archiveContent(item)">{{ t('content_page.archive') }}</LButton><LButton v-if="item.status==='trash'&&canUpdate" size="sm" shape="rounded" @click="restoreContent(item)">{{ t('content_page.restore') }}</LButton><LButton v-else-if="canDelete" size="sm" variant="outline" severity="danger" shape="rounded" @click="trashContent(item)">{{ t('content_page.trash_short') }}</LButton></div>
           </article>
         </div>
 
         <LPanel flush bare class="cms-desktop-only">
           <LDataTable :value="items" data-key="id">
             <Column header=""><template #body="{data:row}"><input type="checkbox" class="cms-check-input" :disabled="bulkBusy" :checked="selected.includes(String(row.id))" :aria-label="`${t('a11y.select_content')} #${row.id}`" @change="toggleSelected(row.id)"></template></Column>
-            <Column field="title" :header="t('content_page.title')"><template #body="{data:row}"><div><strong>{{ row.title || t('content_page.untitled', { id: row.id }) }}</strong><small class="cms-table-subline">{{ row.slug || `#${row.id}` }}</small></div></template></Column>
+            <Column field="title" :header="t('content_page.title')"><template #body="{data:row}"><div><strong>{{ row.title || t('content_page.untitled', { id: row.id }) }}</strong><small class="cms-table-subline">{{ row.slug || `#${row.id}` }}</small><a v-if="row.status==='published'&&row.public_url" class="cms-public-link" :href="row.public_url" target="_blank" rel="noopener noreferrer">{{ t('content_page.view_public') }}</a></div></template></Column>
             <Column :header="t('content_page.type')"><template #body="{data:row}">{{ typeLabel(row.type) }}</template></Column>
             <Column :header="t('content_page.status')"><template #body="{data:row}"><LBadge :severity="statusSeverity(row.status)">{{ statusLabel(row.status) }}</LBadge></template></Column>
-            <Column :header="t('content_page.bulk_action').replace('…','')"><template #body="{data:row}"><div class="cms-card-actions"><LButton size="sm" variant="outline" shape="rounded" @click="editContent(row)">{{ t('content_page.edit').split(' :type')[0] }}</LButton><LButton size="sm" variant="outline" shape="rounded" @click="openHistory(row)">{{ t('content_page.history') }}</LButton><LButton v-if="row.status!=='published'&&row.status!=='trash'" size="sm" shape="rounded" @click="publishContent(row)">{{ t('content_page.bulk_publish') }}</LButton><LButton v-if="row.status==='trash'" size="sm" shape="rounded" @click="restoreContent(row)">{{ t('content_page.restore') }}</LButton><LButton v-else size="sm" variant="outline" severity="danger" shape="rounded" @click="trashContent(row)">{{ t('content_page.trash_short') }}</LButton></div></template></Column>
+            <Column :header="t('content_page.bulk_action').replace('…','')"><template #body="{data:row}"><div class="cms-card-actions"><a v-if="row.status==='published'&&row.public_url" class="cms-public-link" :href="row.public_url" target="_blank" rel="noopener noreferrer">{{ t('content_page.view_public') }}</a><LButton v-if="canUpdate" size="sm" variant="outline" shape="rounded" @click="editContent(row)">{{ t('content_page.edit').split(' :type')[0] }}</LButton><LButton size="sm" variant="outline" shape="rounded" @click="openHistory(row)">{{ t('content_page.history') }}</LButton><LButton v-if="row.status==='draft'&&canSubmitReview" size="sm" shape="rounded" @click="submitReviewContent(row)">{{ t('content_page.submit_review') }}</LButton><LButton v-if="row.status==='pending_review'&&canApprove" size="sm" shape="rounded" @click="approveContent(row)">{{ t('content_page.approve') }}</LButton><LButton v-if="['draft','approved','scheduled'].includes(row.status)&&canPublish" size="sm" shape="rounded" @click="publishContent(row)">{{ t('content_page.bulk_publish') }}</LButton><LButton v-if="['published','approved'].includes(row.status)&&canArchive" size="sm" variant="outline" shape="rounded" @click="archiveContent(row)">{{ t('content_page.archive') }}</LButton><LButton v-if="row.status==='trash'&&canUpdate" size="sm" shape="rounded" @click="restoreContent(row)">{{ t('content_page.restore') }}</LButton><LButton v-else-if="canDelete" size="sm" variant="outline" severity="danger" shape="rounded" @click="trashContent(row)">{{ t('content_page.trash_short') }}</LButton></div></template></Column>
           </LDataTable>
         </LPanel>
       </CmsPageState>
@@ -232,6 +262,7 @@ import Column from 'primevue/column'
 import { LBadge, LButton, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
 import { contentApi, mediaApi, taxonomyApi } from '../../services/cms-api.js'
+import { canAdmin } from '../../services/admin-provider.js'
 import { t } from '../../i18n/index.js'
 
 const items=ref([]),types=ref([]),loading=ref(false),saving=ref(false),bulkBusy=ref(false),error=ref(''),notice=ref(''),editorOpen=ref(false),editingId=ref(null),query=ref(''),typeFilter=ref(''),statusFilter=ref(''),localeFilter=ref(''),selected=ref([]),bulkAction=ref(''),scheduleAt=ref(''),previousType=ref('post'),pickerSearchInput=ref(null),parentLabel=ref('')
@@ -239,21 +270,34 @@ const pagination=reactive({limit:50,offset:0,returned:0,has_more:false})
 const form=reactive({site_id:1,type:'post',title:'',slug:'',excerpt:'',locale:'fa',parent_id:'',fields:{},metadataJson:'{}'})
 const resourceCache=reactive({})
 const picker=reactive({open:false,kind:'',fieldKey:'',title:'',query:'',items:[],loading:false,error:'',multiple:false,taxonomy:'',targetTypes:[],selected:[],pagination:{limit:24,offset:0,total:0,has_more:false},richField:''})
-const statusTabs=[{value:'',label:t('content_page.all')},{value:'draft',label:t('content_page.draft')},{value:'scheduled',label:t('content_page.scheduled')},{value:'published',label:t('content_page.published')},{value:'trash',label:t('content_page.trash_short')}]
+const statusTabs=[{value:'',label:t('content_page.all')},{value:'draft',label:t('content_page.draft')},{value:'pending_review',label:t('content_page.pending_review_tab')},{value:'approved',label:t('content_page.approved_tab')},{value:'scheduled',label:t('content_page.scheduled')},{value:'published',label:t('content_page.published')},{value:'archived',label:t('content_page.archived_tab')},{value:'trash',label:t('content_page.trash_short')}]
 const currentType=computed(()=>types.value.find(item=>item.key===form.type)||null)
+const canCreate=canAdmin('content.create'),canUpdate=canAdmin('content.update'),canPublish=canAdmin('content.publish'),canDelete=canAdmin('content.delete'),canSubmitReview=canAdmin('content.submit_review'),canApprove=canAdmin('content.approve'),canArchive=canAdmin('content.archive')
+const bulkAllowed=computed(()=>({publish:canPublish,'submit-review':canSubmitReview,approve:canApprove,archive:canArchive,trash:canDelete,restore:canUpdate}[bulkAction.value]||false))
 const currentFields=computed(()=>currentType.value?.fields||[])
 const currentEditing=computed(()=>items.value.find(item=>String(item.id)===String(editingId.value))||null)
 const parentDisplay=computed(()=>parentLabel.value||resourceInfo('content',form.parent_id)?.title||(form.parent_id?t('content_page.parent_item',{id:form.parent_id}):t('content_page.no_parent')))
 const pickerPlaceholder=computed(()=>picker.kind==='media'?t('content_page.search_media_placeholder'):picker.kind==='taxonomy'?t('content_page.search_terms_placeholder'):t('content_page.search_content_placeholder'))
 const pickerRange=computed(()=>{const total=Number(picker.pagination.total||0);if(total<=0)return t('content_page.resource_range_empty');const from=Math.min(total,picker.pagination.offset+1),to=Math.min(total,picker.pagination.offset+picker.items.length);return t('content_page.resource_range',{from,to,total})})
 const allSelected=computed(()=>items.value.length>0&&items.value.every(item=>selected.value.includes(String(item.id))))
+const workflowStatus=computed(()=>currentEditing.value?.status||statusFilter.value||'draft')
+const workflowStage=computed(()=>({draft:0,pending_review:1,approved:2,scheduled:2,published:3,archived:4}[workflowStatus.value]??0))
+const workflowCurrentLabel=computed(()=>statusLabel(workflowStatus.value))
+const workflowSeverity=computed(()=>statusSeverity(workflowStatus.value))
+const workflowSteps=computed(()=>[
+  {key:'draft',label:t('content_page.draft'),hint:t('content_page.workflow_draft_hint')},
+  {key:'pending_review',label:t('content_page.pending_review_tab'),hint:t('content_page.workflow_review_hint')},
+  {key:'approved',label:t('content_page.approved_tab'),hint:t('content_page.workflow_approval_hint')},
+  {key:'published',label:t('content_page.published'),hint:t('content_page.workflow_publish_hint')},
+  {key:'archived',label:t('content_page.archived_tab'),hint:t('content_page.workflow_archive_hint')},
+])
 function message(e){return e?.message||t('content_page.unexpected_error')}
 function clone(value){return JSON.parse(JSON.stringify(value))}
 function meaningful(value){if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.keys(value).length>0;return String(value??'').trim()!==''}
 function draftSignature(){return JSON.stringify({site_id:form.site_id,type:form.type,title:form.title,slug:form.slug,excerpt:form.excerpt,locale:form.locale,parent_id:form.parent_id,fields:clone(form.fields),metadataJson:form.metadataJson,scheduleAt:scheduleAt.value})}
 function defaultValue(field){if(field.default!==null&&field.default!==undefined)return field.default;if(field.multiple)return[];if(field.type==='boolean')return false;if(['json','group'].includes(field.type))return'{}';if(field.type==='repeater')return'[]';return''}
 function resetForm(typeKey=''){const key=typeKey||types.value[0]?.key||'post';form.site_id=1;form.type=key;form.title='';form.slug='';form.excerpt='';form.locale='fa';form.parent_id='';form.metadataJson='{}';form.fields={};const descriptor=types.value.find(item=>item.key===key);for(const field of descriptor?.fields||[])form.fields[field.key]=defaultValue(field);editingId.value=null;scheduleAt.value='';previousType.value=key;parentLabel.value='';closePicker()}
-async function loadContents(resetOffset=false){if(resetOffset)pagination.offset=0;loading.value=true;error.value='';try{const r=await contentApi.list({search:query.value,type:typeFilter.value,status:statusFilter.value,locale:localeFilter.value,limit:pagination.limit,offset:pagination.offset});items.value=r.data?.items||[];types.value=r.data?.types||types.value;Object.assign(pagination,r.data?.pagination||{});selected.value=selected.value.filter(id=>items.value.some(item=>String(item.id)===id));if(!types.value.some(item=>item.key===form.type))resetForm(types.value[0]?.key||'post')}catch(e){error.value=message(e)}finally{loading.value=false}}
+async function loadContents(resetOffset=false){if(resetOffset)pagination.offset=0;loading.value=true;error.value='';try{const r=await contentApi.list({search:query.value,type:typeFilter.value,status:statusFilter.value,locale:localeFilter.value,limit:pagination.limit,offset:pagination.offset,projection:'list'});items.value=r.data?.items||[];types.value=r.data?.types||types.value;Object.assign(pagination,r.data?.pagination||{});selected.value=selected.value.filter(id=>items.value.some(item=>String(item.id)===id));if(!types.value.some(item=>item.key===form.type))resetForm(types.value[0]?.key||'post')}catch(e){error.value=message(e)}finally{loading.value=false}}
 function moveStatusTab(event, delta) {
   const tabs = [...(event.currentTarget?.parentElement?.querySelectorAll('[role=\"tab\"]') || [])]
   if (!tabs.length) return
@@ -266,7 +310,7 @@ function moveStatusTab(event, delta) {
 }
 function setStatus(value){statusFilter.value=value;loadContents(true)}
 function applyFilters(){loadContents(true)}
-function startCreate(){if(statusFilter.value==='trash'){statusFilter.value='';notice.value=t('content_page.create_left_trash')}resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';window.scrollTo({top:0,behavior:'smooth'})}
+function startCreate(){if(!canCreate){error.value=t('state.denied_message');return}if(statusFilter.value==='trash'){statusFilter.value='';notice.value=t('content_page.create_left_trash')}resetForm(typeFilter.value||types.value[0]?.key||'post');editorOpen.value=true;error.value='';window.scrollTo({top:0,behavior:'smooth'})}
 function changeType(){
   if(editingId.value)return
   const next=form.type,previous=previousType.value||next
@@ -372,6 +416,10 @@ function normalizeField(field,value){if(field.multiple||['relation','gallery','t
 function payload(){if(!form.title.trim())throw new Error(t('content_page.title_required'));let metadata={};try{metadata=form.metadataJson.trim()?JSON.parse(form.metadataJson):{}}catch{throw new Error(t('content_page.metadata_invalid'))}const fields={};for(const field of currentFields.value){const value=form.fields[field.key];const blank=value===''||value===null||value===undefined;if(!editingId.value&&blank&&!field.required)continue;fields[field.key]=normalizeField(field,value)}return{site_id:Number(form.site_id||1),type:form.type,title:form.title.trim(),slug:form.slug.trim(),excerpt:form.excerpt,locale:form.locale.trim()||'fa',parent_id:form.parent_id?Number(form.parent_id):null,fields,metadata}}
 async function saveContent(publishAfter) {
   if (saving.value) return
+  if ((editingId.value && !canUpdate) || (!editingId.value && !canCreate) || (publishAfter && !canPublish)) {
+    error.value = t('state.denied_message')
+    return
+  }
   saving.value=true;error.value='';notice.value=''
   const submittedDraft=draftSignature()
   try {
@@ -399,6 +447,7 @@ async function saveContent(publishAfter) {
 }
 async function scheduleContent(){
   if(saving.value)return
+  if(!canPublish){error.value=t('state.denied_message');return}
   if(!editingId.value||!scheduleAt.value){error.value=t('content_page.schedule_required');return}
   saving.value=true;error.value='';notice.value=''
   const submittedDraft=draftSignature(),publishAt=new Date(scheduleAt.value).toISOString(),id=editingId.value
@@ -414,8 +463,8 @@ async function scheduleContent(){
   }catch(e){error.value=message(e)}
   finally{saving.value=false}
 }
-async function act(fn){error.value='';try{await fn();notice.value=t('content_page.operation_done');await loadContents()}catch(e){error.value=message(e)}}
-const publishContent=i=>act(()=>contentApi.publish(i.id));const restoreContent=i=>act(()=>contentApi.restore(i.id));const trashContent=i=>{if(!confirm(t('content_page.trash_confirm')))return;return act(()=>contentApi.trash(i.id))}
+async function act(fn,noticeKey='operation_done'){error.value='';try{await fn();notice.value=t(`content_page.${noticeKey}`);await loadContents()}catch(e){error.value=message(e)}}
+const publishContent=i=>act(()=>contentApi.publish(i.id),'published_notice');const submitReviewContent=i=>act(()=>contentApi.submitReview(i.id),'submitted_notice');const approveContent=i=>act(()=>contentApi.approve(i.id),'approved_notice');const archiveContent=i=>act(()=>contentApi.archive(i.id),'archived_notice');const restoreContent=i=>act(()=>contentApi.restore(i.id),'restored_notice');const trashContent=i=>{if(!confirm(t('content_page.trash_confirm')))return;return act(()=>contentApi.trash(i.id))}
 function openHistory(item){const base=window.location.pathname.replace(/\/content\/?$/,'');window.history.pushState({},'',`${base}/revisions?content=${encodeURIComponent(item.id)}`);window.dispatchEvent(new PopStateEvent('popstate'))}
 function toggleSelected(id){if(bulkBusy.value)return;const value=String(id);selected.value=selected.value.includes(value)?selected.value.filter(v=>v!==value):[...selected.value,value]}
 function toggleAll(){if(bulkBusy.value)return;selected.value=allSelected.value?[]:items.value.map(item=>String(item.id))}
@@ -423,7 +472,8 @@ async function runBulk() {
   if(bulkBusy.value)return
   const action=bulkAction.value
   const ids=[...new Set(selected.value)]
-  if(!['publish','restore','trash'].includes(action)||!ids.length)return
+  if(!['publish','submit-review','approve','archive','restore','trash'].includes(action)||!ids.length)return
+  if(!bulkAllowed.value){error.value=t('state.denied_message');return}
   if(!confirm(t('content_page.bulk_confirm',{count:ids.length})))return
   bulkBusy.value=true;error.value='';notice.value=''
   const completed=new Set()
@@ -431,6 +481,9 @@ async function runBulk() {
   try {
     for(const id of ids) {
       if(action==='publish')await contentApi.publish(id)
+      else if(action==='submit-review')await contentApi.submitReview(id)
+      else if(action==='approve')await contentApi.approve(id)
+      else if(action==='archive')await contentApi.archive(id)
       else if(action==='restore')await contentApi.restore(id)
       else await contentApi.trash(id)
       completed.add(id)
@@ -449,11 +502,32 @@ function nextPage(){if(!pagination.has_more)return;pagination.offset+=pagination
 function prevPage(){if(pagination.offset<=0)return;pagination.offset=Math.max(0,pagination.offset-pagination.limit);loadContents()}
 function typeLabel(key){const type=types.value.find(item=>item.key===key);return type?.singular_label||type?.label||key||'—'}
 function statusCount(v){return items.value.filter(item=>item.status===v).length}
-function statusLabel(v){return({draft:t('content_page.draft'),scheduled:t('content_page.scheduled_full'),published:t('content_page.published'),trash:t('content_page.trash_short')})[v]||v||t('content_page.unknown')}
-function statusSeverity(v){if(v==='published')return'success';if(v==='scheduled')return'info';if(v==='trash')return'danger';return'secondary'}
+function statusLabel(v){return({draft:t('content_page.draft'),pending_review:t('content_page.pending_review'),approved:t('content_page.approved'),scheduled:t('content_page.scheduled_full'),published:t('content_page.published'),archived:t('content_page.archived'),trash:t('content_page.trash_short')})[v]||v||t('content_page.unknown')}
+function statusSeverity(v){if(v==='published')return'success';if(v==='approved'||v==='scheduled')return'info';if(v==='pending_review')return'warning';if(v==='trash')return'danger';return'secondary'}
 onMounted(async()=>{resetForm();await loadContents()})
 </script>
 
 <style scoped>
 .cms-content-tabs{display:flex;gap:.45rem;overflow:auto;padding:.1rem 0 .4rem}.cms-content-tab{border:1px solid var(--p-surface-300);border-radius:999px;background:transparent;padding:.55rem .8rem;white-space:nowrap;cursor:pointer}.cms-content-tab[data-active="true"]{background:var(--p-primary-color);border-color:var(--p-primary-color);color:#fff}.cms-content-editor{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.75fr);gap:1rem}.cms-content-editor__main,.cms-content-editor__side{display:grid;gap:.8rem;align-content:start}.cms-content-field{padding:.8rem;border:1px solid var(--p-surface-200);border-radius:.75rem;display:grid;gap:.7rem}.cms-content-field__label{display:grid;gap:.2rem}.cms-content-field__technical{font-size:.78rem;opacity:.72}.cms-content-field__technical summary{cursor:pointer}.cms-richtext{border:1px solid var(--p-surface-300);border-radius:.75rem;overflow:hidden}.cms-richtext__toolbar{display:flex;gap:.3rem;flex-wrap:wrap;padding:.45rem;border-bottom:1px solid var(--p-surface-200);background:var(--p-surface-50)}.cms-richtext__toolbar button{min-width:42px;min-height:40px;border:1px solid var(--p-surface-300);border-radius:.55rem;background:var(--p-surface-0);color:inherit;cursor:pointer}.cms-richtext__editor{min-height:220px;padding:.8rem;outline:none;line-height:1.8}.cms-richtext__editor:focus{box-shadow:inset 0 0 0 2px var(--p-primary-color)}.cms-richtext__editor img{max-width:100%;height:auto}.cms-resource-value{display:grid;gap:.55rem}.cms-resource-chips{display:flex;gap:.45rem;flex-wrap:wrap}.cms-resource-chip{display:inline-flex;gap:.4rem;align-items:center;min-height:38px;padding:.3rem .55rem;border:1px solid var(--p-surface-300);border-radius:999px;background:var(--p-surface-50)}.cms-resource-chip img{width:30px;height:30px;object-fit:cover;border-radius:50%}.cms-resource-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:1.1rem}.cms-resource-picker__toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.6rem;align-items:end}.cms-resource-picker__toolbar label{display:grid;gap:.35rem}.cms-resource-picker__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.65rem;margin:.8rem 0}.cms-resource-picker__item{min-height:72px;display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.55rem;border:1px solid var(--p-surface-200);border-radius:.75rem;background:var(--p-surface-0);color:inherit;text-align:start;cursor:pointer}.cms-resource-picker__item[data-selected="true"]{border-color:var(--p-primary-color);box-shadow:0 0 0 1px var(--p-primary-color)}.cms-resource-picker__item img{width:54px;height:54px;object-fit:cover;border-radius:.55rem}.cms-resource-picker__item>span{display:grid;gap:.2rem;min-width:0}.cms-resource-picker__item small{opacity:.68;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cms-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.cms-content-advanced{padding:.75rem;border:1px solid var(--p-surface-200);border-radius:.75rem}.cms-content-advanced summary{cursor:pointer;font-weight:650}.cms-content-advanced label{display:grid;gap:.45rem;margin-top:.7rem}.cms-schedule-field{display:grid;gap:.45rem;margin-top:.8rem}.cms-content-filters{grid-template-columns:minmax(220px,1fr) 180px 120px auto}.cms-content-bulk{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.8rem 0;padding:.7rem;border:1px dashed var(--p-surface-300);border-radius:.75rem}.cms-check-input{width:1.2rem;height:1.2rem}.cms-table-subline{display:block;opacity:.65;margin-top:.2rem}.cms-content-pagination{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.8rem}.cms-control-form--single{grid-template-columns:1fr}@media(max-width:900px){.cms-content-editor{grid-template-columns:1fr}.cms-content-filters{grid-template-columns:1fr 1fr}}@media(max-width:600px){.cms-content-filters,.cms-resource-picker__toolbar{grid-template-columns:1fr}.cms-resource-picker__item{grid-template-columns:48px minmax(0,1fr)}.cms-resource-picker__item>.l-badge{grid-column:1 / -1}.cms-richtext__toolbar button{flex:1 1 42px}}
+.cms-public-url{display:grid;gap:.35rem;padding:.7rem;border:1px solid var(--p-primary-color);border-radius:.7rem;background:var(--p-primary-50,#f0f6ff);overflow-wrap:anywhere}.cms-public-url a,.cms-public-link{color:var(--p-primary-color);font-weight:650;text-decoration:underline;overflow-wrap:anywhere}.cms-public-link{display:inline-block;margin-top:.3rem}
+</style>
+
+<style scoped>
+.cms-editorial-workflow{display:grid;gap:1rem;padding:1rem;border:1px solid var(--p-surface-200);border-radius:1rem;background:linear-gradient(135deg,var(--p-surface-0),var(--p-surface-50))}
+.cms-editorial-workflow__header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.cms-editorial-workflow h2{margin:0;font-size:1.05rem}
+.cms-editorial-workflow p{margin:.3rem 0 0;max-width:70ch}
+.cms-editorial-workflow__current{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
+.cms-editorial-workflow__steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.65rem;list-style:none;margin:0;padding:0}
+.cms-editorial-workflow__step{position:relative;display:grid;gap:.3rem;min-height:5.5rem;padding:.7rem;border:1px solid var(--p-surface-200);border-radius:.75rem;background:var(--p-surface-0);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.cms-editorial-workflow__step-number{display:grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:50%;background:var(--p-surface-200);font-weight:750}
+.cms-editorial-workflow__step strong{font-size:.9rem}
+.cms-editorial-workflow__step small{color:var(--p-text-muted-color);line-height:1.5}
+.cms-editorial-workflow__step[data-state="complete"]{border-color:var(--p-primary-color);background:var(--p-primary-50,#f0f6ff)}
+.cms-editorial-workflow__step[data-state="complete"] .cms-editorial-workflow__step-number{background:var(--p-primary-color);color:#fff}
+.cms-editorial-workflow__step[data-state="current"]{border-color:var(--p-primary-color);box-shadow:0 0 0 2px color-mix(in srgb,var(--p-primary-color) 20%,transparent);}
+.cms-editorial-workflow__step[data-state="current"] .cms-editorial-workflow__step-number{background:var(--p-primary-color);color:#fff}
+@media(max-width:900px){.cms-editorial-workflow__steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.cms-editorial-workflow{padding:.8rem}.cms-editorial-workflow__header{display:grid}.cms-editorial-workflow__current{justify-content:flex-start}.cms-editorial-workflow__steps{grid-template-columns:1fr 1fr}.cms-editorial-workflow__step{min-height:0}.cms-editorial-workflow__step small{font-size:.78rem}}
+@media(prefers-reduced-motion:reduce){.cms-editorial-workflow__step{transition:none}}
 </style>

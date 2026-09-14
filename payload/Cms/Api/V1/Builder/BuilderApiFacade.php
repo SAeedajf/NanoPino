@@ -8,6 +8,7 @@ use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentValidationException;
 use App\com_pinoox_cms\Cms\Block\Render\BlockRenderContext;
 use App\com_pinoox_cms\Cms\Builder\BuilderConcurrencyException;
 use App\com_pinoox_cms\Cms\Builder\BuilderDocumentRecord;
+use App\com_pinoox_cms\Cms\Builder\BuilderDocumentSummary;
 use App\com_pinoox_cms\Cms\Builder\BuilderService;
 use App\com_pinoox_cms\Cms\Builder\BuilderTarget;
 use App\com_pinoox_cms\Cms\Builder\BuilderTargetType;
@@ -48,10 +49,19 @@ final readonly class BuilderApiFacade
 
             $limit = max(1, min(200, (int)($query['limit'] ?? 100)));
             $offset = max(0, (int)($query['offset'] ?? 0));
-            $items = $this->builder->listDocuments($siteId, $type, $locale !== '' ? $locale : null, $limit, $offset, $actorId);
+            $projection = trim((string)($query['projection'] ?? 'full'));
+            if (!in_array($projection, ['full', 'summary'], true)) {
+                throw new InvalidArgumentException('Invalid Builder list projection.');
+            }
+
+            $items = $projection === 'summary'
+                ? $this->builder->listDocumentSummaries($siteId, $type, $locale !== '' ? $locale : null, $limit, $offset, $actorId)
+                : $this->builder->listDocuments($siteId, $type, $locale !== '' ? $locale : null, $limit, $offset, $actorId);
             $total = $this->builder->countDocuments($siteId, $type, $locale !== '' ? $locale : null, $actorId);
 
-            $rows = array_map(fn (BuilderDocumentRecord $record): array => $this->record($record), $items);
+            $rows = $projection === 'summary'
+                ? array_map(fn (BuilderDocumentSummary $record): array => $this->summaryRecord($record), $items)
+                : array_map(fn (BuilderDocumentRecord $record): array => $this->record($record), $items);
             $status = [];
             foreach ($rows as $row) {
                 $key = (string)($row['status'] ?? 'unknown');
@@ -72,6 +82,7 @@ final readonly class BuilderApiFacade
                     'total' => $total,
                     'has_more' => $offset + count($rows) < $total,
                 ],
+                'projection' => $projection,
             ]]);
         });
     }
@@ -343,6 +354,26 @@ final readonly class BuilderApiFacade
             ],
             'status' => $record->status->value,
             'document' => $record->document->toArray(),
+            'checksum' => $record->checksum,
+            'version' => $record->version,
+            'published_at' => $record->publishedAt,
+            'created_at' => $record->createdAt,
+            'updated_at' => $record->updatedAt,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function summaryRecord(BuilderDocumentSummary $record): array
+    {
+        return [
+            'id' => $record->id,
+            'target' => [
+                'site_id' => $record->target->siteId,
+                'type' => $record->target->type->value,
+                'key' => $record->target->key,
+                'locale' => $record->target->locale,
+            ],
+            'status' => $record->status->value,
             'checksum' => $record->checksum,
             'version' => $record->version,
             'published_at' => $record->publishedAt,

@@ -15,7 +15,7 @@ final readonly class PackageTrustReport
         public array $warnings = [],
     ) {}
 
-    public function canProceed(bool $requireSignature = false): bool
+    public function canProceed(bool $requireSignature = true): bool
     {
         if ($this->level === PackageTrustLevel::Failed || !$this->integrityVerified) {
             return false;

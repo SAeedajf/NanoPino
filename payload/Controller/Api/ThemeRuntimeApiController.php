@@ -9,6 +9,7 @@ use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePattern;
 use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePatternLoader;
 use App\com_pinoox_cms\Cms\Theme\PinooxNativeThemeGateway;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
+use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
 use Pinoox\Component\Http\JsonResponse;
@@ -128,7 +129,7 @@ final class ThemeRuntimeApiController extends ApiController
         }
     }
 
-    private function requestPayload(Request $r):array{try{$d=$r->toArray();}catch(\Throwable){$d=[];}return is_array($d)?$d:[];}
+    private function requestPayload(Request $r):array{return CmsRequestPayload::read($r);}
     private function reason(\Throwable $e):string{
         $m=trim($e->getMessage());
         if($m===''||str_contains($m,'/')||str_contains($m,'\\'))return'See CMS audit/logs for internal details.';

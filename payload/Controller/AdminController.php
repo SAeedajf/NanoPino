@@ -17,6 +17,7 @@ use App\com_pinoox_cms\Cms\Authorization\AuthorizationRequest;
 use App\com_pinoox_cms\Cms\Authorization\SingleSiteScopeGuard;
 use App\com_pinoox_cms\Cms\Authorization\PinooxAccessGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityRepository;
+use App\com_pinoox_cms\Cms\Identity\PinooxEffectiveIdentity;
 use App\com_pinoox_cms\Cms\Audit\PinooxAuditRepository;
 use Pinoox\Component\Kernel\Controller\Controller;
 use Pinoox\Component\Http\Request;
@@ -49,6 +50,7 @@ use App\com_pinoox_cms\Cms\Runtime\RuntimeBindingState;
 use App\com_pinoox_cms\Cms\Security\RateLimit\CoreRateLimitProfiles;
 use App\com_pinoox_cms\Cms\Security\Http\CoreApiSecurityMatrix;
 use App\com_pinoox_cms\Cms\Driver\DriverDefinition;
+use App\com_pinoox_cms\Cms\Sdk\Package\SdkStarterCatalog;
 
 final class AdminController extends Controller
 {
@@ -65,10 +67,10 @@ final class AdminController extends Controller
             return $adminResponses->failure($adminFrontend);
         }
 
-        $cspPolicy = new CspPolicy();
+        $cspPolicy = CspPolicy::fromEnvironment();
         $cspNonce = $cspPolicy->nonce();
         $request->attributes->set('cms_csp_nonce', $cspNonce);
-        RuntimeBindingState::setCsp(false);
+        RuntimeBindingState::setCsp($cspPolicy->isEnforced());
 
         $kernel = CmsKernel::instance();
 
@@ -142,7 +144,11 @@ final class AdminController extends Controller
 
         $identity = new PinooxIdentityRepository();
         try {
-            $currentUser = $identity->currentUser();
+            $currentUser = PinooxEffectiveIdentity::withEffectiveAbilities(
+                $identity->currentUser(),
+                $kernel->capabilities,
+                $authorization,
+            );
             $users = $authorization->can(new AuthorizationRequest('users.read'))
                 ? $identity->users(100)
                 : [];
@@ -342,6 +348,10 @@ final class AdminController extends Controller
             $runtimeKernel->version,
         );
 
+        // Keep the manager's health snapshot aligned with the Extension
+        // Center catalog before binding the extension count check.
+        CmsRuntimeServices::syncInstalledExtensions();
+
         try {
             $cmsStoragePath = rtrim(SystemConfig::path('storage'), '/\\') . '/cms';
         } catch (\Throwable) {
@@ -386,15 +396,18 @@ final class AdminController extends Controller
 
         $platformSuperReadiness = (new PlatformSuperTransitionReadiness())->inspect();
 
+        $searchDriver = CmsRuntimeServices::searchDriver();
+        $remoteSearchConfigured = CmsRuntimeServices::remoteSearchConfiguration() !== null;
         $securityRuntimeState=new SecurityRuntimeState(
             csrfVerifierBound:RuntimeBindingState::csrf()&&$csrfToken!==null,
             rateLimitsRegistered:RuntimeBindingState::rateLimits(),
             securityHeadersBound:RuntimeBindingState::headers(),
-            ssrfTransportBound:(CmsRuntimeServices::searchDriver() && RuntimeBindingState::ssrf()),
+            ssrfTransportBound:($searchDriver instanceof \App\com_pinoox_cms\Cms\Search\MeilisearchSearchDriver || $searchDriver instanceof \App\com_pinoox_cms\Cms\Search\TypesenseSearchDriver) && RuntimeBindingState::ssrf(),
             publicApiSecurityBound:RuntimeBindingState::api(),
             cspEnforced:RuntimeBindingState::csp(),
             implicitPlatformSuperEnabled:(bool)$platformSuperReadiness['platform_super'],
             explicitPlatformSuperReady:(bool)$platformSuperReadiness['ready'],
+            ssrfGuardReady:(!$remoteSearchConfigured || RuntimeBindingState::ssrf()),
         );
         $securityPosture=(new SecurityPostureService($securityRuntimeState))->report()->toArray();
         $securityRateLimits = array_map(
@@ -491,6 +504,7 @@ final class AdminController extends Controller
                     ],
                     'manifest' => $manifestData,
                     'mountPath' => $adminMountPath,
+                    'publicSiteUrl' => AdminRuntimeUrl::appPath('/site', $adminMountPath),
                     'apiBase' => $runtimeApiBase,
                     'telemetry' => $telemetry,
                     'frontend' => $adminFrontend->toArray(),
@@ -605,7 +619,7 @@ final class AdminController extends Controller
                                 'onRoute','onApi','onPath','onAction','onController','onModel','onTheme',
                             ],
                             'apiBase' => '/api/v1/extensions/{package}',
-                            'starters' => [],
+                            'starters' => SdkStarterCatalog::all(),
                             'packageValidator' => true,
                             'testHarness' => true,
                             'coreEdits' => false,
@@ -665,6 +679,7 @@ final class AdminController extends Controller
                             'csrfBound' => $securityRuntimeState->csrfVerifierBound,
                             'rateLimitsRegistered' => $securityRuntimeState->rateLimitsRegistered,
                             'ssrfTransportBound' => $securityRuntimeState->ssrfTransportBound,
+                            'ssrfGuardReady' => $securityRuntimeState->ssrfGuardReady,
                             'rateLimits' => $securityRateLimits,
                             'apiMatrix' => $apiSecurityMatrix,
                             'platformSuperTransition' => $platformSuperReadiness,
@@ -677,6 +692,7 @@ final class AdminController extends Controller
                         'roles' => $roles,
                         'roleTemplates' => $roleTemplates,
                         'currentUser' => $currentUser,
+                        'authState' => $runtimeActorId !== null ? 'authenticated' : 'anonymous',
                         'settingDefinitions' => $settingDefinitions,
                         'runtimeApi' => [
                             'bound' => RuntimeBindingState::api(),

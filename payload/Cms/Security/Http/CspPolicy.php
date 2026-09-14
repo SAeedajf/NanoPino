@@ -13,6 +13,23 @@ final readonly class CspPolicy
         public array $extraDirectives = [],
     ) {}
 
+    public static function fromEnvironment(): self
+    {
+        $mode = getenv('PINOOX_CMS_CSP_MODE');
+        $reportOnly = is_string($mode) && in_array(
+            strtolower(trim($mode)),
+            ['report-only', '0', 'false', 'off'],
+            true,
+        );
+
+        return new self(reportOnly: $reportOnly);
+    }
+
+    public function isEnforced(): bool
+    {
+        return !$this->reportOnly;
+    }
+
     public function nonce(): string
     {
         return rtrim(strtr(base64_encode(random_bytes(18)), '+/', '-_'), '=');

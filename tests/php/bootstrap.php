@@ -3,6 +3,17 @@ declare(strict_types=1);
 
 const NANOPINO_ROOT = __DIR__ . '/../..';
 
+// The extracted repository test harness does not boot the full Pinoox runtime.
+// Provide the native env() contract with deterministic process-environment
+// semantics so package metadata tests exercise the real payload classes.
+if (!function_exists('env')) {
+    function env(string $key, mixed $default = null): mixed
+    {
+        $value = getenv($key);
+        return $value === false ? $default : $value;
+    }
+}
+
 spl_autoload_register(static function (string $class): void {
     $prefix = 'App\\com_pinoox_cms\\';
     if (!str_starts_with($class, $prefix)) {

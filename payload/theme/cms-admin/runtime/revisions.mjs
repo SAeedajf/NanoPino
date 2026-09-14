@@ -1,7 +1,7 @@
 import { api, ui, input, message, confirmFa, routeButton, tr } from './common.mjs'
 
 function validId(value){const id=Number(value);return Number.isSafeInteger(id)&&id>0?String(id):''}
-function kindLabel(kind){return ({initial:tr('revisions_page.kind_initial'),manual:tr('revisions_page.kind_manual'),autosave:tr('revisions_page.kind_autosave'),published:tr('revisions_page.kind_published'),scheduled:tr('revisions_page.kind_scheduled'),pre_restore:tr('revisions_page.kind_pre_restore'),restored:tr('revisions_page.kind_restored')})[kind]||kind}
+function kindLabel(kind){return ({initial:tr('revisions_page.kind_initial'),manual:tr('revisions_page.kind_manual'),autosave:tr('revisions_page.kind_autosave'),submitted:tr('revisions_page.kind_submitted'),approved:tr('revisions_page.kind_approved'),published:tr('revisions_page.kind_published'),scheduled:tr('revisions_page.kind_scheduled'),archived:tr('revisions_page.kind_archived'),pre_restore:tr('revisions_page.kind_pre_restore'),restored:tr('revisions_page.kind_restored')})[kind]||kind}
 function kindSeverity(kind){return kind==='published'||kind==='restored'?'success':kind==='autosave'?'info':kind==='pre_restore'?'warning':'secondary'}
 function formatted(value){if(!value)return'—';try{return new Date(value).toLocaleString()}catch{return String(value)}}
 function displayValue(value){if(value===undefined)return'—';if(value===null)return'null';const text=typeof value==='string'?value:JSON.stringify(value,null,2);return String(text).length>700?String(text).slice(0,700)+'…':String(text)}

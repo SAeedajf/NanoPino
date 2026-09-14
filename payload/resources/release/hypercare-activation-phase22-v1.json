@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "phase": 22,
+  "name": "NanoPino On-call, Monitoring and Hypercare Activation",
+  "release": {
+    "package": "com_pinoox_cms",
+    "version": "0.23.72",
+    "version_code": 2372,
+    "artifact": "releases/NanoPino-0.23.72-phase22-canary-observation.pinx"
+  },
+  "activation": {
+    "status": "source_operational_bundle_ready",
+    "target": "https://test.boxpdf.ir",
+    "target_mutations_executed": false,
+    "authenticated_monitoring_executed": false,
+    "on_call_owner_assigned": false,
+    "alert_channel_connected": false,
+    "hypercare_window_hours": 48,
+    "monitor_cadence_seconds": 60,
+    "minimum_canary_window_seconds": 300,
+    "minimum_canary_samples": 20
+  },
+  "monitor": {
+    "script": "tools/live/monitor-nanopino-hypercare.sh",
+    "method": "GET",
+    "external_alert_delivery": "scheduler_owned",
+    "probes": [
+      {"name": "manager", "path": "/manager/", "expected": [200]},
+      {"name": "public_site", "path": "/qwe/site", "expected": [200]},
+      {"name": "private_dashboard", "path": "/qwe", "expected": [401, 403]},
+      {"name": "private_health", "path": "/qwe/api/v1/cms/system/health", "expected": [401, 403]}
+    ],
+    "required_public_headers": [
+      "content-security-policy",
+      "strict-transport-security",
+      "referrer-policy",
+      "permissions-policy",
+      "cross-origin-opener-policy",
+      "cross-origin-resource-policy",
+      "x-content-type-options",
+      "x-frame-options"
+    ]
+  },
+  "support": {
+    "severity_policy": "docs/deployment/canary-stable-support.md",
+    "incident_runbook": "docs/deployment/canary-stable-support.md",
+    "rollback_runbook": "docs/migration/upgrade-rollback.md",
+    "customer_communication": "pending_owner_approval",
+    "close_conditions": [
+      "final health snapshot recorded",
+      "open incidents reviewed",
+      "rollback disposition recorded",
+      "customer communication status recorded",
+      "release hash preserved with evidence"
+    ]
+  },
+  "open_actions": [
+    "assign a named primary and secondary on-call owner",
+    "connect an approved scheduler and alert destination",
+    "run authenticated monitoring on the target",
+    "record the Canary observation window and incident timeline",
+    "obtain explicit Stable approval after Canary closure"
+  ]
+}

@@ -9,17 +9,20 @@ final class PinooxDatabaseSearchDriver implements SearchDriverInterface
 {
     private const TABLE = 'search_documents';
 
+    /** @var list<string> Columns required to materialize a search hit. */
+    private const HIT_COLUMNS = [
+        'document_id',
+        'document_type',
+        'title',
+        'url',
+        'metadata_json',
+    ];
+
     public function id(): string { return 'database'; }
 
     public function index(SearchDocument $document): void
     {
         CmsDatabase::transaction(function () use ($document): void {
-            $query = CmsDatabase::table(self::TABLE)
-                ->where('site_id',$document->siteId)
-                ->where('document_type',$document->type)
-                ->where('document_id',$document->id)
-                ->where('locale',$document->locale);
-
             $payload=[
                 'site_id'=>$document->siteId,
                 'document_type'=>$document->type,
@@ -37,14 +40,15 @@ final class PinooxDatabaseSearchDriver implements SearchDriverInterface
                     : null,
                 'updated_at'=>gmdate('Y-m-d H:i:s'),
             ];
-
-            if ($query->exists()) {
-                $query->update($payload);
-                return;
-            }
-
             $payload['created_at']=gmdate('Y-m-d H:i:s');
-            CmsDatabase::table(self::TABLE)->insert($payload);
+            // The unique key is the final authority for an index document.
+            // An atomic upsert avoids the exists-then-insert race that could
+            // otherwise turn concurrent indexing into a duplicate-key error.
+            CmsDatabase::table(self::TABLE)->upsert(
+                [$payload],
+                ['site_id','document_type','document_id','locale'],
+                ['title','search_text','url','metadata_json','source_updated_at','updated_at'],
+            );
         });
     }
 
@@ -82,7 +86,12 @@ final class PinooxDatabaseSearchDriver implements SearchDriverInterface
         $total=(clone $builder)->count();
 
         $rows=$builder
+            // Search documents can contain large normalized text and metadata.
+            // Keep the result projection narrow so list/search requests do not
+            // transfer the full index row for every hit.
+            ->select(self::HIT_COLUMNS)
             ->orderByDesc('updated_at')
+            ->orderByDesc('id')
             ->offset($query->offset)
             ->limit($query->limit)
             ->get();

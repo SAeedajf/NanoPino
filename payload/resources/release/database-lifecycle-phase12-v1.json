@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "name": "NanoPino Database Lifecycle and Real Migration gate",
+  "captured_at": "2026-09-12T17:56:00Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "package_connection": "native platform; local DevDB/SQLite override only for local test runtime",
+    "production_database_boundary": "MySQL/MariaDB with InnoDB",
+    "local_sqlite_preflight": "enabled only for local/development/test or PINOOX_TESTING",
+    "owned_cms_tables": 16,
+    "logical_table_prefix": "cms_",
+    "repair_migrations": "idempotent and legacy-prefix preserving",
+    "uninstall_guard": "rollback transaction plus owned-table deletion guard"
+  },
+  "isolated_devdb": {
+    "fresh_install": "passed",
+    "connection_driver": "sqlite",
+    "table_prefix": "cms_",
+    "native_platform_tables_retained": true,
+    "noop_update": "passed",
+    "sentinel_preserved": true,
+    "reset_rollback": "passed",
+    "owned_cms_tables_after_reset": 0
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "database_health": "read-only health/database connectivity observed in Phase 10",
+    "live_migration": "not executed",
+    "schema_parity": "unverified",
+    "reason": "No approved live backup/mutation authority and authenticated update transport remains unavailable"
+  },
+  "gate": {
+    "source_contracts": true,
+    "isolated_real_lifecycle": true,
+    "target_migration": false,
+    "production_ready": false
+  }
+}

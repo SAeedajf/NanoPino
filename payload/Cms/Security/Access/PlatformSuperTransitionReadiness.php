@@ -9,7 +9,7 @@ use Pinoox\Support\Platform;
 
 final class PlatformSuperTransitionReadiness
 {
-    /** @return array{platform_super:bool,total_platform_accounts:int,explicit_super_accounts:int,implicit_only_accounts:int,ready:bool,error:?string} */
+    /** @return array{platform_super:bool,total_platform_accounts:int,explicit_super_accounts:int,implicit_only_accounts:int,ready:bool,cutover_complete:bool,error:?string} */
     public function inspect(): array
     {
         try {
@@ -46,13 +46,18 @@ final class PlatformSuperTransitionReadiness
 
             $total = (int)$users->count();
             $platformSuper = (bool)($config['platform_super'] ?? true);
+            $roleCoverageReady = $total > 0 && $implicitOnly === 0 && $explicit > 0;
 
             return [
                 'platform_super' => $platformSuper,
                 'total_platform_accounts' => $total,
                 'explicit_super_accounts' => $explicit,
                 'implicit_only_accounts' => $implicitOnly,
-                'ready' => $platformSuper && $total > 0 && $implicitOnly === 0 && $explicit > 0,
+                // `ready` means the system can safely perform the cutover while
+                // implicit access is still enabled. Once cut over, expose a
+                // separate terminal state instead of reporting a false warning.
+                'ready' => $platformSuper && $roleCoverageReady,
+                'cutover_complete' => !$platformSuper && $roleCoverageReady,
                 'error' => null,
             ];
         } catch (\Throwable $error) {
@@ -62,6 +67,7 @@ final class PlatformSuperTransitionReadiness
                 'explicit_super_accounts' => 0,
                 'implicit_only_accounts' => 0,
                 'ready' => false,
+                'cutover_complete' => false,
                 'error' => $error->getMessage(),
             ];
         }

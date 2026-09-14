@@ -5,11 +5,14 @@ namespace App\com_pinoox_cms\Controller\Api;
 
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
 use App\com_pinoox_cms\Cms\Content\ContentProjection;
+use App\com_pinoox_cms\Cms\Content\ContentConflictException;
 use App\com_pinoox_cms\Cms\Content\ContentQuery;
 use App\com_pinoox_cms\Cms\Content\ContentStatus;
 use App\com_pinoox_cms\Cms\Content\ContentValidationException;
 use App\com_pinoox_cms\Cms\Field\FieldValidationException;
+use App\com_pinoox_cms\Cms\PublicSite\PublicContentUrl;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
+use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use Pinoox\Component\Http\JsonResponse;
@@ -87,7 +90,7 @@ final class ContentRuntimeApiController extends ApiController
             $items = $hasMore ? array_slice($fetched, 0, $limit) : $fetched;
 
             return CmsApiResponse::ok([
-                'items' => array_map(static fn ($item): array => $item->toArray(), $items),
+                'items' => array_map(fn ($item): array => $this->recordPayload($item), $items),
                 'types' => $this->contentTypeDescriptors(),
                 'projection' => $projection->value,
                 'pagination' => [
@@ -134,7 +137,7 @@ final class ContentRuntimeApiController extends ApiController
         try {
             $record = CmsRuntimeServices::content()->find($this->id($id), CmsRuntimeServices::actorId());
             return $record
-                ? CmsApiResponse::ok($record->toArray())
+                ? CmsApiResponse::ok($this->recordPayload($record))
                 : CmsApiResponse::error('CONTENT_NOT_FOUND', 'Content not found.', 404);
         } catch (AuthorizationDeniedException) {
             return CmsApiResponse::error('FORBIDDEN', 'Content access is not permitted.', 403);
@@ -173,9 +176,40 @@ final class ContentRuntimeApiController extends ApiController
         );
     }
 
+    public function submitReview(string $id): JsonResponse
+    {
+        return $this->mutation(
+            fn () => CmsRuntimeServices::content()->submitForReview($this->id($id), CmsRuntimeServices::actorId()),
+            200,
+            'content.submit_review',
+        );
+    }
+
+    public function approve(string $id): JsonResponse
+    {
+        return $this->mutation(
+            fn () => CmsRuntimeServices::content()->approve($this->id($id), CmsRuntimeServices::actorId()),
+            200,
+            'content.approve',
+        );
+    }
+
+    public function archive(string $id): JsonResponse
+    {
+        return $this->mutation(
+            fn () => CmsRuntimeServices::content()->archive($this->id($id), CmsRuntimeServices::actorId()),
+            200,
+            'content.archive',
+        );
+    }
+
     public function schedule(Request $request, string $id): JsonResponse
     {
-        $data = $this->requestPayload($request);
+        try {
+            $data = $this->requestPayload($request);
+        } catch (\InvalidArgumentException $e) {
+            return CmsApiResponse::error('CONTENT_VALIDATION_FAILED', $e->getMessage(), 422);
+        }
         return $this->mutation(
             fn () => CmsRuntimeServices::content()->schedule(
                 $this->id($id),
@@ -208,7 +242,7 @@ final class ContentRuntimeApiController extends ApiController
     public function revisions(string $id): JsonResponse
     {
         try {
-            $items = CmsRuntimeServices::revisions()->history(
+            $items = CmsRuntimeServices::revisions()->historySummary(
                 $this->id($id),
                 CmsRuntimeServices::actorId(),
                 100,
@@ -355,9 +389,13 @@ final class ContentRuntimeApiController extends ApiController
     {
         try {
             $record = $callback();
-            return CmsApiResponse::ok($record->toArray(), $status);
+            return CmsApiResponse::ok($this->recordPayload($record), $status);
         } catch (AuthorizationDeniedException) {
             return CmsApiResponse::error('FORBIDDEN', 'Content mutation is not permitted.', 403);
+        } catch (ContentConflictException $e) {
+            return CmsApiResponse::error('CONTENT_SLUG_CONFLICT', $e->getMessage(), 409);
+        } catch (\LogicException $e) {
+            return CmsApiResponse::error('CONTENT_TRANSITION_INVALID', $e->getMessage(), 409);
         } catch (ContentValidationException|FieldValidationException|\InvalidArgumentException $e) {
             $notFound = str_contains(strtolower($e->getMessage()), 'not found');
             return CmsApiResponse::error(
@@ -385,13 +423,16 @@ final class ContentRuntimeApiController extends ApiController
     }
 
     /** @return array<string,mixed> */
+    private function recordPayload($record): array
+    {
+        $payload = $record->toArray();
+        $payload['public_url'] = PublicContentUrl::path($record);
+        return $payload;
+    }
+
+    /** @return array<string,mixed> */
     private function requestPayload(Request $request): array
     {
-        try {
-            $data = $request->toArray();
-        } catch (\Throwable) {
-            $data = [];
-        }
-        return is_array($data) ? $data : [];
+        return CmsRequestPayload::read($request);
     }
 }

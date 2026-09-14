@@ -5,10 +5,14 @@ namespace App\com_pinoox_cms\Cms\Security\Http;
 
 final readonly class SecurityHeadersPolicy
 {
-    public function __construct(
-        private CspPolicy $csp = new CspPolicy(),
-        private bool $hsts = true,
-    ) {}
+    private CspPolicy $csp;
+    private bool $hsts;
+
+    public function __construct(?CspPolicy $csp = null, bool $hsts = true)
+    {
+        $this->csp = $csp ?? CspPolicy::fromEnvironment();
+        $this->hsts = $hsts;
+    }
 
     /** @return array<string,string> */
     public function headers(string $nonce, bool $https): array

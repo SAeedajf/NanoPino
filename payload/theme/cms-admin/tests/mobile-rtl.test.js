@@ -15,3 +15,8 @@ test('Admin styles include mobile-first breakpoints and logical sizing', () => {
 test('Admin styles include reduced-motion accessibility handling', () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
 })
+
+test('Admin controls preserve zoom, text scaling and 44px interactive targets', () => {
+  assert.match(css, /text-size-adjust:\s*100%/)
+  assert.match(css, /:where\(button, \[role='button'\]\)\s*\{[\s\S]*min-block-size:\s*var\(--cms-touch-target\)/)
+})

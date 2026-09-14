@@ -15,6 +15,7 @@ use App\com_pinoox_cms\Cms\Builder\Revision\BuilderRevisionRecord;
 use App\com_pinoox_cms\Cms\Builder\Revision\BuilderRevisionRepositoryInterface;
 use App\com_pinoox_cms\Cms\Builder\Transaction\BuilderTransactionInterface;
 use App\com_pinoox_cms\Cms\Builder\Transaction\DirectBuilderTransaction;
+use App\com_pinoox_cms\Cms\Cache\PublicRenderCacheInvalidator;
 
 final class BuilderService
 {
@@ -26,6 +27,7 @@ final class BuilderService
         private readonly AuthorizationManager $authorization,
         private readonly AuditLogger $audit,
         private readonly BuilderTransactionInterface $transaction = new DirectBuilderTransaction(),
+        private readonly ?PublicRenderCacheInvalidator $renderCache = null,
     ) {}
 
     /** @param array<string,mixed> $rawDocument */
@@ -71,6 +73,8 @@ final class BuilderService
             $correlationId,
             ['target' => $target->identifier(), 'checksum' => $checksum],
         );
+
+        $this->renderCache?->invalidateSite($target->siteId);
 
         return $record;
     }
@@ -147,6 +151,8 @@ final class BuilderService
             $correlationId,
             ['version' => $saved->version, 'checksum' => $saved->checksum],
         );
+
+        $this->renderCache?->invalidateSite($saved->target->siteId);
 
         return $saved;
     }
@@ -248,6 +254,8 @@ final class BuilderService
             ['revision_id' => $revision->id, 'checksum' => $saved->checksum],
         );
 
+        $this->renderCache?->invalidateSite($saved->target->siteId);
+
         return $saved;
     }
 
@@ -332,6 +340,8 @@ final class BuilderService
             ],
         );
 
+        $this->renderCache?->invalidateSite($saved->target->siteId);
+
         return $saved;
     }
 
@@ -346,6 +356,19 @@ final class BuilderService
     ): array {
         $this->authorize('builder.read', $siteId, $actorId, 'builder_target', '*');
         return $this->documents->list($siteId, $type, $locale, max(1, min(200, $limit)), max(0, $offset));
+    }
+
+    /** @return list<BuilderDocumentSummary> */
+    public function listDocumentSummaries(
+        int $siteId,
+        ?BuilderTargetType $type = null,
+        ?string $locale = null,
+        int $limit = 100,
+        int $offset = 0,
+        ?int $actorId = null,
+    ): array {
+        $this->authorize('builder.read', $siteId, $actorId, 'builder_target', '*');
+        return $this->documents->listSummaries($siteId, $type, $locale, max(1, min(200, $limit)), max(0, $offset));
     }
 
     public function countDocuments(

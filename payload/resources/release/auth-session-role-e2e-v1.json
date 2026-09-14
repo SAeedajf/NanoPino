@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "NanoPino Auth, Session and Role E2E gate",
+  "captured_at": "2026-09-12T21:12:40+03:30",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "auth_identity_contract": "verified",
+    "session_csrf_contract": "verified",
+    "role_capability_contract": "verified",
+    "user_route_metadata": "verified"
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "manager_path": "/manager/",
+    "app_mount": "/qwe/",
+    "api_base": "/qwe/api/v1/cms",
+    "installed_version": "0.23.68",
+    "candidate_version": "0.23.72"
+  },
+  "observed_without_credentials": {
+    "dashboard": {
+      "http_status": 403,
+      "response_code": "ACCESS_DENIED",
+      "permission": "cms.admin"
+    },
+    "health_api": {
+      "http_status": 403,
+      "response_code": "ACCESS_DENIED",
+      "permission": "system.health.view"
+    },
+    "users_api": {
+      "http_status": 403,
+      "response_code": "ACCESS_DENIED",
+      "permission": "users.read"
+    },
+    "auth_state_mapping": "unverified",
+    "expected_source_mapping": "401 AUTHENTICATION_REQUIRED for an anonymous denial"
+  },
+  "authenticated_e2e": {
+    "manager_and_dashboard_baseline": "verified in Phase 10",
+    "role_switching": "unverified",
+    "session_revocation": "unverified",
+    "csrf_mutation": "unverified",
+    "blocker": "browser_file_chooser_transport_unavailable"
+  },
+  "mutations_performed": [],
+  "gate": {
+    "source_contracts": true,
+    "unauthenticated_private_boundary": true,
+    "authenticated_role_session_e2e": false,
+    "production_ready": false
+  }
+}

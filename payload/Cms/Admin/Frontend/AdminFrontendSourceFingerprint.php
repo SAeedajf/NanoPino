@@ -36,7 +36,7 @@ final class AdminFrontendSourceFingerprint
             }
         }
 
-        foreach(['package.json','vite.config.js','verify-dist.mjs','source-fingerprint.mjs','runtime-fingerprint.mjs','run-tests.mjs','build-linux.sh','build-windows.ps1'] as$relative){
+        foreach(['package.json','package-lock.json','vite.config.js','verify-dist.mjs','source-fingerprint.mjs','runtime-fingerprint.mjs','run-tests.mjs','build-linux.sh','build-windows.ps1'] as$relative){
             $path=$root.'/'.$relative;
             if(is_file($path)&&!is_link($path))$paths[]=$relative;
         }

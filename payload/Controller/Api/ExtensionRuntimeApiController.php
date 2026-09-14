@@ -7,6 +7,7 @@ use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
 use App\com_pinoox_cms\Cms\ExtensionCenter\Operation\ExtensionOperationType;
 use App\com_pinoox_cms\Cms\Recovery\SafeModeManager;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
+use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
 use Pinoox\Component\Http\JsonResponse;
@@ -46,7 +47,7 @@ final class ExtensionRuntimeApiController extends ApiController
             $mode=Pinx::resolveMode($native,false);
             $projection=CmsRuntimeServices::extensionCenter()->inspectAndReview(
                 $stage->path,$stage->displayName,$stage->size,CmsRuntimeServices::actorId(),
-                [],false,$mode==='update',false,
+                [],true,$mode==='update',false,
             );
             return CmsApiResponse::ok(['stage'=>$stage->publicData(),'mode'=>$mode,'review'=>$projection->toArray()]);
         } catch(AuthorizationDeniedException) {
@@ -65,7 +66,7 @@ final class ExtensionRuntimeApiController extends ApiController
             $mode=Pinx::resolveMode($native,false);
             $ticket=CmsRuntimeServices::extensionCenter()->issueReviewTicket(
                 $stage->path,$stage->displayName,$stage->size,(bool)($payload['approved']??false),
-                CmsRuntimeServices::actorId(),[],false,$mode==='update',false,
+                CmsRuntimeServices::actorId(),[],true,$mode==='update',false,
             );
             return CmsApiResponse::ok([
                 'stage'=>$stage->publicData(),'mode'=>$mode,'token'=>$ticket['token'],
@@ -94,11 +95,11 @@ final class ExtensionRuntimeApiController extends ApiController
 
             $ticket=CmsRuntimeServices::extensionCenter()->issueReviewTicket(
                 $stage->path,$stage->displayName,$stage->size,(bool)($payload['approved']??false),
-                CmsRuntimeServices::actorId(),[],false,$mode==='update',false,
+                CmsRuntimeServices::actorId(),[],true,$mode==='update',false,
             );
             $operation=CmsRuntimeServices::extensionCenter()->executePackageOperation(
                 $type,$stage->path,$stage->displayName,$stage->size,$ticket['token'],
-                CmsRuntimeServices::actorId(),[],false,false,
+                CmsRuntimeServices::actorId(),[],true,false,
             );
 
             if($operation->status->value==='succeeded'){
@@ -137,7 +138,7 @@ final class ExtensionRuntimeApiController extends ApiController
 
             $projection=CmsRuntimeServices::extensionCenter()->inspectAndReview(
                 $stage->path,$stage->displayName,$stage->size,CmsRuntimeServices::actorId(),
-                [],false,true,false,
+                [],true,true,false,
             );
             if($projection->inspection->manifest->identifier()!==$id){
                 return CmsApiResponse::error('EXTENSION_ID_MISMATCH','Uploaded update package belongs to another extension.',409);
@@ -145,11 +146,11 @@ final class ExtensionRuntimeApiController extends ApiController
 
             $ticket=CmsRuntimeServices::extensionCenter()->issueReviewTicket(
                 $stage->path,$stage->displayName,$stage->size,(bool)($payload['approved']??false),
-                CmsRuntimeServices::actorId(),[],false,true,false,
+                CmsRuntimeServices::actorId(),[],true,true,false,
             );
             $op=CmsRuntimeServices::extensionCenter()->executePackageOperation(
                 ExtensionOperationType::Update,$stage->path,$stage->displayName,$stage->size,$ticket['token'],
-                CmsRuntimeServices::actorId(),[],false,false,
+                CmsRuntimeServices::actorId(),[],true,false,
             );
 
             if($op->status->value==='succeeded'){
@@ -176,11 +177,30 @@ final class ExtensionRuntimeApiController extends ApiController
     public function activate(string $id):JsonResponse{return $this->installed(ExtensionOperationType::Activate,$id);}
     public function deactivate(string $id):JsonResponse{return $this->installed(ExtensionOperationType::Deactivate,$id);}
     public function repair(string $id):JsonResponse{return $this->installed(ExtensionOperationType::Repair,$id);}
-    public function uninstall(string $id):JsonResponse{return $this->installed(ExtensionOperationType::Uninstall,$id);}
+    public function uninstall(Request $request,string $id):JsonResponse
+    {
+        try {
+            $payload=$this->requestPayload($request);
+        } catch (\InvalidArgumentException $e) {
+            return CmsApiResponse::error('EXTENSION_REQUEST_INVALID',$e->getMessage(),422);
+        }
+        if(($payload['confirmation']??null)!=='UNINSTALL'){
+            return CmsApiResponse::error(
+                'EXTENSION_UNINSTALL_CONFIRMATION_REQUIRED',
+                'Type UNINSTALL to confirm this destructive operation.',
+                409,
+            );
+        }
+        return $this->installed(ExtensionOperationType::Uninstall,$id);
+    }
 
     public function rollback(Request $request,string $id):JsonResponse
     {
-        $data=$this->requestPayload($request);
+        try {
+            $data=$this->requestPayload($request);
+        } catch (\InvalidArgumentException $e) {
+            return CmsApiResponse::error('EXTENSION_REQUEST_INVALID',$e->getMessage(),422);
+        }
         return $this->installed(ExtensionOperationType::Rollback,$id,trim((string)($data['recovery_point_id']??'')));
     }
 
@@ -200,7 +220,7 @@ final class ExtensionRuntimeApiController extends ApiController
         }
     }
 
-    private function requestPayload(Request $r):array{try{$d=$r->toArray();}catch(\Throwable){$d=[];}return is_array($d)?$d:[];}
+    private function requestPayload(Request $r):array{return CmsRequestPayload::read($r);}
     private function reason(\Throwable $e):string{
         $m=trim($e->getMessage());
         if($m===''||str_contains($m,'/')||str_contains($m,'\\'))return'See CMS operation journal for internal details.';

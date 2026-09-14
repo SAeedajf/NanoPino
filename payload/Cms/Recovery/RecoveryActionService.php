@@ -26,7 +26,24 @@ final readonly class RecoveryActionService
             throw new RuntimeException('Recovery point not found.');
         }
 
-        $restored = $this->recovery->restore($recoveryPointId);
+        try {
+            $restored = $this->recovery->restore($recoveryPointId);
+        } catch (\Throwable $error) {
+            try {
+                $this->safeMode->enable(
+                    'Recovery restore was incomplete; health validation is required.',
+                    $point->extensionId,
+                    $point->id,
+                );
+            } catch (\Throwable) {
+                throw new RuntimeException(
+                    'Recovery incomplete and Safe Mode could not be persisted.',
+                    0,
+                    $error,
+                );
+            }
+            throw $error;
+        }
 
         $state = $this->safeMode->state();
         if ($state->enabled && $state->recoveryPointId === $recoveryPointId) {

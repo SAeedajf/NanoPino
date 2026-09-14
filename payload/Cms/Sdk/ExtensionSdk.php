@@ -7,6 +7,9 @@ use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
 use App\com_pinoox_cms\Cms\Sdk\Contracts\CmsExtensionInterface;
 use App\com_pinoox_cms\Cms\Sdk\Native\PinooxAppRegisterGateway;
 use App\com_pinoox_cms\Cms\Sdk\Registry\CmsKernelRegistryGateway;
+use App\com_pinoox_cms\Cms\Recovery\RecoveryBootGuard;
+use App\com_pinoox_cms\Cms\Recovery\SafeModeManager;
+use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use Pinoox\Component\AppEvent\AppRegister;
 
 final class ExtensionSdk
@@ -19,6 +22,11 @@ final class ExtensionSdk
         ?string $owner=null,
     ): ExtensionContext {
         $package=$register->package();
+        if ($package !== 'com_pinoox_cms') {
+            (new RecoveryBootGuard(
+                new SafeModeManager(CmsRuntimeServices::storageRoot() . '/recovery/safe-mode.json'),
+            ))->assertMayBoot($package);
+        }
         $context=new ExtensionContext(
             owner:$owner ?? $package,
             package:$package,

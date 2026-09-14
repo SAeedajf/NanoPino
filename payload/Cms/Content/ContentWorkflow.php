@@ -12,15 +12,32 @@ final class ContentWorkflow
         'draft' => [
             ContentStatus::Published,
             ContentStatus::Scheduled,
+            ContentStatus::PendingReview,
+            ContentStatus::Trash,
+        ],
+        'pending_review' => [
+            ContentStatus::Draft,
+            ContentStatus::Approved,
+            ContentStatus::Trash,
+        ],
+        'approved' => [
+            ContentStatus::Draft,
+            ContentStatus::Published,
+            ContentStatus::Scheduled,
             ContentStatus::Trash,
         ],
         'published' => [
             ContentStatus::Draft,
+            ContentStatus::Archived,
             ContentStatus::Trash,
         ],
         'scheduled' => [
             ContentStatus::Draft,
             ContentStatus::Published,
+            ContentStatus::Trash,
+        ],
+        'archived' => [
+            ContentStatus::Draft,
             ContentStatus::Trash,
         ],
         'trash' => [

@@ -1,4 +1,4 @@
-import { readApiResponse } from '../../runtime/api-response.mjs'
+import { createRequestSignal, createRequestTimeoutError, readApiResponse } from '../../runtime/api-response.mjs'
 import { t } from '../i18n/index.js'
 import { captureError, createCorrelationId } from './telemetry.js'
 function boot(){return typeof window!=='undefined'?(window.__PINOOX__||{}):{}}
@@ -13,9 +13,10 @@ export function cmsApiBase(){
 function csrfToken(){
   return typeof window!=='undefined'?(window.__PINOOX__?.csrf||''):''
 }
-export async function cmsRequest(path,{method='GET',body=null,headers={},signal}={}){
+export async function cmsRequest(path,{method='GET',body=null,headers={},signal,timeoutMs=15000}={}){
   const correlationId=headers['X-Correlation-ID']||headers['x-correlation-id']||createCorrelationId()
-  const options={method,credentials:'same-origin',headers:{Accept:'application/json',...headers,'X-Correlation-ID':correlationId},signal}
+  const requestSignal=createRequestSignal(signal,timeoutMs)
+  const options={method,credentials:'same-origin',headers:{Accept:'application/json',...headers,'X-Correlation-ID':correlationId},signal:requestSignal.signal}
   const mutation=!['GET','HEAD','OPTIONS'].includes(method.toUpperCase())
   if(mutation){
     const token=csrfToken()
@@ -31,8 +32,11 @@ export async function cmsRequest(path,{method='GET',body=null,headers={},signal}
   const payload=await readApiResponse(response,(key,fallback)=>t(key,{},fallback),{method})
   return{status:response.status,data:payload?.data??payload,body:payload,headers:response.headers}
   } catch (error) {
-    captureError(error,{operation:'cmsRequest',path,method,status:error?.status,correlationId})
-    throw error
+    const normalized=requestSignal.timedOut() ? createRequestTimeoutError((key, fallback) => t(key,{},fallback)) : error
+    captureError(normalized,{operation:'cmsRequest',path,method,status:normalized?.status,correlationId})
+    throw normalized
+  } finally {
+    requestSignal.dispose()
   }
 }
 export const mediaApi={
@@ -76,7 +80,7 @@ export const extensionApi={
   update:(id,stageId,approved=false)=>cmsRequest(`/extensions/${encodeURIComponent(id)}/update`,{method:'POST',body:{stage_id:stageId,approved}}),
   rollback:(id,recoveryPointId)=>cmsRequest(`/extensions/${encodeURIComponent(id)}/rollback`,{method:'POST',body:{recovery_point_id:recoveryPointId}}),
   repair:id=>cmsRequest(`/extensions/${encodeURIComponent(id)}/repair`,{method:'POST',body:{}}),
-  uninstall:id=>cmsRequest(`/extensions/${encodeURIComponent(id)}`,{method:'DELETE'}),
+  uninstall:id=>cmsRequest(`/extensions/${encodeURIComponent(id)}`,{method:'DELETE',body:{confirmation:'UNINSTALL'}}),
 }
 
 export const userApi={
@@ -128,6 +132,9 @@ export const contentApi={
   read:id=>cmsRequest(`/content/${id}`),
   update:(id,payload)=>cmsRequest(`/content/${id}`,{method:'PUT',body:payload}),
   publish:id=>cmsRequest(`/content/${id}/publish`,{method:'POST',body:{}}),
+  submitReview:id=>cmsRequest(`/content/${id}/submit-review`,{method:'POST',body:{}}),
+  approve:id=>cmsRequest(`/content/${id}/approve`,{method:'POST',body:{}}),
+  archive:id=>cmsRequest(`/content/${id}/archive`,{method:'POST',body:{}}),
   schedule:(id,publishAt)=>cmsRequest(`/content/${id}/schedule`,{method:'POST',body:{publish_at:publishAt}}),
   revisions:id=>cmsRequest(`/content/${id}/revisions`),
   revision:(id,revisionId)=>cmsRequest(`/content/${id}/revisions/${revisionId}`),
@@ -137,5 +144,8 @@ export const contentApi={
 }
 export const taxonomyApi={
   terms:(key,params={})=>{const q=new URLSearchParams();Object.entries(params).forEach(([k,v])=>v!==''&&v!=null&&q.set(k,String(v)));return cmsRequest(`/taxonomies/${encodeURIComponent(key)}/terms${q.size?`?${q}`:''}`)},
+  create:(key,payload)=>cmsRequest(`/taxonomies/${encodeURIComponent(key)}/terms`,{method:'POST',body:payload}),
+  update:(key,id,payload)=>cmsRequest(`/taxonomies/${encodeURIComponent(key)}/terms/${encodeURIComponent(id)}`,{method:'PATCH',body:payload}),
+  delete:(key,id)=>cmsRequest(`/taxonomies/${encodeURIComponent(key)}/terms/${encodeURIComponent(id)}`,{method:'DELETE'}),
 }
 export const securityApi={status:()=>cmsRequest('/system/security')}

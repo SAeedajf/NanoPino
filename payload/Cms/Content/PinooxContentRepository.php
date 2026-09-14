@@ -3,14 +3,20 @@ declare(strict_types=1);
 
 namespace App\com_pinoox_cms\Cms\Content;
 
+use DateTimeImmutable;
+
 use App\com_pinoox_cms\Model\ContentFieldValueModel;
 use App\com_pinoox_cms\Model\ContentModel;
 use App\com_pinoox_cms\Model\ContentRelationModel;
 use App\com_pinoox_cms\Model\ContentTermModel;
 use App\com_pinoox_cms\Cms\Database\CmsDatabase;
+use App\com_pinoox_cms\Cms\Support\SearchTerm;
+use App\com_pinoox_cms\Cms\Support\QueryBounds;
 
 final class PinooxContentRepository implements ContentRepositoryInterface
 {
+    private const MAX_BATCH_IDS = 5000;
+
     /** @var list<string> */
     private const LIST_COLUMNS = [
         'id',
@@ -32,33 +38,51 @@ final class PinooxContentRepository implements ContentRepositoryInterface
 
     public function create(ContentMutation $mutation): ContentRecord
     {
-        return CmsDatabase::transaction(function () use ($mutation): ContentRecord {
-            $model = ContentModel::create($this->attributes($mutation));
-            $this->syncFields((int) $model->id, $mutation->fields);
-            $this->syncRelations((int) $model->id, $mutation->relations);
-            $this->syncTerms((int) $model->id, $mutation->terms);
+        try {
+            return CmsDatabase::transaction(function () use ($mutation): ContentRecord {
+                $model = ContentModel::create($this->attributes($mutation));
+                $this->syncFields((int) $model->id, $mutation->fields);
+                $this->syncRelations((int) $model->id, $mutation->relations);
+                $this->syncTerms((int) $model->id, $mutation->terms);
 
-            return $this->hydrate($model->fresh());
-        });
+                return $this->hydrate($model->fresh());
+            });
+        } catch (\Throwable $exception) {
+            $conflict = ContentConflictException::from($exception);
+            if ($conflict !== null) {
+                throw $conflict;
+            }
+
+            throw $exception;
+        }
     }
 
     public function update(int $id, ContentMutation $mutation): ContentRecord
     {
-        return CmsDatabase::transaction(function () use ($id, $mutation): ContentRecord {
-            $model = ContentModel::find($id);
-            if (!$model) {
-                throw new \RuntimeException('Content not found: ' . $id);
+        try {
+            return CmsDatabase::transaction(function () use ($id, $mutation): ContentRecord {
+                $model = ContentModel::find($id);
+                if (!$model) {
+                    throw new \RuntimeException('Content not found: ' . $id);
+                }
+
+                $model->fill($this->attributes($mutation));
+                $model->save();
+
+                $this->syncFields($id, $mutation->fields);
+                $this->syncRelations($id, $mutation->relations);
+                $this->syncTerms($id, $mutation->terms);
+
+                return $this->hydrate($model->fresh());
+            });
+        } catch (\Throwable $exception) {
+            $conflict = ContentConflictException::from($exception);
+            if ($conflict !== null) {
+                throw $conflict;
             }
 
-            $model->fill($this->attributes($mutation));
-            $model->save();
-
-            $this->syncFields($id, $mutation->fields);
-            $this->syncRelations($id, $mutation->relations);
-            $this->syncTerms($id, $mutation->terms);
-
-            return $this->hydrate($model->fresh());
-        });
+            throw $exception;
+        }
     }
 
     public function find(
@@ -75,6 +99,23 @@ final class PinooxContentRepository implements ContentRepositoryInterface
         return $model ? $this->hydrate($model, $projection) : null;
     }
 
+    public function findPublishedBySlug(
+        int $siteId,
+        string $type,
+        string $locale,
+        string $slug,
+    ): ?ContentRecord {
+        $model = ContentModel::query()
+            ->where('site_id', $siteId)
+            ->where('type', $type)
+            ->where('locale', $locale)
+            ->where('slug', $slug)
+            ->where('status', ContentStatus::Published->value)
+            ->first();
+
+        return $model ? $this->hydrate($model, ContentProjection::Detail) : null;
+    }
+
     public function findMany(
         array $ids,
         ContentProjection $projection = ContentProjection::List,
@@ -86,16 +127,25 @@ final class PinooxContentRepository implements ContentRepositoryInterface
         if ($ids === []) {
             return [];
         }
-
-        $query = ContentModel::query()->whereIn('id', $ids);
-        if ($projection === ContentProjection::List) {
-            $query->select(self::LIST_COLUMNS);
+        if (count($ids) > self::MAX_BATCH_IDS) {
+            throw new \InvalidArgumentException(
+                'Content batch lookup cannot contain more than ' . self::MAX_BATCH_IDS . ' IDs.',
+            );
         }
 
-        $records = $this->hydrateMany($query->get(), $projection);
         $indexed = [];
-        foreach ($records as $record) {
-            $indexed[$record->id] = $record;
+        // Keep each IN clause below common driver parameter limits. The
+        // public batch size is bounded above, so this cannot become an
+        // unbounded query fan-out or memory allocation.
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $query = ContentModel::query()->whereIn('id', $chunk);
+            if ($projection === ContentProjection::List) {
+                $query->select(self::LIST_COLUMNS);
+            }
+
+            foreach ($this->hydrateMany($query->get(), $projection) as $record) {
+                $indexed[$record->id] = $record;
+            }
         }
 
         return $indexed;
@@ -111,9 +161,15 @@ final class PinooxContentRepository implements ContentRepositoryInterface
         if ($query->authorId !== null) $builder->where('author_id', $query->authorId);
         if ($query->parentId !== null) $builder->where('parent_id', $query->parentId);
         if ($query->beforeId !== null) $builder->where('id', '<', $query->beforeId);
+        if ($query->termId !== null) {
+            $builder->whereHas('termRelations', static function ($relation) use ($query): void {
+                $relation->where('term_id', $query->termId);
+                if ($query->taxonomy !== null) $relation->where('taxonomy', $query->taxonomy);
+            });
+        }
 
-        if ($query->search !== null && trim($query->search) !== '') {
-            $search = '%' . trim($query->search) . '%';
+        $search = SearchTerm::contains($query->search);
+        if ($search !== null) {
             $builder->where(function ($nested) use ($search): void {
                 $nested
                     ->where('title', 'like', $search)
@@ -128,7 +184,7 @@ final class PinooxContentRepository implements ContentRepositoryInterface
 
         $models = $builder
             ->orderByDesc('id')
-            ->offset(max(0, $query->offset))
+            ->offset(QueryBounds::offset($query->offset))
             ->limit(max(1, min(500, $query->limit)))
             ->get();
 
@@ -145,9 +201,15 @@ final class PinooxContentRepository implements ContentRepositoryInterface
         if ($query->authorId !== null) $builder->where('author_id', $query->authorId);
         if ($query->parentId !== null) $builder->where('parent_id', $query->parentId);
         if ($query->beforeId !== null) $builder->where('id', '<', $query->beforeId);
+        if ($query->termId !== null) {
+            $builder->whereHas('termRelations', static function ($relation) use ($query): void {
+                $relation->where('term_id', $query->termId);
+                if ($query->taxonomy !== null) $relation->where('taxonomy', $query->taxonomy);
+            });
+        }
 
-        if ($query->search !== null && trim($query->search) !== '') {
-            $search = '%' . trim($query->search) . '%';
+        $search = SearchTerm::contains($query->search);
+        if ($search !== null) {
             $builder->where(function ($nested) use ($search): void {
                 $nested
                     ->where('title', 'like', $search)
@@ -157,6 +219,69 @@ final class PinooxContentRepository implements ContentRepositoryInterface
         }
 
         return (int) $builder->count();
+    }
+
+    /** @return list<ContentRecord> */
+    public function publishDue(int $limit = 50, ?DateTimeImmutable $now = null): array
+    {
+        $now ??= new DateTimeImmutable('now');
+        $nowDatabase = $now->format('Y-m-d H:i:s');
+        $publishedAt = $now->format(DATE_ATOM);
+        $models = ContentModel::query()
+            ->where('status', ContentStatus::Scheduled->value)
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', $nowDatabase)
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->limit(max(1, min(500, $limit)))
+            ->get();
+
+        $publishedIds = [];
+        foreach ($models as $model) {
+            // Compare-and-set prevents duplicate publication when two native
+            // scheduler invocations overlap despite the scheduler lock.
+            $changed = ContentModel::query()
+                ->whereKey((int) $model->id)
+                ->where('status', ContentStatus::Scheduled->value)
+                ->whereNotNull('scheduled_at')
+                ->where('scheduled_at', '<=', $nowDatabase)
+                ->update([
+                    'status' => ContentStatus::Published->value,
+                    'published_at' => $publishedAt,
+                    'scheduled_at' => null,
+                    'updated_at' => $publishedAt,
+                ]);
+
+            if ($changed !== 1) {
+                continue;
+            }
+
+            $publishedIds[] = (int) $model->id;
+        }
+
+        if ($publishedIds === []) {
+            return [];
+        }
+
+        // Re-read and hydrate the claimed records as one bounded collection.
+        // The compare-and-set above remains per record for concurrency safety,
+        // while this avoids one find plus three association queries per item.
+        $freshModels = ContentModel::query()->whereIn('id', $publishedIds)->get();
+        $recordsById = [];
+        foreach ($this->hydrateMany($freshModels, ContentProjection::Detail) as $record) {
+            $recordsById[$record->id] = $record;
+        }
+
+        // Preserve the scheduler's deterministic scheduled_at/id order even
+        // though an IN query is not required to retain input ordering.
+        $published = [];
+        foreach ($publishedIds as $id) {
+            if (isset($recordsById[$id])) {
+                $published[] = $recordsById[$id];
+            }
+        }
+
+        return $published;
     }
 
     public function slugExists(
@@ -203,32 +328,43 @@ final class PinooxContentRepository implements ContentRepositoryInterface
     /** @param array<string,mixed> $fields */
     private function syncFields(int $contentId, array $fields): void
     {
+        if ($fields === []) {
+            return;
+        }
+
+        $keys = array_map('strval', array_keys($fields));
+        $existing = ContentFieldValueModel::query()
+            ->where('content_id', $contentId)
+            ->whereIn('field_key', $keys)
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('field_key');
+        $now = gmdate('Y-m-d H:i:s');
+        $rows = [];
+
         foreach ($fields as $key => $value) {
             $encoded = json_encode(
                 $value,
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
             );
 
-            $record = ContentFieldValueModel::query()
-                ->where('content_id', $contentId)
-                ->where('field_key', $key)
-                ->first();
-
-            if ($record) {
-                $record->value_json = $encoded;
-                $record->value_type = get_debug_type($value);
-                $record->version = (int) $record->version + 1;
-                $record->save();
-            } else {
-                ContentFieldValueModel::create([
-                    'content_id' => $contentId,
-                    'field_key' => $key,
-                    'value_type' => get_debug_type($value),
-                    'value_json' => $encoded,
-                    'version' => 1,
-                ]);
-            }
+            $record = $existing->get((string) $key);
+            $rows[] = [
+                'content_id' => $contentId,
+                'field_key' => (string) $key,
+                'value_type' => get_debug_type($value),
+                'value_json' => $encoded,
+                'version' => $record ? (int) $record->version + 1 : 1,
+                'created_at' => $record?->created_at?->format('Y-m-d H:i:s') ?? $now,
+                'updated_at' => $now,
+            ];
         }
+
+        ContentFieldValueModel::query()->upsert(
+            $rows,
+            ['content_id', 'field_key'],
+            ['value_type', 'value_json', 'version', 'updated_at'],
+        );
     }
 
     /** @param array<string,list<int>> $relations */
@@ -240,13 +376,21 @@ final class PinooxContentRepository implements ContentRepositoryInterface
                 ->where('field_key', $fieldKey)
                 ->delete();
 
+            $now = gmdate('Y-m-d H:i:s');
+            $rows = [];
             foreach (array_values(array_unique($targetIds)) as $order => $targetId) {
-                ContentRelationModel::create([
+                $rows[] = [
                     'source_content_id' => $contentId,
                     'field_key' => $fieldKey,
                     'target_content_id' => $targetId,
                     'sort_order' => $order,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if ($rows !== []) {
+                ContentRelationModel::query()->insert($rows);
             }
         }
     }
@@ -260,13 +404,21 @@ final class PinooxContentRepository implements ContentRepositoryInterface
                 ->where('taxonomy', $taxonomy)
                 ->delete();
 
+            $now = gmdate('Y-m-d H:i:s');
+            $rows = [];
             foreach (array_values(array_unique(array_map('intval', $termIds))) as $order => $termId) {
-                ContentTermModel::create([
+                $rows[] = [
                     'content_id' => $contentId,
                     'term_id' => $termId,
                     'taxonomy' => $taxonomy,
                     'sort_order' => $order,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if ($rows !== []) {
+                ContentTermModel::query()->insert($rows);
             }
         }
     }

@@ -77,6 +77,24 @@ final class InMemoryQueueRepository implements QueueRepositoryInterface
         ];
     }
 
+    /** @return int number of processing jobs returned to the retryable state */
+    public function recoverStaleProcessing(int $leaseSeconds=3600,?float $now=null): int
+    {
+        $leaseSeconds=max(60,min(86400,$leaseSeconds));
+        $now??=microtime(true);
+        $cutoff=$now-$leaseSeconds;
+        $recovered=0;
+        foreach ($this->jobs as $job) {
+            if ($job->status!==QueueJobStatus::Processing || $job->updatedAt>$cutoff) continue;
+            $job->status=QueueJobStatus::Failed;
+            $job->availableAt=$now;
+            $job->updatedAt=$now;
+            $job->lastError='Recovered stale processing lease after worker interruption.';
+            ++$recovered;
+        }
+        return $recovered;
+    }
+
     public function recent(int $limit=100): array
     {
         $jobs=array_values($this->jobs);

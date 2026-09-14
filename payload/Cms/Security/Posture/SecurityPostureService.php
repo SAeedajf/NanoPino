@@ -21,7 +21,16 @@ final readonly class SecurityPostureService
             $this->runtimeControl('request.csrf','CSRF verifier',$this->runtime->csrfVerifierBound,'Request integrity policy exists, but production CSRF verification must be bound to the Pinoox runtime.'),
             $this->runtimeControl('abuse.rate_limit','Rate limits',$this->runtime->rateLimitsRegistered,'CMS profiles target native Pinoox RateLimiter/ThrottleFlow; runtime registration is required.'),
             $this->runtimeControl('http.headers','Security headers',$this->runtime->securityHeadersBound,'Security header/CSP policy exists; response binding is required.'),
-            $this->runtimeControl('network.ssrf','Outbound SSRF guard',$this->runtime->ssrfTransportBound,'Allowlist/DNS/IP guard exists; remote transports must bind it before network calls.'),
+            new SecurityControl(
+                'network.ssrf',
+                'Outbound SSRF guard',
+                $this->runtime->ssrfGuardReady ? SecurityControlStatus::Pass : SecurityControlStatus::Warning,
+                $this->runtime->ssrfGuardReady
+                    ? ($this->runtime->ssrfTransportBound
+                        ? 'Configured remote search uses the allowlist, DNS/IP validation and pinned cURL resolution guard.'
+                        : 'Remote search is disabled; database search is the active fail-closed fallback and no outbound transport is active.')
+                    : 'Remote search is configured but its outbound transport is not bound to the SSRF guard.',
+            ),
             $this->runtimeControl('api.security','Public API security pipeline',$this->runtime->publicApiSecurityBound,'Public HTTP routes must bind auth, request integrity and native throttle flows.'),
             new SecurityControl(
                 'authorization.platform_super',

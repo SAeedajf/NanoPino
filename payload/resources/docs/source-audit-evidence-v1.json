@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "status": "not_available",
-  "release_version": "0.23.29",
-  "release_version_code": 2329,
-  "documentation_manifest_sha256": "e13d335d7bf5126e57cc0fd0e8261a897d369d16578ff1abdeba5cb1039b50a2",
-  "required_docs": 31,
-  "machine_contracts": 23,
-  "adr_count": 0,
-  "markdown_files": 0,
-  "internal_links": 0,
-  "source_audit_completed_at": null,
-  "reason": "Source documentation is present and required paths are repository-gated, but a completed signed-off artifact documentation audit has not yet been captured for this candidate."
+  "status": "passed",
+  "release_version": "0.23.72",
+  "release_version_code": 2372,
+  "documentation_manifest_sha256": "a309f71e11b214524d0839cf9e749f2b8645a379580f8e96fd18673f51ab2b0b",
+  "required_docs": 33,
+  "machine_contracts": 25,
+  "adr_count": 2,
+  "markdown_files": 67,
+  "internal_links": 38,
+  "source_audit_completed_at": "2026-09-14T09:10:54Z",
+  "reason": "Source documentation audit passed for the 0.23.72 candidate after recording the Phase 22 Stable, Canary and post-release support gate. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
 }

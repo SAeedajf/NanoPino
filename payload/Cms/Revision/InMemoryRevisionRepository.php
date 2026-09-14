@@ -45,6 +45,21 @@ final class InMemoryRevisionRepository implements RevisionRepositoryInterface
         return array_slice($records, 0, max(1, min(500, $limit)));
     }
 
+    public function summariesForContent(int $contentId, int $limit = 100): array
+    {
+        return array_map(
+            static fn (RevisionRecord $record): RevisionSummary => new RevisionSummary(
+                $record->id,
+                $record->kind,
+                $record->checksum,
+                $record->actorId,
+                $record->sourceRevisionId,
+                $record->createdAt,
+            ),
+            $this->forContent($contentId, $limit),
+        );
+    }
+
     public function latestAutosave(int $contentId, ?int $actorId): ?RevisionRecord
     {
         foreach ($this->forContent($contentId, 500) as $record) {

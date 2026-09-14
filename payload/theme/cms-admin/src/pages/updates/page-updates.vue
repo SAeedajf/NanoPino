@@ -6,8 +6,8 @@
           <option value="">{{ t('updates_page.select_extension') }}</option>
           <option v-for="item in extensions" :key="item.id" :value="item.id">{{ item.name || item.id }}</option>
         </select>
-        <LButton icon="refresh-cw" variant="outline" :disabled="loading || !extensionId" @click="load">{{ t('common.refresh') }}</LButton>
-        <LButton icon="save" :disabled="saving || !extensionId" @click="savePolicy">{{ saving ? t('updates_page.saving') : t('common.save') }}</LButton>
+        <LButton icon="refresh-cw" variant="outline" :loading="loading" :disabled="loading || !extensionId" @click="load">{{ t('common.refresh') }}</LButton>
+        <LButton icon="save" :disabled="saving || !extensionId || !canManage" @click="savePolicy">{{ saving ? t('updates_page.saving') : t('common.save') }}</LButton>
       </div>
     </template>
 
@@ -34,7 +34,7 @@
               <option v-for="mode in center.autoUpdateModes" :key="mode" :value="mode">{{ mode }}</option>
             </select>
           </label>
-          <label class="cms-toggle-row"><input v-model="policy.require_signature" type="checkbox"><span>Require signature</span></label>
+          <label class="cms-toggle-row"><input v-model="policy.require_signature" type="checkbox" disabled><span>Require signature (mandatory)</span></label>
           <label class="cms-toggle-row"><input v-model="policy.snapshot_before_update" type="checkbox"><span>Snapshot before update</span></label>
           <label class="cms-toggle-row"><input v-model="policy.health_check_required" type="checkbox"><span>Health check required</span></label>
           <label class="cms-toggle-row"><input v-model="policy.allow_downgrade" type="checkbox"><span>Allow downgrade</span></label>
@@ -82,12 +82,13 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import Column from 'primevue/column'
 import { LBadge, LButton, LDataTable, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
-import { readAdminBootData } from '../../services/admin-provider.js'
+import { canAdmin, readAdminBootData } from '../../services/admin-provider.js'
 import { extensionApi, updateApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
 const boot = readAdminBootData()
 const center = boot.updateCenter
+const canManage = canAdmin('extensions.update') || canAdmin('system.update')
 const extensions = ref([])
 const extensionId = ref('')
 const history = ref([])
@@ -97,12 +98,13 @@ const saving = ref(false)
 const error = ref('')
 const notice = ref('')
 const policy = reactive(defaultPolicy())
+let loadRequest = 0
 
 function defaultPolicy() {
   return {
     channel: 'stable',
     auto_update: 'disabled',
-    require_signature: false,
+    require_signature: true,
     allow_downgrade: false,
     snapshot_before_update: true,
     health_check_required: true,
@@ -121,26 +123,31 @@ async function loadExtensions() {
 
 async function load() {
   if (!extensionId.value) return
+  const request = ++loadRequest
   loading.value = true
   error.value = ''
   try {
-    const [p, h, r] = await Promise.all([
+    const results = await Promise.allSettled([
       updateApi.policy(extensionId.value),
       updateApi.history(extensionId.value, 100),
       updateApi.recoveryPoints(extensionId.value),
     ])
-    applyPolicy(p.data || {})
-    history.value = Array.isArray(h.data) ? h.data : []
-    recoveryPoints.value = Array.isArray(r.data) ? r.data : []
+    if (request !== loadRequest) return
+    const [p, h, r] = results
+    if (p.status === 'fulfilled') applyPolicy(p.value.data || {})
+    if (h.status === 'fulfilled') history.value = Array.isArray(h.value.data) ? h.value.data : []
+    if (r.status === 'fulfilled') recoveryPoints.value = Array.isArray(r.value.data) ? r.value.data : []
+    const failures = results.filter(result => result.status === 'rejected')
+    if (failures.length) error.value = t('updates_page.partial_load_failed', { count: failures.length })
   } catch (e) {
-    error.value = e.message
+    if (request === loadRequest) error.value = e.message
   } finally {
-    loading.value = false
+    if (request === loadRequest) loading.value = false
   }
 }
 
 async function savePolicy() {
-  if (!extensionId.value) return
+  if (!extensionId.value || !canManage) return
   saving.value = true
   error.value = ''
   notice.value = ''

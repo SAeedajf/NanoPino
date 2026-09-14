@@ -20,6 +20,26 @@
         "items",
         "pagination"
       ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/taxonomies/{key}/terms",
+      "capability": "taxonomy.manage",
+      "body": ["site_id", "name", "slug", "description", "parent_id", "locale", "metadata"],
+      "response": ["term"]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/cms/taxonomies/{key}/terms/{id}",
+      "capability": "taxonomy.manage",
+      "body": ["name", "slug", "description", "parent_id", "locale", "metadata"],
+      "response": ["term"]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/cms/taxonomies/{key}/terms/{id}",
+      "capability": "taxonomy.manage",
+      "response": ["deleted"]
     }
   ],
   "pagination": {

@@ -1,4 +1,4 @@
-# ADR-001: Acknowledge request snapshots without discarding newer editor state
+# ADR-001 — Acknowledge request snapshots without discarding newer editor state
 
 Date: 2026-09-06. Status: accepted for the audit correction branch.
 

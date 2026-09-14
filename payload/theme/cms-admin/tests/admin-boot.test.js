@@ -13,6 +13,13 @@ test('Admin boot awaits Luma and emits explicit lifecycle signals', () => {
   assert.match(main, /cms\.admin\.runtime_boot_failed/)
 })
 
+test('SPA route changes move focus to the new main content without stealing scroll', () => {
+  const main = read('src/main.js')
+  assert.match(main, /function focusMainContent\(\)/)
+  assert.match(main, /main\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(main, /afterEach\?\.\(\(to\) => \{[\s\S]*focusMainContent\(\)/)
+})
+
 test('server shell resolves locale/direction dynamically and never returns an empty app mount', () => {
   const twig = read('main.twig')
   assert.match(twig, /lang="\{\{ bootstrap\.locale\|default\('fa'\) \}\}"/)

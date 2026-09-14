@@ -6,7 +6,21 @@ use App\com_pinoox_cms\Controller\AdminController;
 use App\com_pinoox_cms\Controller\AdminFrontendStatusController;
 use App\com_pinoox_cms\Controller\AdminRuntimeModuleController;
 use App\com_pinoox_cms\Controller\ExtensionAdminAssetController;
+use App\com_pinoox_cms\Controller\PublicContentController;
 use function Pinoox\Router\get;
+
+get('/site', [PublicContentController::class, 'site'])
+    ->name('cms.public.site');
+
+get('/page/{slug}', [PublicContentController::class, 'page'])
+    ->name('cms.public.page');
+
+get('/post/{slug}', [PublicContentController::class, 'post'])
+    ->name('cms.public.post');
+
+get('/{taxonomy}/{termSlug}', [PublicContentController::class, 'taxonomy'])
+    ->filters(['taxonomy' => '[a-z][a-z0-9_-]{1,63}', 'termSlug' => '[^/]{1,160}'])
+    ->name('cms.public.taxonomy');
 
 get('/__cms/health/frontend', [AdminFrontendStatusController::class, 'index'])
     ->permission('cms.admin')

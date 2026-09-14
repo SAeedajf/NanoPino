@@ -6,6 +6,7 @@ namespace App\com_pinoox_cms\Controller\Api;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
 use App\com_pinoox_cms\Cms\Authorization\ScopeType;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
+use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Settings\SettingConcurrencyException;
@@ -254,11 +255,6 @@ final class SettingsApiController extends ApiController
     /** @return array<string,mixed> */
     private function requestPayload(Request $request): array
     {
-        try {
-            $data = $request->toArray();
-        } catch (\Throwable) {
-            $data = [];
-        }
-        return is_array($data) ? $data : [];
+        return CmsRequestPayload::read($request);
     }
 }

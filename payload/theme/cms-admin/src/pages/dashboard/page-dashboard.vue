@@ -1,7 +1,7 @@
 <template>
   <LPage icon="layout-dashboard" header-tone="gradient">
     <SafeModeBanner :safe-mode="boot.safeMode" />
-    <template #actions><LButton icon="refresh-cw" variant="outline" :loading="loading" @click="load">{{ t('common.refresh') }}</LButton></template>
+    <template #actions><div class="cms-card-actions"><a class="cms-dashboard-public-site" :href="publicSiteUrl" target="_blank" rel="noopener noreferrer" :aria-label="`${t('dashboard.view_site')} — ${publicSiteUrl}`"><LIcon name="external-link" aria-hidden="true" /><span><strong>{{ t('dashboard.view_site') }}</strong><small>{{ publicSiteUrl }}</small></span></a><LButton icon="refresh-cw" variant="outline" :loading="loading" @click="load">{{ t('common.refresh') }}</LButton></div></template>
     <div v-if="error" class="cms-alert cms-alert--danger" role="alert">{{ error }}</div>
 
     <div class="cms-stat-grid" :aria-label="t('dashboard.summary_aria')">
@@ -55,14 +55,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { LBadge, LButton, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
+import { LBadge, LButton, LIcon, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
 import SafeModeBanner from '../../components/safe-mode-banner.vue'
-import { readAdminBootData } from '../../services/admin-provider.js'
+import { publicSiteUrl as resolvePublicSiteUrl, readAdminBootData } from '../../services/admin-provider.js'
 import { contentApi, extensionApi, mediaApi, systemApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
 
 const boot = readAdminBootData()
+const publicSiteUrl = resolvePublicSiteUrl()
 const router = useRouter()
 const extensions = ref([])
 const health = ref([])

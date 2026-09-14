@@ -32,7 +32,44 @@ test('empty 204 succeeds; null/primitive 200 fails; valid data remains unchanged
   t.mock.method(globalThis, 'fetch', async () => new Response('{"success":true,"data":{"id":7}}'))
   assert.deepEqual((await cmsRequest('/test')).data, { id: 7 })
 })
+test('successful HTTP responses require the explicit CMS success envelope', async t => {
+  for (const body of ['{}', '{"data":{"id":7}}', '[]']) {
+    t.mock.method(globalThis, 'fetch', async () => new Response(body, { status: 200 }))
+    await assert.rejects(() => cmsRequest('/test'), e => e.code === 'CMS_INVALID_RESPONSE' && e.status === 200)
+  }
+  t.mock.method(globalThis, 'fetch', async () => new Response('{"success":true,"data":{"id":7}}'))
+  assert.deepEqual((await cmsRequest('/test')).data, { id: 7 })
+})
 test('non-JSON HTTP failure retains status and safe response correlation', async t => {
   t.mock.method(globalThis, 'fetch', async () => new Response('private server trace', {status: 502, headers: {'X-Correlation-ID': 'req-9'}}))
   await assert.rejects(() => cmsRequest('/test'), e => e.status === 502 && e.correlationId === 'req-9' && !e.message.includes('private'))
 })
+
+test('authentication failures are localized, marked, and announced without leaking response details', async t => {
+  const events = []
+  const before = globalThis.window
+  globalThis.window = { dispatchEvent: event => events.push(event) }
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ success: false, error: { code: 'AUTHENTICATION_REQUIRED', message: 'Authentication is required.' } }), { status: 401 }))
+  try {
+    await assert.rejects(() => cmsRequest('/test'), e => e.code === 'AUTHENTICATION_REQUIRED' && e.status === 401 && e.authRequired === true && e.message.includes('Authentication is required'))
+    assert.equal(events.length, 1)
+    assert.equal(events[0].type, 'pinoox-cms:auth-required')
+    assert.equal(events[0].detail.status, 401)
+  } finally { globalThis.window = before }
+})
+
+for (const [name, run] of Object.entries({
+  vue: options => cmsRequest('/test', options),
+  runtime: options => api('/test', options),
+})) {
+  test(`${name}: stalled requests fail with a recoverable timeout`, async t => {
+    t.mock.method(globalThis, 'fetch', async (_url, options) => new Promise((resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })), { once: true })
+    }))
+    const before = globalThis.window
+    globalThis.window = { __PINOOX__: { cmsAdmin: { actions: { test: '/test' } } } }
+    try {
+      await assert.rejects(() => run({ timeoutMs: 5 }), e => e.code === 'CMS_REQUEST_TIMEOUT' && e.status === 408)
+    } finally { globalThis.window = before }
+  })
+}

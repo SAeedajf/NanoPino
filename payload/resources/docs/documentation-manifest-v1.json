@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "documentation_version": "0.23.29",
+  "documentation_version": "0.23.72",
   "freeze_state": "candidate",
   "authoritative_entry": "docs/index.md",
   "policy": "docs/documentation/freeze-policy.md",
@@ -36,6 +36,8 @@
     "docs/documentation/freeze-policy.md",
     "docs/documentation/gap-report.md",
     "docs/deployment/admin-frontend.md",
+    "docs/deployment/hypercare-activation.md",
+    "docs/audit/2026-09-14-phase-22-canary-observation.md",
     "docs/deployment/release-gate.md"
   ],
   "machine_contracts": [
@@ -57,6 +59,8 @@
     "resources/sdk/sdk-contract-v1.json",
     "resources/docs/runtime-inventory-v1.json",
     "resources/release/release-gate-v1.json",
+    "resources/release/hypercare-activation-phase22-v1.json",
+    "resources/release/canary-observation-phase22-v1.json",
     "resources/api/users-v1.json",
     "resources/api/content-v1.json",
     "resources/api/settings-v1.json",

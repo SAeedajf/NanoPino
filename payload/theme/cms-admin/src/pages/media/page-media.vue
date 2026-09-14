@@ -2,7 +2,7 @@
   <LPage icon="images">
     <template #actions>
       <input ref="fileInput" class="cms-visually-hidden" type="file" multiple :accept="accept" :aria-label="t('a11y.media_upload')" @change="onFileChange">
-      <LButton icon="upload" shape="rounded" :disabled="uploading" @click="fileInput?.click()">
+      <LButton icon="upload" shape="rounded" :disabled="uploading || !canUpload" @click="fileInput?.click()">
         {{ uploading ? t('media_page.uploading') : t('media_page.upload_media') }}
       </LButton>
     </template>
@@ -25,7 +25,7 @@
       >
         <strong>{{ t('media_page.drop_files') }}</strong>
         <small>{{ t('media_page.max_policy', { max: policy.max_mb || 20, extensions: (policy.allowed_extensions || []).join(', ') || t('media_page.server_policy') }) }}</small>
-        <LButton variant="outline" shape="rounded" :disabled="uploading" @click="fileInput?.click()">{{ t('media_page.select_files') }}</LButton>
+        <LButton variant="outline" shape="rounded" :disabled="uploading || !canUpload" @click="fileInput?.click()">{{ t('media_page.select_files') }}</LButton>
       </div>
       <div v-if="uploadQueue.length" class="cms-upload-queue">
         <article v-for="row in uploadQueue" :key="row.id" class="cms-upload-row">
@@ -51,7 +51,7 @@
       <div class="cms-media-toolbar">
         <input v-model="query" class="cms-input" type="search" :placeholder="t('media_page.search_placeholder')" :aria-label="t('a11y.media_search')" @input="queueSearch">
         <select v-model="kind" class="cms-input" :aria-label="t('a11y.media_kind')" @change="applyFilters"><option value="">{{ t('media_page.all_kinds') }}</option><option v-for="item in kinds" :key="item" :value="item">{{ kindLabel(item) }}</option></select>
-        <LButton variant="outline" severity="neutral" shape="rounded" @click="view=view==='grid'?'list':'grid'">{{ view==='grid' ? t('media_page.list_view') : t('media_page.grid_view') }}</LButton>
+        <LButton variant="outline" severity="neutral" shape="rounded" :aria-pressed="view==='list' ? 'true' : 'false'" @click="view=view==='grid'?'list':'grid'">{{ view==='grid' ? t('media_page.list_view') : t('media_page.grid_view') }}</LButton>
         <LButton variant="outline" severity="neutral" shape="rounded" @click="loadMedia">{{ t('media_page.refresh') }}</LButton>
       </div>
     </LPanel>
@@ -62,7 +62,7 @@
         <div v-else-if="error && !libraryLoaded" class="cms-page-state cms-page-state--error" role="alert"><strong>{{ t('media_page.load_failed') }}</strong><p>{{ t('media_page.load_failed_hint') }}</p><LButton variant="outline" @click="loadMedia">{{ t('media_page.refresh') }}</LButton></div>
         <div v-else-if="!assets.length" class="cms-page-state">{{ t('media_page.not_found') }}</div>
         <div v-else-if="view==='grid'" class="cms-media-grid">
-          <article v-for="asset in assets" :key="asset.id" class="cms-media-card" :class="{ selected:selected?.id===asset.id }" role="button" tabindex="0" :aria-pressed="selected?.id===asset.id ? 'true' : 'false'" @click="openAsset(asset)" @keydown.enter.prevent="openAsset(asset)" @keydown.space.prevent="openAsset(asset)">
+          <article v-for="asset in assets" :key="asset.id" class="cms-media-card" :class="{ selected:selected?.id===asset.id }" role="button" tabindex="0" :aria-pressed="selected?.id===asset.id ? 'true' : 'false'" :aria-label="`${titleOf(asset)} — ${kindLabel(asset.kind)}`" @click="openAsset(asset)" @keydown.enter.prevent="openAsset(asset)" @keydown.space.prevent="openAsset(asset)">
             <div class="cms-media-card__preview">
               <img v-if="asset.kind==='image' && (asset.thumb || asset.url)" :src="asset.thumb || asset.url" :alt="asset.alt || ''">
               <LIcon v-else :name="kindIcon(asset.kind)" :size="30" />
@@ -72,7 +72,7 @@
           </article>
         </div>
         <div v-else class="cms-media-list">
-          <article v-for="asset in assets" :key="asset.id" class="cms-media-list-row" :class="{ selected:selected?.id===asset.id }" role="button" tabindex="0" :aria-pressed="selected?.id===asset.id ? 'true' : 'false'" @click="openAsset(asset)" @keydown.enter.prevent="openAsset(asset)" @keydown.space.prevent="openAsset(asset)">
+          <article v-for="asset in assets" :key="asset.id" class="cms-media-list-row" :class="{ selected:selected?.id===asset.id }" role="button" tabindex="0" :aria-pressed="selected?.id===asset.id ? 'true' : 'false'" :aria-label="`${titleOf(asset)} — ${kindLabel(asset.kind)}`" @click="openAsset(asset)" @keydown.enter.prevent="openAsset(asset)" @keydown.space.prevent="openAsset(asset)">
             <div class="cms-media-list-thumb"><img v-if="asset.kind==='image' && (asset.thumb||asset.url)" :src="asset.thumb||asset.url" :alt="asset.alt||''"><LIcon v-else :name="kindIcon(asset.kind)" /></div>
             <div><strong>{{ titleOf(asset) }}</strong><small>{{ asset.original_name }}</small><LBadge v-if="asset.kind==='image' && !asset.alt" severity="warning">{{ t('media_page.missing_alt') }}</LBadge></div>
             <span>{{ kindLabel(asset.kind) }}</span><span>{{ formatBytes(asset.size) }}</span>
@@ -86,7 +86,7 @@
           <template #header>{{ t('media_page.details') }}</template>
           <div class="cms-media-detail-preview"><img v-if="selected.kind==='image' && selected.url" :src="selected.url" :alt="draft.alt"><video v-else-if="selected.kind==='video' && selected.url" controls :src="selected.url"/><audio v-else-if="selected.kind==='audio' && selected.url" controls :src="selected.url"/><LIcon v-else :name="kindIcon(selected.kind)" :size="42" /></div>
           <div class="cms-form-grid"><label>{{ t('media_page.title') }}<input v-model="draft.title" class="cms-input" @input="draftDirty=true"></label><label v-if="selected.kind==='image'">{{ t('media_page.alt') }}<input v-model="draft.alt" class="cms-input" :placeholder="t('media_page.alt_placeholder')" @input="draftDirty=true"></label><label>{{ t('media_page.caption') }}<textarea v-model="draft.caption" class="cms-input" rows="3" @input="draftDirty=true"/></label><label>{{ t('media_page.description') }}<textarea v-model="draft.description" class="cms-input" rows="4" @input="draftDirty=true"/></label></div>
-          <div class="cms-card-actions"><LButton :disabled="saving" @click="saveMetadata">{{ saving ? t('media_page.saving') : t('media_page.save') }}</LButton><LButton variant="outline" @click="copyUrl">{{ t('media_page.copy_url') }}</LButton><LButton variant="outline" @click="closeAsset">{{ t('media_page.close') }}</LButton><LButton variant="outline" severity="danger" @click="removeAsset">{{ t('media_page.delete') }}</LButton></div>
+          <div class="cms-card-actions"><LButton :disabled="saving || !canUpdate" @click="saveMetadata">{{ saving ? t('media_page.saving') : t('media_page.save') }}</LButton><LButton variant="outline" @click="copyUrl">{{ t('media_page.copy_url') }}</LButton><LButton variant="outline" @click="closeAsset">{{ t('media_page.close') }}</LButton><LButton v-if="canDelete" variant="outline" severity="danger" @click="removeAsset">{{ t('media_page.delete') }}</LButton></div>
         </LPanel>
         <LPanel><template #header>{{ t('media_page.usages', { count: selected.usage_count || 0 }) }}</template><article v-for="usage in selected.usages || []" :key="usage.id" class="cms-usage-row"><strong>{{ usage.resource_type }} #{{ usage.resource_id }}</strong><small>{{ usage.context }}</small></article><p v-if="!(selected.usages||[]).length" class="cms-muted">{{ t('media_page.no_usages') }}</p></LPanel>
         <LPanel><template #header>{{ t('media_page.variants', { count: selected.variant_count || 0 }) }}</template><article v-for="variant in selected.variants || []" :key="variant.id" class="cms-usage-row"><strong>{{ variant.variant_key || variant.key }}</strong><small>{{ variant.width || '—' }}×{{ variant.height || '—' }} · {{ formatBytes(variant.size) }}</small></article><p v-if="!(selected.variants||[]).length" class="cms-muted">{{ t('media_page.no_variants') }}</p></LPanel>
@@ -99,10 +99,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { LBadge, LButton, LIcon, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import { mediaApi } from '../../services/cms-api.js'
+import { canAdmin } from '../../services/admin-provider.js'
 import { t } from '../../i18n/index.js'
 
 const assets=ref([]), summary=ref({}), policy=ref({allowed_extensions:[],max_mb:20}), pagination=ref({limit:48,offset:0,returned:0,has_more:false}), kinds=ref(['image','video','audio','document'])
 const query=ref(''), kind=ref(''), view=ref('grid'), loading=ref(false), libraryLoaded=ref(false), uploading=ref(false), dragging=ref(false), notice=ref(''), error=ref(''), fileInput=ref(null), uploadQueue=ref([]), selected=ref(null), saving=ref(false), draft=ref({title:'',alt:'',caption:'',description:''}), draftDirty=ref(false)
+const canUpload=canAdmin('media.upload'),canUpdate=canAdmin('media.update'),canDelete=canAdmin('media.delete')
 let timer=null, libraryRequest=0, selectionRequest=0
 const accept=computed(()=>(policy.value.allowed_extensions||[]).map(v=>'.'+v).join(','))
 const mediaRange=computed(()=>{const total=Number(pagination.value.total??summary.value.total??0);if(total<=0)return t('media_page.range_empty');const from=Math.min(total,Number(pagination.value.offset||0)+1),to=Math.min(total,Number(pagination.value.offset||0)+Number(pagination.value.returned||assets.value.length||0));return t('media_page.range',{from,to,total})})
@@ -121,6 +123,7 @@ async function openAsset(asset){
 }
 function closeAsset(){if(!confirmDiscardDraft())return;clearSelection()}
 async function saveMetadata(){
+  if(!canUpdate){error.value=t('state.denied_message');return}
   if(!selected.value||saving.value)return
   const id=selected.value.id,submitted=JSON.stringify(draft.value),body=JSON.parse(submitted)
   saving.value=true;error.value='';notice.value=''
@@ -134,10 +137,10 @@ async function saveMetadata(){
     await loadMedia()
   }catch(e){error.value=e.message}finally{saving.value=false}
 }
-async function removeAsset(){if(!selected.value||!confirm(t('media_page.delete_confirm',{title:titleOf(selected.value)})))return;try{await mediaApi.remove(selected.value.id);clearSelection();notice.value=t('media_page.deleted');await loadMedia()}catch(e){if(e.code==='MEDIA_IN_USE'&&e.details?.usages){selected.value={...selected.value,in_use:true,usage_count:e.details.usages.length,usages:e.details.usages};error.value=t('media_page.in_use')}else error.value=e.message}}
+async function removeAsset(){if(!canDelete){error.value=t('state.denied_message');return}if(!selected.value||!confirm(t('media_page.delete_confirm',{title:titleOf(selected.value)})))return;try{await mediaApi.remove(selected.value.id);clearSelection();notice.value=t('media_page.deleted');await loadMedia()}catch(e){if(e.code==='MEDIA_IN_USE'&&e.details?.usages){selected.value={...selected.value,in_use:true,usage_count:e.details.usages.length,usages:e.details.usages};error.value=t('media_page.in_use')}else error.value=e.message}}
 async function copyUrl(){if(!selected.value?.url)return;try{await navigator.clipboard.writeText(selected.value.url);notice.value=t('media_page.url_copied')}catch{error.value=t('media_page.url_copy_failed')}}
 function onDrop(event){dragging.value=false;addFiles([...(event.dataTransfer.files||[])])}function onFileChange(event){addFiles([...(event.target.files||[])]);event.target.value=''}
-function addFiles(files){const allowed=new Set((policy.value.allowed_extensions||[]).map(v=>String(v).toLowerCase()));const max=Number(policy.value.max_bytes||0);for(const file of files){const ext=String(file.name.split('.').pop()||'').toLowerCase();let status='queued',rowError='';if(allowed.size&&!allowed.has(ext)){status='rejected';rowError=t('media_page.extension_rejected')}else if(max&&file.size>max){status='rejected';rowError=t('media_page.size_rejected',{max:policy.value.max_mb||Math.round(max/1048576)})}uploadQueue.value.push({id:`${Date.now()}-${Math.random()}`,file,name:file.name,size:file.size,status,error:rowError})}runUploads()}
+function addFiles(files){if(!canUpload){error.value=t('state.denied_message');return}const allowed=new Set((policy.value.allowed_extensions||[]).map(v=>String(v).toLowerCase()));const max=Number(policy.value.max_bytes||0);for(const file of files){const ext=String(file.name.split('.').pop()||'').toLowerCase();let status='queued',rowError='';if(allowed.size&&!allowed.has(ext)){status='rejected';rowError=t('media_page.extension_rejected')}else if(max&&file.size>max){status='rejected';rowError=t('media_page.size_rejected',{max:policy.value.max_mb||Math.round(max/1048576)})}uploadQueue.value.push({id:`${Date.now()}-${Math.random()}`,file,name:file.name,size:file.size,status,error:rowError})}runUploads()}
 async function runUploads(){if(uploading.value)return;uploading.value=true;let done=0;try{for(const row of uploadQueue.value){if(row.status!=='queued')continue;row.status='uploading';row.error='';try{const form=new FormData();form.append('file',row.file,row.file.name);form.append('site_id','1');form.append('public','1');const response=await mediaApi.upload(form);row.assetId=(response.data||response).id;row.status='done';done++}catch(e){row.status='error';row.error=e.message}}if(done){notice.value=t('media_page.uploaded_count',{count:done});pagination.value.offset=0;await loadMedia()}}finally{uploading.value=false}}
 function retryUpload(row){if(!row||row.status!=='error'||uploading.value)return;row.status='queued';row.error='';runUploads()}
 function cancelUpload(row){if(!row||row.status==='uploading')return;uploadQueue.value=uploadQueue.value.filter(item=>item.id!==row.id)}

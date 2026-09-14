@@ -77,6 +77,7 @@ return [
             cspEnforced: true,
             implicitPlatformSuperEnabled: false,
             explicitPlatformSuperReady: true,
+            ssrfGuardReady: true,
         );
 
         $report = (new SecurityPostureService($runtime))->report();

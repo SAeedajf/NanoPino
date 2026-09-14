@@ -47,15 +47,20 @@
 
     <LPanel>
       <template #header>Starter Packages</template>
-      <div class="cms-sdk-starters">
+      <p class="cms-muted">{{ t('sdk_page.starter_note') }}</p>
+      <div v-if="sdk.starters.length" class="cms-sdk-starters">
         <article v-for="starter in sdk.starters" :key="starter.id" class="cms-list-card cms-list-card--wide">
           <div>
             <strong>{{ starter.label }}</strong>
+            <small>{{ starter.description }}</small>
+            <span class="cms-muted">{{ starter.type }} · {{ t('sdk_page.starter_files', { count: starter.files.length }) }} · {{ t('sdk_page.starter_validation', { value: starter.validation }) }}</span>
             <code>{{ starter.path }}</code>
+            <code>{{ starter.command }}</code>
           </div>
-          <LBadge severity="secondary">Source included</LBadge>
+          <LBadge severity="success">{{ t('sdk_page.starter_executable') }}</LBadge>
         </article>
       </div>
+      <div v-else class="cms-empty-state">{{ t('sdk_page.starter_unbound') }}</div>
     </LPanel>
 
     <LPanel>

@@ -49,3 +49,12 @@ test('canonical media API exposes detail read operation', () => {
   const api = read('src/services/cms-api.js')
   assert.match(api, /read:id=>cmsRequest\(`\/media\/\$\{id\}`\)/)
 })
+
+test('media summary aggregates dashboard counters in one database projection', () => {
+  const repository = readFileSync(new URL('../../../Cms/Media/PinooxMediaRepository.php', import.meta.url), 'utf8')
+  assert.match(repository, /selectRaw\('COUNT\(\*\) AS total'\)/)
+  assert.match(repository, /COALESCE\(SUM\(size\), 0\) AS total_bytes/)
+  assert.match(repository, /missing_alt/)
+  assert.doesNotMatch(repository, /\(clone \$base\)->count\(\)/)
+  assert.doesNotMatch(repository, /\(clone \$base\)->sum\('size'\)/)
+})

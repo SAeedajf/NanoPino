@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "NanoPino Builder Theme Public Rendering Phase 15 gate",
+  "captured_at": "2026-09-14T00:00:00Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "builder": {
+      "public_published_resolution": true,
+      "mutation_cache_invalidation": ["create", "save", "publish", "restore"]
+    },
+    "theme": {
+      "native_package": "com_pinoox_cms",
+      "active_stack_resolution": true,
+      "inheritance_resolution": true,
+      "design_override_validation": true,
+      "public_template_source_execution": false
+    },
+    "public_rendering": {
+      "renderers": ["home", "page", "taxonomy"],
+      "design_token_css_compilation": true,
+      "safe_fallbacks": true,
+      "site_theme_cache_invalidation": true
+    }
+  },
+  "verification": {
+    "php_tests": "69/69",
+    "frontend_tests": "203/203",
+    "vite_build": true,
+    "production_assets": 62,
+    "documentation_audit": true,
+    "isolated_contracts": ["theme_design_tokens", "builder_public_cache_coherence", "safe_public_fallback"]
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "read_only_boundary_probe": {
+      "manager": 200,
+      "public_site": 200,
+      "private_dashboard": 401,
+      "private_health": 401,
+      "security_headers": ["X-Content-Type-Options", "X-Frame-Options"]
+    },
+    "mutations": "not executed",
+    "theme_activation": "unverified",
+    "builder_public_rendering": "unverified",
+    "authenticated_browser_e2e": "pending"
+  },
+  "gate": {
+    "source_contracts": true,
+    "local_runtime_integration": true,
+    "target_theme_builder_e2e": false,
+    "production_ready": false
+  }
+}

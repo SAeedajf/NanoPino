@@ -47,6 +47,71 @@ final class InMemoryTermRepository implements TermRepositoryInterface
         return $this->terms[$id] ?? null;
     }
 
+    public function findBySlug(int $siteId, string $taxonomy, string $locale, string $slug): ?TermRecord
+    {
+        foreach ($this->terms as $term) {
+            if ($term->siteId === $siteId && $term->taxonomy === $taxonomy && $term->locale === $locale && $term->slug === $slug) {
+                return $term;
+            }
+        }
+
+        return null;
+    }
+
+    public function update(int $id, array $changes): ?TermRecord
+    {
+        $current = $this->terms[$id] ?? null;
+        if ($current === null) {
+            return null;
+        }
+
+        $updated = new TermRecord(
+            $current->id,
+            $current->siteId,
+            (string)($changes['taxonomy'] ?? $current->taxonomy),
+            (string)($changes['name'] ?? $current->name),
+            (string)($changes['slug'] ?? $current->slug),
+            (string)($changes['description'] ?? $current->description),
+            array_key_exists('parent_id', $changes) ? ($changes['parent_id'] !== null ? (int)$changes['parent_id'] : null) : $current->parentId,
+            (string)($changes['locale'] ?? $current->locale),
+            is_array($changes['metadata'] ?? null) ? $changes['metadata'] : $current->metadata,
+            $current->createdAt,
+            gmdate(DATE_ATOM),
+        );
+        $this->terms[$id] = $updated;
+
+        return $updated;
+    }
+
+    public function delete(int $id): bool
+    {
+        if (!isset($this->terms[$id])) {
+            return false;
+        }
+
+        foreach ($this->assignments as $taxonomyAssignments) {
+            foreach ($taxonomyAssignments as $termIds) {
+                if (in_array($id, $termIds, true)) {
+                    return false;
+                }
+            }
+        }
+
+        unset($this->terms[$id]);
+        return true;
+    }
+
+    public function hasChildren(int $id): bool
+    {
+        foreach ($this->terms as $term) {
+            if ($term->parentId === $id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function findMany(array $ids): array
     {
         $result = [];

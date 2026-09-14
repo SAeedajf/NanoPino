@@ -1,5 +1,8 @@
 # ممیزی NanoPino — ۲۰۲۶/۰۹/۰۶
 
+> این گزارش historical است. ماتریس رسمی فازهای فعلی در
+> `docs/audit/2026-09-12-phase-matrix.md` قرار دارد.
+
 ## نتیجه
 
 **NOT READY برای Stable 1.0؛ تأیید اجرای کامل محصول: NOT VERIFIED.**

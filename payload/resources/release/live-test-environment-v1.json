@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "name": "NanoPino live Pinoox test environment",
+  "captured_at": "2026-09-12T20:58:13+03:30",
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "manager_path": "/manager/",
+    "app_mount": "/qwe/",
+    "public_site_path": "/qwe/site",
+    "api_base": "/qwe/api/v1/cms",
+    "package": "com_pinoox_cms",
+    "expected_version": "0.23.72",
+    "expected_version_code": 2372,
+    "minimum_pincore_code": 232
+  },
+  "observed": {
+    "manager": {
+      "browser_access": "authenticated",
+      "http_redirect_then_success": true,
+      "installed_package": "com_pinoox_cms",
+      "installed_version": "0.23.68",
+      "installed_status": "active",
+      "assigned_route": "/qwe"
+    },
+    "dashboard": {
+      "browser_access": "authenticated",
+      "title": "داشبورد",
+      "mount_loaded": true,
+      "api_requests_successful": true
+    },
+    "public_site": {
+      "http_status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "security_headers_present": [
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ]
+    },
+    "health": {
+      "http_status": 200,
+      "overall": "ok",
+      "checks": 13,
+      "php": "8.3.33",
+      "sapi": "litespeed",
+      "pincore": "3.14.4",
+      "pincore_code": 236,
+      "schema_required_tables": 16,
+      "schema_missing_tables": 0,
+      "integrity_orphan_relations": 0,
+      "database_connectivity": true,
+      "cache": "ok",
+      "storage": "ok",
+      "queue": "ok",
+      "scheduler": "ok",
+      "health_registered_extensions": 0
+    },
+    "extensions": {
+      "http_status": 200,
+      "active_items": 2,
+      "items": [
+        "com_pinoox_cms",
+        "com_example_plugin"
+      ],
+      "registry_count_mismatch": true
+    },
+    "candidate": {
+      "local_artifact": "releases/NanoPino-0.23.72-phase10-live-baseline.pinx",
+      "sha256": null,
+      "sha256_evidence": "external release verification output",
+      "uploaded": false,
+      "upgrade_executed": false,
+      "blocked_at": "browser_file_chooser_transport"
+    }
+  },
+  "gate": {
+    "environment_exists": true,
+    "authenticated_live_baseline": true,
+    "candidate_live_update": "pending",
+    "target_regression_sweep": "pending",
+    "signed_package_lifecycle": "blocked",
+    "production_ready": false
+  }
+}

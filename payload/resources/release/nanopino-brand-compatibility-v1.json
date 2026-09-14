@@ -4,6 +4,8 @@
   "rename_from": "Pinoox CMS Core",
   "release_version": "0.23.24",
   "release_version_code": 2324,
+  "evidence_status": "historical_snapshot",
+  "historical_reason": "Brand compatibility evidence generated for 0.23.24; technical identifiers remain governed by the current manifest.",
   "breaking": false,
   "compatibility": {
     "package": "com_pinoox_cms",

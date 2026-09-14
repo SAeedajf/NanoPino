@@ -2,12 +2,25 @@
 
 NanoPino installation and update must use the native Pinoox PINX lifecycle. Do not extract a PINX manually into `apps/` and do not rename a generic ZIP to `.pinx`.
 
-## Current installability contract
+> **Evidence boundary (2026-09-12):** this document contains historical R15/R16
+> lifecycle claims and examples. The current checkout is `0.23.72 / 2372` and
+> the historical release helpers (`tools/release/build-pinx.sh` and
+> `tools/release/verify-pinx-installability.php`) are **Not found in current
+> codebase**. The native `php pinoox pinx:build`/`pinx:info` commands are
+> available, and current install/upgrade/rollback evidence must still be
+> regenerated before a Stable or Production Ready claim.
 
-| Requirement | NanoPino 0.23.29 |
+## Installability contract
+
+The requirements below are current platform constraints. The explicit
+`0.23.29` values in the lifecycle examples are historical R15 CI scenarios,
+not the current NanoPino candidate version.
+
+| Requirement | Current contract / historical R15 reference |
 |---|---|
 | Package | `com_pinoox_cms` |
-| Version | `0.23.29` / code `2329` |
+| Current candidate | `0.23.72` / code `2372` |
+| Historical R15 lifecycle reference | `0.23.29` / code `2329` |
 | PHP | `>= 8.2` |
 | Pincore | `>= 3.14.0` |
 | Native minpin | `232` |
@@ -25,7 +38,7 @@ NanoPino installation and update must use the native Pinoox PINX lifecycle. Do n
 
 GD or Imagick is recommended for image processing. OPcache is recommended in production. Their absence is reported as a warning rather than an installation blocker.
 
-The repository CI executes the PINX lifecycle against Pincore 3.14.0 and 3.14.4. A target shared-hosting environment must still be validated independently because hosting policy, PHP builds, permissions and database privileges can differ.
+Historical R15 CI executed the PINX lifecycle against Pincore 3.14.0 and 3.14.4. The current checkout's quality workflow does not provision that lifecycle; a target shared-hosting environment must still be validated independently because hosting policy, PHP builds, permissions and database privileges can differ.
 
 ## Native installation sequence
 

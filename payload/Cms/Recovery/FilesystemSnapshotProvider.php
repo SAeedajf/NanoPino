@@ -36,6 +36,10 @@ final class FilesystemSnapshotProvider implements SnapshotProviderInterface
         $source = (string)($receipt['source'] ?? $this->sourcePath);
         $snapshot = (string)($receipt['path'] ?? '');
 
+        if (is_link($source)) {
+            throw new RuntimeException('Filesystem restore source may not be a symbolic link.');
+        }
+
         if (!($receipt['exists'] ?? false)) {
             $this->remove($source);
             return;
@@ -136,13 +140,17 @@ final class FilesystemSnapshotProvider implements SnapshotProviderInterface
     {
         if (!file_exists($path) && !is_link($path)) { return; }
         if (is_file($path) || is_link($path)) {
-            @unlink($path);
+            if (!@unlink($path) && (file_exists($path) || is_link($path))) {
+                throw new RuntimeException('Unable to remove filesystem recovery path: ' . $path);
+            }
             return;
         }
         foreach (scandir($path) ?: [] as $name) {
             if ($name === '.' || $name === '..') { continue; }
             $this->remove($path . '/' . $name);
         }
-        @rmdir($path);
+        if (is_dir($path) && !@rmdir($path)) {
+            throw new RuntimeException('Unable to remove filesystem recovery directory: ' . $path);
+        }
     }
 }

@@ -27,6 +27,15 @@ interface BuilderDocumentRepositoryInterface
         int $offset = 0,
     ): array;
 
+    /** @return list<BuilderDocumentSummary> */
+    public function listSummaries(
+        int $siteId,
+        ?BuilderTargetType $type = null,
+        ?string $locale = null,
+        int $limit = 100,
+        int $offset = 0,
+    ): array;
+
     public function count(
         int $siteId,
         ?BuilderTargetType $type = null,

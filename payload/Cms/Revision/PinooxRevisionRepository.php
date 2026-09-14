@@ -7,6 +7,16 @@ use App\com_pinoox_cms\Model\ContentRevisionModel;
 
 final class PinooxRevisionRepository implements RevisionRepositoryInterface
 {
+    /** @var list<string> Columns required by the revision history list. */
+    private const SUMMARY_COLUMNS = [
+        'id',
+        'kind',
+        'checksum',
+        'actor_id',
+        'source_revision_id',
+        'created_at',
+    ];
+
     public function append(
         RevisionSnapshot $snapshot,
         RevisionKind $kind,
@@ -48,6 +58,25 @@ final class PinooxRevisionRepository implements RevisionRepositoryInterface
             ->limit(max(1, min(500, $limit)))
             ->get()
             ->map(fn (ContentRevisionModel $model): RevisionRecord => $this->hydrate($model))
+            ->all();
+    }
+
+    public function summariesForContent(int $contentId, int $limit = 100): array
+    {
+        return ContentRevisionModel::query()
+            ->where('content_id', $contentId)
+            ->select(self::SUMMARY_COLUMNS)
+            ->orderByDesc('id')
+            ->limit(max(1, min(500, $limit)))
+            ->get()
+            ->map(static fn (ContentRevisionModel $model): RevisionSummary => new RevisionSummary(
+                (int) $model->id,
+                RevisionKind::from((string) $model->kind),
+                (string) $model->checksum,
+                $model->actor_id !== null ? (int) $model->actor_id : null,
+                $model->source_revision_id !== null ? (int) $model->source_revision_id : null,
+                (string) $model->created_at,
+            ))
             ->all();
     }
 

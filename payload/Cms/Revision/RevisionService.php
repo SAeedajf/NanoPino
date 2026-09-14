@@ -507,13 +507,7 @@ final class RevisionService implements ContentRevisionRecorderInterface
     /** @return list<RevisionRecord> */
     public function history(int $contentId, ?int $actorId = null, int $limit = 100): array
     {
-        $current = $this->content->find($contentId)
-            ?? throw new ContentValidationException('Content not found.');
-
-        $type = $this->contentTypes->definition($current->type)
-            ?? throw new ContentValidationException('Content type not registered.');
-
-        $this->authorizeOwnedContent($type->permissions['read'], $current->siteId, $current->id, $current->authorId, $actorId);
+        $this->authorizedContentForHistory($contentId, $actorId);
 
         $records = $this->revisions->forContent($contentId, $limit);
         foreach ($records as $record) {
@@ -521,6 +515,33 @@ final class RevisionService implements ContentRevisionRecorderInterface
         }
 
         return $records;
+    }
+
+    /** @return list<RevisionSummary> */
+    public function historySummary(int $contentId, ?int $actorId = null, int $limit = 100): array
+    {
+        $this->authorizedContentForHistory($contentId, $actorId);
+
+        return $this->revisions->summariesForContent($contentId, $limit);
+    }
+
+    private function authorizedContentForHistory(int $contentId, ?int $actorId): \App\com_pinoox_cms\Cms\Content\ContentRecord
+    {
+        $current = $this->content->find($contentId)
+            ?? throw new ContentValidationException('Content not found.');
+
+        $type = $this->contentTypes->definition($current->type)
+            ?? throw new ContentValidationException('Content type not registered.');
+
+        $this->authorizeOwnedContent(
+            $type->permissions['read'],
+            $current->siteId,
+            $current->id,
+            $current->authorId,
+            $actorId,
+        );
+
+        return $current;
     }
 
     private function verify(RevisionRecord $record): void

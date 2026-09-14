@@ -7,9 +7,15 @@ use App\com_pinoox_cms\Cms\Block\Document\BlockDocument;
 use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentParser;
 use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentSerializer;
 use App\com_pinoox_cms\Model\BuilderDocumentModel;
+use App\com_pinoox_cms\Cms\Support\QueryBounds;
 
 final class PinooxBuilderDocumentRepository implements BuilderDocumentRepositoryInterface
 {
+    private const SUMMARY_COLUMNS = [
+        'id', 'site_id', 'target_type', 'target_key', 'locale', 'status',
+        'checksum', 'version', 'actor_id', 'published_at', 'created_at', 'updated_at',
+    ];
+
     public function __construct(
         private readonly BlockDocumentParser $parser = new BlockDocumentParser(),
         private readonly BlockDocumentSerializer $serializer = new BlockDocumentSerializer(),
@@ -83,10 +89,40 @@ final class PinooxBuilderDocumentRepository implements BuilderDocumentRepository
             ->orderBy('target_key')
             ->orderBy('locale')
             ->orderBy('id')
-            ->offset(max(0, $offset))
+            ->offset(QueryBounds::offset($offset))
             ->limit(max(1, min(200, $limit)))
             ->get()
             ->map(fn (BuilderDocumentModel $model): BuilderDocumentRecord => $this->hydrate($model))
+            ->all();
+    }
+
+    /** @return list<BuilderDocumentSummary> */
+    public function listSummaries(
+        int $siteId,
+        ?BuilderTargetType $type = null,
+        ?string $locale = null,
+        int $limit = 100,
+        int $offset = 0,
+    ): array {
+        $query = BuilderDocumentModel::query()
+            ->select(self::SUMMARY_COLUMNS)
+            ->where('site_id', $siteId);
+        if ($type !== null) {
+            $query->where('target_type', $type->value);
+        }
+        if ($locale !== null && $locale !== '') {
+            $query->where('locale', $locale);
+        }
+
+        return $query
+            ->orderBy('target_type')
+            ->orderBy('target_key')
+            ->orderBy('locale')
+            ->orderBy('id')
+            ->offset(QueryBounds::offset($offset))
+            ->limit(max(1, min(200, $limit)))
+            ->get()
+            ->map(fn (BuilderDocumentModel $model): BuilderDocumentSummary => $this->summary($model))
             ->all();
     }
 
@@ -171,6 +207,26 @@ final class PinooxBuilderDocumentRepository implements BuilderDocumentRepository
             BuilderStatus::from((string)$model->status),
             $document,
             $stored,
+            (int)$model->version,
+            $model->actor_id !== null ? (int)$model->actor_id : null,
+            $model->published_at !== null ? (string)$model->published_at : null,
+            (string)$model->created_at,
+            (string)$model->updated_at,
+        );
+    }
+
+    private function summary(BuilderDocumentModel $model): BuilderDocumentSummary
+    {
+        return new BuilderDocumentSummary(
+            (int)$model->id,
+            new BuilderTarget(
+                (int)$model->site_id,
+                BuilderTargetType::from((string)$model->target_type),
+                (string)$model->target_key,
+                (string)$model->locale,
+            ),
+            BuilderStatus::from((string)$model->status),
+            (string)$model->checksum,
             (int)$model->version,
             $model->actor_id !== null ? (int)$model->actor_id : null,
             $model->published_at !== null ? (string)$model->published_at : null,

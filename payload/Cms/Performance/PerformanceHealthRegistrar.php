@@ -21,7 +21,9 @@ final readonly class PerformanceHealthRegistrar
                 $statuses=array_column($snapshot['budget_evaluations'],'status');
                 $status=in_array('fail',$statuses,true)
                     ? 'error'
-                    : (in_array('warning',$statuses,true) ? 'warning' : 'ok');
+                    : (in_array('warning',$statuses,true) || in_array('unmeasured',$statuses,true)
+                        ? 'warning'
+                        : 'ok');
 
                 return [
                     'status'=>$status,

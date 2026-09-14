@@ -20,6 +20,12 @@ final readonly class QueueWorker
         $limit=max(1,min(500,$limit));
         $stats=['processed'=>0,'completed'=>0,'retried'=>0,'dead'=>0];
 
+        // Recover only repositories that explicitly support leases. This keeps
+        // the interface backward compatible for extension-provided adapters.
+        if (method_exists($this->repository,'recoverStaleProcessing')) {
+            $this->repository->recoverStaleProcessing();
+        }
+
         for ($i=0;$i<$limit;$i++) {
             $job=$this->repository->reserve();
             if ($job===null) break;
@@ -47,8 +53,21 @@ final readonly class QueueWorker
 
     private function executeReserved(QueueEnvelope $job): string
     {
-        $definition=$this->registry->job($job->type);
         $started=microtime(true);
+
+        try {
+            $definition=$this->registry->job($job->type);
+        } catch (\Throwable $error) {
+            // A removed/disabled job type must never leave a durable record in
+            // processing forever. It is a configuration failure, so retrying
+            // cannot make progress; surface it as a dead job for operator action.
+            $job->status=QueueJobStatus::Dead;
+            $job->lastError=$this->safeError($error);
+            $job->updatedAt=microtime(true);
+            $this->repository->save($job);
+            $this->recordCost($job,$started,'dead');
+            return 'dead';
+        }
 
         try {
             ($definition->handler)(

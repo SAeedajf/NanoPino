@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\com_pinoox_cms\Cms\Settings;
 
 use App\com_pinoox_cms\Cms\Authorization\ScopeType;
+use App\com_pinoox_cms\Cms\PublicSite\PublicNavigation;
+use App\com_pinoox_cms\Cms\PublicSite\PublicSiteContext;
 
 final class CoreSettings
 {
@@ -42,6 +44,36 @@ final class CoreSettings
                         ['value'=>'de','label'=>'Deutsch'],
                     ],
                 ]),
+            ),
+            new SettingDefinition(
+                'site.public_hosts', self::OWNER, SettingType::Json, [],
+                [ScopeType::Site],
+                readPermission: null, writePermission: 'settings.manage',
+                group: 'general', label: 'دامنه‌های سایت عمومی',
+                validator: static fn (mixed $value): bool|string =>
+                    PublicSiteContext::validateHostMap($value),
+                ui: self::ui(
+                    'textarea',
+                    30,
+                    'اختیاری: نگاشت دقیق دامنه به site_id و locale. برای هر دامنه فقط یک شیء site_id/locale وارد کنید.',
+                    ['domain', 'host', 'multisite', 'locale'],
+                    ['rows' => 10],
+                ),
+            ),
+            new SettingDefinition(
+                PublicNavigation::SETTING, self::OWNER, SettingType::Json, [],
+                [ScopeType::Site],
+                readPermission: null, writePermission: 'settings.manage',
+                group: 'general', label: 'منوی اصلی سایت',
+                validator: static fn (mixed $value): bool|string =>
+                    PublicNavigation::validate($value),
+                ui: self::ui(
+                    'textarea',
+                    35,
+                    'فهرست JSON مسیرهای داخلی سایت. هر مورد شامل label و path است و حداکثر دو سطح پشتیبانی می‌شود.',
+                    ['menu', 'navigation', 'header', 'site'],
+                    ['rows' => 14, 'placeholder' => "[{\"label\":\"خانه\",\"path\":\"/site\"}]"],
+                ),
             ),
             new SettingDefinition(
                 'site.timezone', self::OWNER, SettingType::String, 'UTC',

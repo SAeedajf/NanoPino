@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "phase": 22,
+  "name": "NanoPino Stable, Canary and Post-Release Support",
+  "captured_at": "2026-09-14T09:53:29Z",
+  "release": {
+    "package": "com_pinoox_cms",
+    "product": "NanoPino",
+    "version": "0.23.72",
+    "version_code": 2372,
+    "artifact": "releases/NanoPino-0.23.72-phase22-canary-observation.pinx",
+    "signed": true,
+    "signing": {
+      "status": "cryptographically_verified_local_key",
+      "key_id": "nanopino-local:main",
+      "fingerprint": "bae3db064a68d3ad",
+      "target_trust_store_registered": false
+    }
+  },
+  "channels": ["canary", "stable"],
+  "promotion_policy": {
+    "minimum_canary_window_seconds": 300,
+    "minimum_canary_samples": 20,
+    "maximum_error_rate_percent": 1.0,
+    "minimum_availability_percent": 99.0,
+    "maximum_p95_latency_ms": 1200,
+    "high_security_findings_allowed": 0,
+    "signature_required": true,
+    "stable_requires": [
+      "canary_promoted",
+      "canary_window_closed",
+      "stable_approval",
+      "rollback_ready",
+      "monitoring_ready",
+      "incident_runbook_ready",
+      "customer_communication_ready"
+    ]
+  },
+  "verification": {
+    "local_technical_candidate": true,
+    "frontend_tests": "228/228",
+    "php_tests": "76/76",
+    "vite_build": true,
+    "source_dist_parity": true,
+    "runtime_parity": true,
+    "documentation_audit": {
+      "status": "passed",
+      "required_docs": 33,
+      "machine_contracts": 25,
+      "markdown_files": 67,
+      "internal_links": 38
+    },
+    "canary_policy_implemented": true,
+    "canary_observation_recorded": true,
+    "canary_observation_promotable": false,
+    "canary_promotion_executed": false,
+    "stable_promotion_executed": false,
+    "stable_approval": false,
+    "post_release_support_ready": false,
+    "signed_artifact_verified": true,
+    "signed_lifecycle_executed": false,
+    "rollback_runbook_source_ready": true,
+    "operational_support_bundle_ready": true,
+    "target_authenticated_e2e": false,
+    "target_canary_deployment_verified": false,
+    "target_deployment": false
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "mutations_executed": false,
+    "public_site_read_only": "HTTP 200",
+    "private_cms_without_session": "HTTP 401",
+    "deployment_status": "not executed"
+  },
+  "open_boundaries": [
+    "register the approved public key in the target trust store and execute signed PINX lifecycle",
+    "capture target Canary health window with authenticated monitoring",
+    "perform approved target backup and migration rehearsal",
+    "obtain explicit Stable approval after Canary closure",
+    "activate named on-call, scheduler/alerting, incident and customer communication plan"
+  ]
+}

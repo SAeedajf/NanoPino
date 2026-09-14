@@ -17,10 +17,10 @@
     <LPanel>
       <template #header>{{ t('recovery_page.points') }}</template>
       <CmsPageState :state="data.recoveryPoints.length ? 'ready' : 'empty'" empty-icon="history" :empty-title="t('recovery_page.empty_title')" :empty-message="t('recovery_page.empty_message')">
-        <div class="cms-stack">
+        <div class="cms-stack" :aria-busy="actionBusy ? 'true' : 'false'">
           <article v-for="point in data.recoveryPoints" :key="point.id" class="cms-list-card cms-list-card--wide">
             <div><strong>{{ point.extensionId || point.extension_id }}</strong><small>{{ point.id }} · {{ point.operation }}</small><small v-if="point.safeModeTarget">{{ t('recovery_page.safe_mode_target') }}</small></div>
-            <div class="cms-card-actions"><LBadge :severity="point.status === 'ready' ? 'success' : 'warning'">{{ point.status }}</LBadge><LButton variant="outline" severity="neutral" size="sm" shape="rounded" :disabled="!center.apiBound || point.restorable === false" @click="requestRestore(point)">{{ t('recovery_page.restore') }}</LButton></div>
+            <div class="cms-card-actions"><LBadge :severity="point.status === 'ready' ? 'success' : 'warning'">{{ point.status }}</LBadge><LButton variant="outline" severity="neutral" size="sm" shape="rounded" :loading="actionBusy === `restore:${point.id}`" :disabled="Boolean(actionBusy) || !center.apiBound || point.restorable === false" @click="requestRestore(point)">{{ actionBusy === `restore:${point.id}` ? t('recovery_page.restoring') : t('recovery_page.restore') }}</LButton></div>
           </article>
         </div>
       </CmsPageState>
@@ -29,11 +29,12 @@
       <template #header>{{ t('recovery_page.safe_mode_control') }}</template>
       <p class="cms-muted">{{ t('recovery_page.safe_mode_explanation') }}</p>
       <div class="luma-actions">
-        <LButton v-if="data.safeMode.enabled" variant="outline" severity="danger" shape="rounded" :disabled="!center.apiBound" @click="requestSafeModeDisable">{{ t('recovery_page.disable_request') }}</LButton>
+        <LButton v-if="data.safeMode.enabled" variant="outline" severity="danger" shape="rounded" :loading="actionBusy === 'safe-mode-disable'" :disabled="Boolean(actionBusy) || !center.apiBound" @click="requestSafeModeDisable">{{ actionBusy === 'safe-mode-disable' ? t('recovery_page.requesting') : t('recovery_page.disable_request') }}</LButton>
         <LBadge v-else severity="success">{{ t('recovery_page.safe_mode_off') }}</LBadge>
       </div>
       <small v-if="!center.apiBound" class="cms-muted">{{ t('recovery_page.api_unbound') }}</small>
       <p v-if="actionMessage" class="cms-action-message" role="status" aria-live="polite">{{ actionMessage }}</p>
+      <p v-if="actionError" class="cms-action-message cms-action-message--error" role="alert" aria-live="assertive">{{ actionError }} <button type="button" @click="actionError = ''">{{ t('recovery_page.dismiss_error') }}</button></p>
     </LPanel>
     <LPanel>
       <template #header>{{ t('recovery_page.api_title') }}</template>
@@ -52,6 +53,21 @@ import { t } from '../../i18n/index.js'
 const data = readAdminBootData()
 const center = data.recoveryCenter
 const actionMessage = ref('')
-async function requestRestore(point) { try { await performAdminAction('restoreRecoveryPoint', { id: point.id }); actionMessage.value = t('recovery_page.restore_requested') } catch (error) { actionMessage.value = error.message } }
-async function requestSafeModeDisable() { try { await performAdminAction('disableSafeMode'); actionMessage.value = t('recovery_page.disable_requested') } catch (error) { actionMessage.value = error.message } }
+const actionError = ref('')
+const actionBusy = ref('')
+function confirmed(message) { return typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(message) }
+async function requestRestore(point) {
+  if (!point?.id || actionBusy.value || !confirmed(t('recovery_page.restore_confirm', { id: point.id }))) return
+  actionBusy.value = `restore:${point.id}`; actionMessage.value = ''; actionError.value = ''
+  try { await performAdminAction('restoreRecoveryPoint', { id: point.id }); actionMessage.value = t('recovery_page.restore_requested') }
+  catch (error) { actionError.value = error?.message || t('recovery_page.action_failed') }
+  finally { actionBusy.value = '' }
+}
+async function requestSafeModeDisable() {
+  if (actionBusy.value || !confirmed(t('recovery_page.disable_confirm'))) return
+  actionBusy.value = 'safe-mode-disable'; actionMessage.value = ''; actionError.value = ''
+  try { await performAdminAction('disableSafeMode'); actionMessage.value = t('recovery_page.disable_requested') }
+  catch (error) { actionError.value = error?.message || t('recovery_page.action_failed') }
+  finally { actionBusy.value = '' }
+}
 </script>

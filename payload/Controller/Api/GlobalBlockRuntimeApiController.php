@@ -7,10 +7,11 @@ use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
 use App\com_pinoox_cms\Cms\Builder\BuilderConcurrencyException;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockRecord;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
+use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use Pinoox\Component\Http\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
+use Pinoox\Component\Http\Request;
 use Pinoox\Component\Kernel\Controller\ApiController;
 
 final class GlobalBlockRuntimeApiController extends ApiController
@@ -123,7 +124,13 @@ final class GlobalBlockRuntimeApiController extends ApiController
             if (str_contains(strtolower($e->getMessage()), 'not found')) {
                 return CmsApiResponse::error('GLOBAL_BLOCK_NOT_FOUND', 'Global Block not found.', 404);
             }
-            throw $e;
+            return CmsRuntimeErrorReporter::response(
+                $e,
+                'GLOBAL_BLOCK_UPDATE_FAILED',
+                'Global Block could not be updated.',
+                500,
+                ['operation' => 'builder.global_blocks.update'],
+            );
         } catch (\Throwable $e) {
             return CmsRuntimeErrorReporter::response(
                 $e,
@@ -152,11 +159,6 @@ final class GlobalBlockRuntimeApiController extends ApiController
 
     private function payload(Request $request): array
     {
-        try {
-            $data = $request->toArray();
-        } catch (\Throwable) {
-            $data = [];
-        }
-        return is_array($data) ? $data : [];
+        return CmsRequestPayload::read($request);
     }
 }

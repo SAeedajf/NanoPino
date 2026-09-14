@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "name": "NanoPino UI/UX WCAG and Browser Matrix Phase 18 gate",
+  "captured_at": "2026-09-14T08:32:55Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "design_system": "Soft UI Evolution / WCAG AA+",
+    "direction": "dynamic fa/en RTL/LTR",
+    "touch_target_css": "44px",
+    "route_focus": "main content focus after SPA navigation",
+    "zoom_policy": "user zoom remains enabled",
+    "reduced_motion": true,
+    "semantic_states": true,
+    "keyboard_contracts": true
+  },
+  "verification": {
+    "frontend_tests": "208/208",
+    "php_tests": "72/72",
+    "vite_build": true,
+    "reachable_assets": 62,
+    "source_dist_parity": true,
+    "target_mutations": "not executed"
+  },
+  "browser_matrix": [
+    {
+      "engine": "Chromium",
+      "version": "145.0.7632.109",
+      "surface": "local Vite admin harness",
+      "viewports": ["375x812", "768x1024", "1440x900"],
+      "result": "PASS",
+      "evidence": "headless DOM boot and screenshots"
+    },
+    {
+      "engine": "Firefox",
+      "version": "147.0.4",
+      "surface": "local Vite admin harness",
+      "viewports": ["375x812", "768x1024", "1440x900"],
+      "result": "PASS",
+      "evidence": "headless screenshots"
+    },
+    {
+      "engine": "Chromium",
+      "version": "145.0.7632.109",
+      "surface": "target public /qwe/site",
+      "viewports": ["375x812", "1440x900"],
+      "result": "PASS",
+      "evidence": "read-only headless DOM smoke test"
+    },
+    {
+      "engine": "Firefox",
+      "version": "147.0.4",
+      "surface": "target public /qwe/site",
+      "viewports": ["375x812", "1440x900"],
+      "result": "PASS",
+      "evidence": "read-only headless screenshots"
+    }
+  ],
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "manager": "read-only reachable; authentication state not changed",
+    "cms_admin": "401 without an authenticated session",
+    "public_site": "read-only /qwe/site reachable",
+    "authenticated_admin_e2e": "pending",
+    "axe_or_screen_reader_audit": "pending"
+  },
+  "gate": {
+    "source_wcag_baseline": true,
+    "local_chromium_matrix": true,
+    "local_firefox_matrix": true,
+    "target_public_smoke": true,
+    "target_authenticated_admin_matrix": false,
+    "production_ready": false
+  }
+}

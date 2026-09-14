@@ -3,7 +3,11 @@ declare(strict_types=1);
 namespace App\com_pinoox_cms\Cms\Health;
 
 use App\com_pinoox_cms\Cms\Compatibility\KernelCompatibilityChecker;
+use App\com_pinoox_cms\Cms\Cache\PinooxCacheStore;
+use App\com_pinoox_cms\Cms\Queue\FileQueueRepository;
+use App\com_pinoox_cms\Cms\Runtime\CmsSchemaIntegrityProbe;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeSchemaReconciler;
+use App\com_pinoox_cms\Cms\Storage\PinooxStorageDriver;
 
 final readonly class SystemHealthRegistrar
 {
@@ -20,6 +24,9 @@ final readonly class SystemHealthRegistrar
         $code=$this->kernelCode;
         $version=$this->kernelVersion;
         $extensionCount=$this->extensionCount;
+        $cache=new PinooxCacheStore();
+        $storage=new PinooxStorageDriver();
+        $queue=new FileQueueRepository($path . '/queue');
 
         $registry->register(new HealthCheckDefinition('system.php',$owner,static function():array{
             return [
@@ -80,6 +87,21 @@ final readonly class SystemHealthRegistrar
             }
         }));
 
+        $registry->register(new HealthCheckDefinition('system.cms_integrity',$owner,static function():array{
+            try {
+                return CmsSchemaIntegrityProbe::inspect();
+            } catch (\Throwable $e) {
+                return [
+                    'status' => 'unknown',
+                    'message' => 'CMS relational integrity probe could not complete.',
+                    'details' => [
+                        'read_only_probe' => true,
+                        'exception' => $e::class,
+                    ],
+                ];
+            }
+        }));
+
         $registry->register(new HealthCheckDefinition('system.media_native_api',$owner,static function():array{
             $class='Pinoox\Component\File\UploadBuilder';
             $methods=['access','package','extensions','maxSize','metadata','thumb','save'];
@@ -104,27 +126,9 @@ final readonly class SystemHealthRegistrar
             }catch(\Throwable $e){return['status'=>'error','message'=>'Pinoox database connectivity probe failed.','details'=>['facade_available'=>true,'connectivity_probe_bound'=>true,'connected'=>false,'exception'=>$e::class]];}
         }));
 
-        $registry->register(new HealthCheckDefinition('system.cache',$owner,static function():array{
-            $available=class_exists('Pinoox\\Portal\\Cache');
-            return [
-                'status'=>$available?'unknown':'error',
-                'message'=>$available
-                    ? 'Pinoox Cache facade is available; read/write probe is not bound yet.'
-                    : 'Pinoox Cache facade is unavailable.',
-                'details'=>['facade_available'=>$available,'read_write_probe_bound'=>false],
-            ];
-        }));
+        $registry->register(new HealthCheckDefinition('system.cache',$owner,static fn():array=>$cache->health()));
 
-        $registry->register(new HealthCheckDefinition('system.storage',$owner,static function():array{
-            $available=class_exists('Pinoox\\Portal\\Storage');
-            return [
-                'status'=>$available?'unknown':'error',
-                'message'=>$available
-                    ? 'Pinoox Storage facade is available; configured-disk probe is not bound yet.'
-                    : 'Pinoox Storage facade is unavailable.',
-                'details'=>['facade_available'=>$available,'disk_probe_bound'=>false],
-            ];
-        }));
+        $registry->register(new HealthCheckDefinition('system.storage',$owner,static fn():array=>$storage->health()));
 
         $registry->register(new HealthCheckDefinition('system.scheduler',$owner,static function():array{
             $schedule=class_exists('Pinoox\\Cron\\Schedule');
@@ -144,16 +148,7 @@ final readonly class SystemHealthRegistrar
             ];
         }));
 
-        $registry->register(new HealthCheckDefinition('system.queue',$owner,static function():array{
-            return [
-                'status'=>'unknown',
-                'message'=>'CMS Queue contract is available; durable repository/runner health probe must be bound by deployment.',
-                'details'=>[
-                    'shared_hosting_sync_fallback'=>true,
-                    'runtime_monitor_bound'=>false,
-                ],
-            ];
-        }));
+        $registry->register(new HealthCheckDefinition('system.queue',$owner,static fn():array=>$queue->health()));
 
         $registry->register(new HealthCheckDefinition('system.extensions',$owner,static function()use($extensionCount):array{
             return [

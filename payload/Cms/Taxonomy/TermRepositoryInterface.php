@@ -19,6 +19,20 @@ interface TermRepositoryInterface
 
     public function find(int $id): ?TermRecord;
 
+    public function findBySlug(int $siteId, string $taxonomy, string $locale, string $slug): ?TermRecord;
+
+    /** @param array<string,mixed> $changes */
+    public function update(int $id, array $changes): ?TermRecord;
+
+    /**
+     * Deletes a term only when it has no content assignments.
+     * Implementations must return false for an unknown term.
+     */
+    public function delete(int $id): bool;
+
+    /** Returns true when the term has child terms and cannot be safely removed. */
+    public function hasChildren(int $id): bool;
+
     /** @param list<int> $ids @return array<int,TermRecord> keyed by id */
     public function findMany(array $ids): array;
 

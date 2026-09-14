@@ -6,11 +6,39 @@ import { resolveAdminManifest } from './registry/admin-manifest.js'
 import { mergeComponentRegistries } from './registry/admin-components.js'
 import { buildThemeConfig } from './registry/theme-config.js'
 import './styles/admin.scss'
-import { applyCmsDocumentLocale } from './i18n/index.js'
+import { applyCmsDocumentLocale, t } from './i18n/index.js'
 import { configureTelemetry, installUnhandledErrorCapture, trackPage } from './services/telemetry.js'
 
 const signal = (name, detail = {}) => {
   window.dispatchEvent(new CustomEvent(name, { detail }))
+}
+
+function installShellAccessibility() {
+  const root = document.querySelector('#app')
+  if (!root) return
+
+  const main = root.querySelector('main')
+  if (!main) return
+
+  main.id ||= 'cms-main-content'
+  main.tabIndex = -1
+
+  if (!root.querySelector('#cms-skip-link')) {
+    const skip = document.createElement('a')
+    skip.id = 'cms-skip-link'
+    skip.className = 'cms-skip-link'
+    skip.href = `#${main.id}`
+    skip.textContent = t('a11y.skip_to_content', {}, 'Skip to content')
+    root.prepend(skip)
+  }
+}
+
+function focusMainContent() {
+  const main = document.querySelector('#cms-main-content')
+  if (!main || typeof main.focus !== 'function') return
+
+  // SPA route changes must announce the new page to keyboard and screen-reader users.
+  main.focus({ preventScroll: true })
 }
 
 async function bootAdmin() {
@@ -32,9 +60,24 @@ async function bootAdmin() {
       themeConfig: buildThemeConfig(manifest),
     })
 
+    // PageLayout renders its semantic main after the router is mounted.
+    // Keep the check bounded so a broken custom route cannot create a loop.
+    let shellChecks = 0
+    const checkShell = () => {
+      installShellAccessibility()
+      if (!document.querySelector('#cms-main-content') && shellChecks++ < 60) {
+        window.requestAnimationFrame(checkShell)
+      }
+    }
+    window.requestAnimationFrame(checkShell)
+
     configureTelemetry(boot.cmsAdmin?.telemetry)
     installUnhandledErrorCapture()
     runtime?.router?.afterEach?.((to) => {
+      window.requestAnimationFrame(() => {
+        installShellAccessibility()
+        focusMainContent()
+      })
       trackPage(to.fullPath, to.meta?.title || document.title)
     })
     trackPage(runtime?.router?.currentRoute?.value?.fullPath || window.location.pathname, document.title)

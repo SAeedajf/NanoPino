@@ -6,7 +6,9 @@ namespace App\com_pinoox_cms\Controller\Api;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationDeniedException;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationRequest;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityRepository;
+use App\com_pinoox_cms\Cms\Identity\PinooxEffectiveIdentity;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
+use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeErrorReporter;
 use Pinoox\Component\Http\JsonResponse;
@@ -20,7 +22,7 @@ final class UserRuntimeApiController extends ApiController
         try {
             CmsRuntimeServices::authorization()->authorize(new AuthorizationRequest('users.read', CmsRuntimeServices::actorId()));
             $query = trim((string)$request->query->get('q', ''));
-            if (mb_strlen($query) > 190) {
+            if ($this->length($query) > 190) {
                 return CmsApiResponse::error('USER_QUERY_INVALID', 'Search query is too long.', 422);
             }
             $status = trim((string)$request->query->get('status', ''));
@@ -57,7 +59,11 @@ final class UserRuntimeApiController extends ApiController
                 'role_templates' => $roleTemplates,
                 'capabilities' => $capabilities,
                 'summary' => $repo->summary(),
-                'current' => $repo->currentUser(),
+                'current' => PinooxEffectiveIdentity::withEffectiveAbilities(
+                    $repo->currentUser(),
+                    $kernel->capabilities,
+                    CmsRuntimeServices::authorization(),
+                ),
                 'statuses' => ['active', 'inactive', 'suspend', 'pending'],
                 'pagination' => [
                     'limit' => $limit,
@@ -86,7 +92,7 @@ final class UserRuntimeApiController extends ApiController
             $data = $this->requestPayload($request);
             $username = trim((string)($data['username'] ?? ''));
             $password = (string)($data['password'] ?? '');
-            if ($username === '' || mb_strlen($username) > 190 || mb_strlen($password) < 8) {
+            if ($username === '' || $this->length($username) > 190 || $this->length($password) < 8) {
                 return CmsApiResponse::error('USER_VALIDATION_FAILED', 'Username and a password of at least 8 characters are required.', 422);
             }
             $id = CmsRuntimeServices::userAdministration()->create(CmsRuntimeServices::actorId(), $data);
@@ -198,8 +204,12 @@ final class UserRuntimeApiController extends ApiController
     /** @return array<string,mixed> */
     private function requestPayload(Request $request): array
     {
-        try { $data = $request->toArray(); } catch (\Throwable) { $data = []; }
-        return is_array($data) ? $data : [];
+        return CmsRequestPayload::read($request);
+    }
+
+    private function length(string $value): int
+    {
+        return function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
     }
 
     private function mutationError(\Throwable $e, string $code, string $message): JsonResponse

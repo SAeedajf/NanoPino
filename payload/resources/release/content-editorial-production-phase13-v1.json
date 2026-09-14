@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "name": "NanoPino Content and Editorial Production Workflow gate",
+  "captured_at": "2026-09-12T18:06:00Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "workflow_states": ["draft", "pending_review", "approved", "scheduled", "published", "archived", "trash"],
+    "scheduled_publication": "atomic repository compare-and-set",
+    "revision_evidence": "Published revision recorded for scheduler publication",
+    "audit_evidence": "content.scheduled_publish recorded for scheduler publication",
+    "scheduler": {
+      "name": "cms.content.publish-due",
+      "cadence": "every minute",
+      "without_overlapping": true
+    },
+    "service_registry": ["content-scheduled-publisher", "editorial-production-workflow"]
+  },
+  "isolated_devdb": {
+    "due_fixture_published": 1,
+    "repeat_run_published": 0,
+    "future_fixture_status": "scheduled",
+    "probe": "passed"
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "content_mutations": "not executed",
+    "scheduler_execution": "not executed",
+    "authenticated_editorial_e2e": "unverified",
+    "public_publish_verification": "unverified"
+  },
+  "gate": {
+    "source_contracts": true,
+    "isolated_scheduler_lifecycle": true,
+    "target_editorial_workflow": false,
+    "production_ready": false
+  }
+}

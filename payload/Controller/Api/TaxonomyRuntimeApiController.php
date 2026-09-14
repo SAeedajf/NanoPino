@@ -15,6 +15,83 @@ use Pinoox\Component\Kernel\Controller\ApiController;
 
 final class TaxonomyRuntimeApiController extends ApiController
 {
+    public function create(Request $request, string $key): JsonResponse
+    {
+        try {
+            $this->assertKey($key);
+            $payload = CmsRequestPayload::read($request);
+            if (array_key_exists('metadata', $payload) && !is_array($payload['metadata'])) {
+                throw new \InvalidArgumentException('Term metadata must be an object.');
+            }
+            $term = CmsRuntimeServices::taxonomy()->createTerm(
+                $key,
+                max(1, (int)($payload['site_id'] ?? $request->query->get('site_id', 1))),
+                (string)($payload['name'] ?? ''),
+                array_key_exists('slug', $payload) ? (string)$payload['slug'] : null,
+                (string)($payload['description'] ?? ''),
+                array_key_exists('parent_id', $payload) && $payload['parent_id'] !== null ? (int)$payload['parent_id'] : null,
+                (string)($payload['locale'] ?? $request->query->get('locale', 'fa')),
+                $payload['metadata'] ?? [],
+                CmsRuntimeServices::actorId(),
+                $request->headers->get('X-Correlation-ID'),
+            );
+            return CmsApiResponse::ok(['term' => $this->serialize($term)], 201);
+        } catch (AuthorizationDeniedException) {
+            return CmsApiResponse::error('FORBIDDEN', 'Taxonomy management is not permitted.', 403);
+        } catch (ContentValidationException|\InvalidArgumentException $e) {
+            return CmsApiResponse::error('TAXONOMY_VALIDATION_FAILED', $e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return CmsRuntimeErrorReporter::response($e, 'TAXONOMY_CREATE_FAILED', 'Term could not be created.', 500, ['operation' => 'taxonomy.term.create', 'taxonomy' => $key]);
+        }
+    }
+
+    public function update(Request $request, string $key, string $id): JsonResponse
+    {
+        try {
+            $this->assertKey($key);
+            $termId = $this->id($id);
+            $payload = CmsRequestPayload::read($request);
+            $term = CmsRuntimeServices::taxonomy()->updateTerm(
+                $termId,
+                $payload,
+                $key,
+                CmsRuntimeServices::actorId(),
+                $request->headers->get('X-Correlation-ID'),
+            );
+            return CmsApiResponse::ok(['term' => $this->serialize($term)]);
+        } catch (AuthorizationDeniedException) {
+            return CmsApiResponse::error('FORBIDDEN', 'Taxonomy management is not permitted.', 403);
+        } catch (ContentValidationException|\InvalidArgumentException $e) {
+            $status = str_contains(strtolower($e->getMessage()), 'not found') ? 404 : 422;
+            return CmsApiResponse::error($status === 404 ? 'TERM_NOT_FOUND' : 'TAXONOMY_VALIDATION_FAILED', $e->getMessage(), $status);
+        } catch (\Throwable $e) {
+            return CmsRuntimeErrorReporter::response($e, 'TAXONOMY_UPDATE_FAILED', 'Term could not be updated.', 500, ['operation' => 'taxonomy.term.update', 'taxonomy' => $key]);
+        }
+    }
+
+    public function delete(Request $request, string $key, string $id): JsonResponse
+    {
+        try {
+            $this->assertKey($key);
+            CmsRuntimeServices::taxonomy()->deleteTerm(
+                $this->id($id),
+                $key,
+                CmsRuntimeServices::actorId(),
+                $request->headers->get('X-Correlation-ID'),
+            );
+            return CmsApiResponse::ok(['deleted' => true]);
+        } catch (AuthorizationDeniedException) {
+            return CmsApiResponse::error('FORBIDDEN', 'Taxonomy management is not permitted.', 403);
+        } catch (ContentValidationException|\InvalidArgumentException $e) {
+            $message = strtolower($e->getMessage());
+            $status = str_contains($message, 'not found') ? 404 : ((str_contains($message, 'assigned') || str_contains($message, 'child terms')) ? 409 : 422);
+            $code = $status === 404 ? 'TERM_NOT_FOUND' : ($status === 409 ? (str_contains($message, 'child terms') ? 'TERM_HAS_CHILDREN' : 'TERM_IN_USE') : 'TAXONOMY_VALIDATION_FAILED');
+            return CmsApiResponse::error($code, $e->getMessage(), $status);
+        } catch (\Throwable $e) {
+            return CmsRuntimeErrorReporter::response($e, 'TAXONOMY_DELETE_FAILED', 'Term could not be deleted.', 500, ['operation' => 'taxonomy.term.delete', 'taxonomy' => $key]);
+        }
+    }
+
     public function terms(Request $request, string $key): JsonResponse
     {
         try {
@@ -75,6 +152,21 @@ final class TaxonomyRuntimeApiController extends ApiController
         }
     }
 
+    private function assertKey(string $key): void
+    {
+        if (preg_match('/^[a-z][a-z0-9_-]{1,63}$/', $key) !== 1) {
+            throw new \InvalidArgumentException('Invalid taxonomy key.');
+        }
+    }
+
+    private function id(string $id): int
+    {
+        if (preg_match('/^[1-9]\d*$/', $id) !== 1) {
+            throw new \InvalidArgumentException('Invalid term id.');
+        }
+        return (int)$id;
+    }
+
     /** @return array<string,mixed> */
     private function serialize(TermRecord $term): array
     {
@@ -87,6 +179,9 @@ final class TaxonomyRuntimeApiController extends ApiController
             'description' => $term->description,
             'parent_id' => $term->parentId,
             'locale' => $term->locale,
+            'metadata' => $term->metadata,
+            'created_at' => $term->createdAt,
+            'updated_at' => $term->updatedAt,
         ];
     }
 }

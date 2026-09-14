@@ -3,6 +3,8 @@
   "product": "NanoPino",
   "release_version": "0.23.24",
   "release_version_code": 2324,
+  "evidence_status": "historical_snapshot",
+  "historical_reason": "Static performance evidence generated for 0.23.24; target-runtime profiling remains a Stable gate.",
   "status": "static_contract_pass",
   "scope": "repository query-plan and source-contract evidence; target-runtime database profiling remains required",
   "content_repository": {

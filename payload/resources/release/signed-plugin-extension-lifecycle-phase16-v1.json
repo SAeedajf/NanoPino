@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "name": "NanoPino Signed Plugin Extension Lifecycle Phase 16 gate",
+  "captured_at": "2026-09-14T08:15:00Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "transport": "native_pinx",
+    "signature_policy": {
+      "install_required": true,
+      "update_required": true,
+      "native_executor_cannot_downgrade": true,
+      "invalid_signature_blocks": true,
+      "unsigned_package_is_inspectable_but_not_executable": true
+    },
+    "review": {
+      "exact_package_sha256_binding": true,
+      "one_time_expiring_ticket": true,
+      "publisher_change_approval": true,
+      "permission_change_approval": true,
+      "static_high_risk_block": true,
+      "permission_grant_digest_binding": true
+    },
+    "lifecycle": {
+      "native_installer_owner": "Pinoox PINX",
+      "recovery_point_before_mutation": true,
+      "failed_recovery_quarantines_and_enables_safe_mode": true,
+      "core_uninstall_blocked": true,
+      "theme_lifecycle_owned_by_appearance": true
+    }
+  },
+  "verification": {
+    "php_tests": "70/70",
+    "frontend_tests": "203/203",
+    "vite_build": true,
+    "production_assets": 62,
+    "package_preflight": true,
+    "archive_integrity": true,
+    "isolated_contracts": ["unsigned_block", "invalid_signature_block", "ticket_digest_binding", "recovery_quarantine"]
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "read_only_boundary_probe": {
+      "manager": 200,
+      "public_site": 200,
+      "private_dashboard": 401,
+      "private_health": 401,
+      "security_headers": ["X-Content-Type-Options", "X-Frame-Options"]
+    },
+    "package_mutations": "not executed",
+    "signed_install_update_uninstall": "pending authorized target rehearsal",
+    "authenticated_browser_e2e": "pending"
+  },
+  "gate": {
+    "source_signed_lifecycle": true,
+    "local_runtime_integration": true,
+    "target_signed_lifecycle_e2e": false,
+    "production_ready": false
+  }
+}

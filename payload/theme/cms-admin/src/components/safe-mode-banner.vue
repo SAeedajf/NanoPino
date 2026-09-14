@@ -3,7 +3,7 @@
     <div class="cms-safe-mode__content">
       <div>
         <div class="cms-safe-mode__title">
-          <LIcon name="shield-alert" :size="20" />
+          <LIcon name="shield-alert" :size="20" aria-hidden="true" />
           {{ t('safe_mode.title') }}
         </div>
         <p class="cms-safe-mode__text">

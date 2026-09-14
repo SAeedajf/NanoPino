@@ -4,8 +4,21 @@ declare(strict_types=1);
 use Pinoox\Component\Migration\Migrator;
 use Pinoox\Component\Package\Lifecycle\AppLifecycleContext;
 use Pinoox\Portal\Database\DB;
+use App\com_pinoox_cms\Cms\Identity\PinooxRoleTemplateProvisioner;
+use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
+
+$provisionRoleTemplates = static function (AppLifecycleContext $context): void {
+    $kernel = CmsKernel::boot($context->package);
+    $provisioner = new PinooxRoleTemplateProvisioner();
+
+    foreach ($kernel->roleTemplates->definitions() as $template) {
+        $provisioner->provision($template);
+    }
+};
 
 return [
+    'install' => $provisionRoleTemplates,
+    'update' => $provisionRoleTemplates,
     'uninstall' => static function (AppLifecycleContext $context): void {
         $package = $context->package;
         if ($package !== 'com_pinoox_cms') {

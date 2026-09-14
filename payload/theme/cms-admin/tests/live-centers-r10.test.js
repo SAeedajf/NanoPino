@@ -86,12 +86,12 @@ test('R10 theme patterns are discovered through the active theme stack and inser
   assert.match(builder, /function insertPattern/)
 })
 
-test('R10 does not advertise unavailable marketplace, remote transport, or missing SDK starters as active', () => {
+test('R10 does not advertise unavailable marketplace or remote transport, and exposes executable SDK starters', () => {
   const admin = readPackage('Controller/AdminController.php')
   const drivers = readPackage('Cms/Driver/CoreDrivers.php')
 
   assert.match(admin, /'marketplace'\s*=>\s*\[[\s\S]*?'connected'\s*=>\s*false/)
-  assert.match(admin, /'starters'\s*=>\s*\[\]/)
+  assert.match(admin, /SdkStarterCatalog::all\(\)/)
   assert.match(admin, /'fallback'\s*=>\s*'search\.database'/)
   assert.match(admin, /remoteSearchConfiguration\(\)/)
   assert.match(drivers, /UnboundRemoteSearchTransport/)
@@ -111,4 +111,12 @@ test('R10 actor-sensitive runtime caches are invalidated on actor change', () =>
       new RegExp(`self::\\$${persistent} = null`),
     )
   }
+})
+
+test('Phase 10 health binds the synced installed-extension registry', () => {
+  const runtime = readPackage('Cms/Runtime/CmsRuntimeServices.php')
+  const admin = readPackage('Controller/AdminController.php')
+
+  assert.match(runtime, /public static function healthRunner\(\)[\s\S]*?self::syncInstalledExtensions\(\)/)
+  assert.match(admin, /CmsRuntimeServices::syncInstalledExtensions\(\)/)
 })

@@ -6,6 +6,8 @@ namespace App\com_pinoox_cms\Cms\Media;
 use App\com_pinoox_cms\Model\MediaAssetModel;
 use App\com_pinoox_cms\Model\MediaUsageModel;
 use App\com_pinoox_cms\Model\MediaVariantModel;
+use App\com_pinoox_cms\Cms\Support\SearchTerm;
+use App\com_pinoox_cms\Cms\Support\QueryBounds;
 
 final class PinooxMediaRepository implements MediaRepositoryInterface
 {
@@ -65,8 +67,8 @@ final class PinooxMediaRepository implements MediaRepositoryInterface
             $builder->where('kind', $kind->value);
         }
 
-        if ($query !== null && trim($query) !== '') {
-            $needle = '%' . trim($query) . '%';
+        $needle = SearchTerm::contains($query);
+        if ($needle !== null) {
             $builder->where(function ($nested) use ($needle): void {
                 $nested
                     ->where('title', 'like', $needle)
@@ -79,7 +81,7 @@ final class PinooxMediaRepository implements MediaRepositoryInterface
 
         return $builder
             ->orderByDesc('id')
-            ->offset(max(0, $offset))
+            ->offset(QueryBounds::offset($offset))
             ->limit(max(1, min(501, $limit)))
             ->get()
             ->map(fn (MediaAssetModel $model): MediaAsset => $this->hydrate($model))
@@ -92,8 +94,8 @@ final class PinooxMediaRepository implements MediaRepositoryInterface
             ->where('site_id', $siteId)
             ->where('status', '!=', MediaStatus::Deleted->value);
         if ($kind !== null) $builder->where('kind', $kind->value);
-        if ($query !== null && trim($query) !== '') {
-            $needle = '%' . trim($query) . '%';
+        $needle = SearchTerm::contains($query);
+        if ($needle !== null) {
             $builder->where(function ($nested) use ($needle): void {
                 $nested->where('title', 'like', $needle)
                     ->orWhere('original_name', 'like', $needle)
@@ -111,20 +113,28 @@ final class PinooxMediaRepository implements MediaRepositoryInterface
             ->where('site_id', $siteId)
             ->where('status', '!=', MediaStatus::Deleted->value);
 
-        $counts = [
-            'total' => (clone $base)->count(),
-            'image' => (clone $base)->where('kind', MediaKind::Image->value)->count(),
-            'video' => (clone $base)->where('kind', MediaKind::Video->value)->count(),
-            'audio' => (clone $base)->where('kind', MediaKind::Audio->value)->count(),
-            'document' => (clone $base)->where('kind', MediaKind::Document->value)->count(),
-            'missing_alt' => (clone $base)
-                ->where('kind', MediaKind::Image->value)
-                ->where(function ($q): void { $q->whereNull('alt')->orWhere('alt', ''); })
-                ->count(),
-            'total_bytes' => (int)((clone $base)->sum('size') ?: 0),
-        ];
+        $row = $base
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw('SUM(CASE WHEN kind = ? THEN 1 ELSE 0 END) AS image', [MediaKind::Image->value])
+            ->selectRaw('SUM(CASE WHEN kind = ? THEN 1 ELSE 0 END) AS video', [MediaKind::Video->value])
+            ->selectRaw('SUM(CASE WHEN kind = ? THEN 1 ELSE 0 END) AS audio', [MediaKind::Audio->value])
+            ->selectRaw('SUM(CASE WHEN kind = ? THEN 1 ELSE 0 END) AS document', [MediaKind::Document->value])
+            ->selectRaw(
+                'SUM(CASE WHEN kind = ? AND (alt IS NULL OR alt = ?) THEN 1 ELSE 0 END) AS missing_alt',
+                [MediaKind::Image->value, ''],
+            )
+            ->selectRaw('COALESCE(SUM(size), 0) AS total_bytes')
+            ->first();
 
-        return array_map(static fn ($value): int => (int)$value, $counts);
+        return [
+            'total' => (int) ($row?->getAttribute('total') ?? 0),
+            'image' => (int) ($row?->getAttribute('image') ?? 0),
+            'video' => (int) ($row?->getAttribute('video') ?? 0),
+            'audio' => (int) ($row?->getAttribute('audio') ?? 0),
+            'document' => (int) ($row?->getAttribute('document') ?? 0),
+            'missing_alt' => (int) ($row?->getAttribute('missing_alt') ?? 0),
+            'total_bytes' => (int) ($row?->getAttribute('total_bytes') ?? 0),
+        ];
     }
 
     public function updateMetadata(int $id, array $changes): MediaAsset

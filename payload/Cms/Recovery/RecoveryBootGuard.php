@@ -18,4 +18,11 @@ final class RecoveryBootGuard
             in_array($extensionId, $this->alwaysAllowed, true),
         );
     }
+
+    public function assertMayBoot(string $extensionId): void
+    {
+        if (!$this->mayBoot($extensionId)) {
+            throw new \RuntimeException('Extension is blocked by CMS Safe Mode.');
+        }
+    }
 }

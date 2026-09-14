@@ -44,40 +44,26 @@ final class ProductionReleaseGate
 
         if ($frontend->ready && $frontend->mode === 'manifest') {
             $buildMetaFile = $root . '/theme/cms-admin/dist/.cms-build.json';
+            $sourcePresent = is_dir($root . '/theme/cms-admin/src')
+                || is_file($root . '/theme/cms-admin/package.json');
 
             try {
-                $current = (new AdminFrontendSourceFingerprint())->calculate($root . '/theme/cms-admin');
-                $parity['currentFingerprint'] = $current['fingerprint'];
-                $parity['sourceFiles'] = $current['files'];
+                $build = $this->readAdminBuildEvidence($buildMetaFile);
+                $parity['buildFingerprint'] = $build['sourceFingerprint'];
+                $parity['buildSourceFiles'] = $build['sourceFiles'];
 
-                if (!is_file($buildMetaFile) || is_link($buildMetaFile)) {
-                    $parity['code'] = 'release.admin_source_parity_missing';
-                    $blockers[] = [
-                        'code' => 'release.admin_source_parity_missing',
-                        'message' => 'Production Admin dist is missing source-parity metadata; rebuild with the release builder.',
-                    ];
+                if (!$sourcePresent) {
+                    // Distributable PINX packages intentionally omit the Admin
+                    // source and build toolchain. In that mode the signed
+                    // package's build evidence is the only verifiable parity
+                    // contract available; never compare it with an empty
+                    // source tree and report a false mismatch.
+                    $parity['ready'] = true;
+                    $parity['code'] = 'release.admin_source_parity_evidence_only';
                 } else {
-                    $size = filesize($buildMetaFile);
-                    if (!is_int($size) || $size < 2 || $size > 65536) {
-                        throw new \RuntimeException('invalid build metadata size');
-                    }
-
-                    $build = json_decode((string) file_get_contents($buildMetaFile), true, 32, JSON_THROW_ON_ERROR);
-
-                    if (
-                        !is_array($build)
-                        || ($build['schema'] ?? null) !== 1
-                        || ($build['algorithm'] ?? null) !== 'sha256-path-filehash-v1'
-                        || !is_string($build['sourceFingerprint'] ?? null)
-                        || preg_match('/^[a-f0-9]{64}$/', $build['sourceFingerprint']) !== 1
-                        || !is_int($build['sourceFiles'] ?? null)
-                        || $build['sourceFiles'] < 1
-                    ) {
-                        throw new \RuntimeException('invalid build metadata schema');
-                    }
-
-                    $parity['buildFingerprint'] = $build['sourceFingerprint'];
-                    $parity['buildSourceFiles'] = $build['sourceFiles'];
+                    $current = (new AdminFrontendSourceFingerprint())->calculate($root . '/theme/cms-admin');
+                    $parity['currentFingerprint'] = $current['fingerprint'];
+                    $parity['sourceFiles'] = $current['files'];
 
                     if (
                         !hash_equals($current['fingerprint'], $build['sourceFingerprint'])
@@ -247,6 +233,37 @@ final class ProductionReleaseGate
             : 'release.admin_runtime_parity_mismatch';
 
         return [$matches, $result];
+    }
+
+    /** @return array{sourceFingerprint:string,sourceFiles:int} */
+    private function readAdminBuildEvidence(string $buildMetaFile): array
+    {
+        if (!is_file($buildMetaFile) || is_link($buildMetaFile)) {
+            throw new \RuntimeException('Admin source-parity metadata is missing.');
+        }
+
+        $size = filesize($buildMetaFile);
+        if (!is_int($size) || $size < 2 || $size > 65536) {
+            throw new \RuntimeException('Invalid Admin build metadata size.');
+        }
+
+        $build = json_decode((string) file_get_contents($buildMetaFile), true, 32, JSON_THROW_ON_ERROR);
+        if (
+            !is_array($build)
+            || ($build['schema'] ?? null) !== 1
+            || ($build['algorithm'] ?? null) !== 'sha256-path-filehash-v1'
+            || !is_string($build['sourceFingerprint'] ?? null)
+            || preg_match('/^[a-f0-9]{64}$/', $build['sourceFingerprint']) !== 1
+            || !is_int($build['sourceFiles'] ?? null)
+            || $build['sourceFiles'] < 1
+        ) {
+            throw new \RuntimeException('Invalid Admin build metadata schema.');
+        }
+
+        return [
+            'sourceFingerprint' => $build['sourceFingerprint'],
+            'sourceFiles' => $build['sourceFiles'],
+        ];
     }
 
     /** @return array{bool,array<string,mixed>} */

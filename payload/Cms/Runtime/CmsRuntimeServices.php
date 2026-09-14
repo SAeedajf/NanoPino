@@ -14,6 +14,7 @@ use App\com_pinoox_cms\Cms\Audit\AuditLogger;
 use App\com_pinoox_cms\Cms\Audit\PinooxAuditRepository;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationManager;
 use App\com_pinoox_cms\Cms\Authorization\PinooxAccessGateway;
+use App\com_pinoox_cms\Cms\Authorization\ScopeType;
 use App\com_pinoox_cms\Cms\Authorization\SingleSiteScopeGuard;
 use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentLoader;
 use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentParser;
@@ -22,6 +23,7 @@ use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentValidator;
 use App\com_pinoox_cms\Cms\Block\Migration\BlockMigrationEngine;
 use App\com_pinoox_cms\Cms\Block\Render\BlockDocumentRenderer;
 use App\com_pinoox_cms\Cms\Builder\BuilderService;
+use App\com_pinoox_cms\Cms\Builder\BuilderPublishedResolver;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockReferenceExpander;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockService;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\PinooxGlobalBlockRepository;
@@ -73,6 +75,7 @@ use App\com_pinoox_cms\Cms\Recovery\SafeModeManager;
 use App\com_pinoox_cms\Cms\Revision\PinooxRevisionRepository;
 use App\com_pinoox_cms\Cms\Revision\RevisionService;
 use App\com_pinoox_cms\Cms\Settings\PinooxSettingsRepository;
+use App\com_pinoox_cms\Cms\Settings\SettingScope;
 use App\com_pinoox_cms\Cms\Settings\SettingsRepositoryInterface;
 use App\com_pinoox_cms\Cms\Settings\SettingsService;
 use App\com_pinoox_cms\Cms\Support\CmsRelease;
@@ -83,8 +86,13 @@ use App\com_pinoox_cms\Cms\Theme\PinooxNativeThemeGateway;
 use App\com_pinoox_cms\Cms\Theme\PinooxThemeActivationGateway;
 use App\com_pinoox_cms\Cms\Theme\ThemeCompatibilityChecker;
 use App\com_pinoox_cms\Cms\Theme\ThemeDiscoveryService;
+use App\com_pinoox_cms\Cms\Theme\ThemeEngine;
 use App\com_pinoox_cms\Cms\Theme\ThemeInheritanceResolver;
 use App\com_pinoox_cms\Cms\Theme\ThemeService;
+use App\com_pinoox_cms\Cms\Theme\ThemeView;
+use App\com_pinoox_cms\Cms\Theme\Design\DesignSchemaValidator;
+use App\com_pinoox_cms\Cms\Theme\Template\TemplateHierarchyResolver;
+use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityMutationGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxUserLookup;
 use App\com_pinoox_cms\Cms\Identity\UserAdministrationService;
@@ -103,11 +111,23 @@ use App\com_pinoox_cms\Cms\Cache\PinooxCacheStore;
 use App\com_pinoox_cms\Cms\Cache\FileCacheTagClock;
 use App\com_pinoox_cms\Cms\Cache\SemanticCache;
 use App\com_pinoox_cms\Cms\Cache\CacheControlService;
+use App\com_pinoox_cms\Cms\Cache\ContentCacheInvalidator;
+use App\com_pinoox_cms\Cms\Cache\PublicRenderCacheInvalidator;
 use App\com_pinoox_cms\Cms\Queue\FileQueueRepository;
 use App\com_pinoox_cms\Cms\Queue\QueueControlService;
+use App\com_pinoox_cms\Cms\Queue\QueueDispatcher;
+use App\com_pinoox_cms\Cms\Queue\QueueMode;
+use App\com_pinoox_cms\Cms\Queue\QueuePayloadValidator;
+use App\com_pinoox_cms\Cms\Queue\QueueRegistry;
+use App\com_pinoox_cms\Cms\Queue\QueueWorker;
+use App\com_pinoox_cms\Cms\Search\SearchQueueRegistrar;
+use App\com_pinoox_cms\Cms\Storage\CmsStorage;
 use App\com_pinoox_cms\Cms\Storage\PinooxStorageDriver;
 use App\com_pinoox_cms\Cms\Performance\PerformanceSnapshotService;
 use App\com_pinoox_cms\Cms\Performance\FilePerformanceRecorder;
+use App\com_pinoox_cms\Cms\Performance\PerformanceMetric;
+use App\com_pinoox_cms\Cms\Performance\PerformanceSample;
+use App\com_pinoox_cms\Cms\Performance\PerformanceProfiler;
 use App\com_pinoox_cms\Cms\Performance\Query\PinooxQueryProbe;
 use App\com_pinoox_cms\Cms\Performance\Cache\CacheEffectivenessTracker;
 use App\com_pinoox_cms\Cms\Performance\Extension\ExtensionCostTracker;
@@ -140,9 +160,17 @@ final class CmsRuntimeServices
     private static ?SearchApiFacade $searchApi = null;
     private static ?InfrastructureApiFacade $infrastructureApi = null;
     private static ?PerformanceApiFacade $performanceApi = null;
+    private static ?FilePerformanceRecorder $performanceRecorder = null;
     private static ?UpdateApiFacade $updateApi = null;
     private static ?PinooxCacheStore $cacheStore = null;
+    private static ?SemanticCache $semanticCache = null;
+    private static ?PublicRenderCacheInvalidator $renderCacheInvalidator = null;
+    private static ?ThemeEngine $themeEngine = null;
     private static ?FileQueueRepository $queueRepository = null;
+    private static ?QueueWorker $queueWorker = null;
+    private static ?QueueDispatcher $queueDispatcher = null;
+    private static ?CmsStorage $storage = null;
+    private static bool $searchQueueRegistered = false;
     private static ?PinooxStorageDriver $storageDriver = null;
     private static ?CacheEffectivenessTracker $cacheTracker = null;
     private static ?ExtensionCostTracker $extensionCostTracker = null;
@@ -187,6 +215,7 @@ final class CmsRuntimeServices
             self::settingsRepository(),
             self::authorization(),
             self::audit(),
+            self::renderCacheInvalidator(),
         );
     }
 
@@ -234,6 +263,7 @@ final class CmsRuntimeServices
             self::authorization(),
             self::audit(),
             new PinooxBuilderTransaction(),
+            self::renderCacheInvalidator(),
         );
     }
 
@@ -256,6 +286,36 @@ final class CmsRuntimeServices
                 self::blockLoader(),
                 $validator,
             ),
+        );
+    }
+
+    /**
+     * Public rendering deliberately bypasses the editor authorization boundary.
+     * The caller must resolve a published document before using this renderer.
+     */
+    public static function publicBlockRenderer(): BlockDocumentRenderer
+    {
+        return new BlockDocumentRenderer(
+            self::kernel()->blocks,
+            self::blockValidator(),
+            self::kernel()->blockRenderers,
+        );
+    }
+
+    public static function publicBuilderPublishedResolver(): BuilderPublishedResolver
+    {
+        return new BuilderPublishedResolver(
+            new PinooxBuilderDocumentRepository(),
+            new PinooxBuilderRevisionRepository(),
+        );
+    }
+
+    public static function publicGlobalBlockExpander(): GlobalBlockReferenceExpander
+    {
+        return new GlobalBlockReferenceExpander(
+            self::globalBlockRepository(),
+            self::blockLoader(),
+            self::blockValidator(),
         );
     }
 
@@ -312,6 +372,7 @@ final class CmsRuntimeServices
             self::audit(),
             revisions: self::revisions(),
             users: new PinooxUserLookup(),
+            cacheInvalidator: new ContentCacheInvalidator(self::semanticCache()),
         );
     }
 
@@ -436,12 +497,72 @@ final class CmsRuntimeServices
             self::authorization(),
             self::audit(),
             CmsRelease::version(),
+            self::renderCacheInvalidator(),
         );
+    }
+
+    /**
+     * Resolve the active native theme for public rendering.
+     *
+     * Public requests receive only validated design data here. Theme template
+     * source is intentionally not evaluated by this boundary; public output
+     * stays on the safe built-in renderer and Builder's render boundary.
+     */
+    public static function publicThemeView(
+        TemplateRequest $request,
+        int $siteId = 1,
+        ?string $context = null,
+        ?string $styleVariation = null,
+    ): ?ThemeView {
+        if ($siteId < 1) return null;
+
+        try {
+            self::discoverThemes();
+            $package = 'com_pinoox_cms';
+            $native = new PinooxNativeThemeGateway();
+            $stack = $native->stack($package, $context);
+            $definition = self::kernel()->themes->byReference($package, $stack->activeName);
+            if ($definition === null) return null;
+
+            // Site overrides are optional presentation data. A settings
+            // backend failure must not hide an otherwise valid native theme.
+            $overrides = [];
+            try {
+                $record = self::settingsRepository()->find(
+                    'theme.design.overrides',
+                    new SettingScope(ScopeType::Site, $siteId),
+                );
+                if (is_array($record?->value)) {
+                    $overrides = (new DesignSchemaValidator())->validate([
+                        'schema' => 1,
+                        'tokens' => $record->value,
+                    ])->tokens;
+                }
+            } catch (\Throwable) {
+                $overrides = [];
+            }
+
+            return self::themeEngine()->resolve(
+                $package,
+                $stack->activeName,
+                $request,
+                $context,
+                $styleVariation,
+                $overrides,
+            );
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public static function healthRunner(): HealthRunner
     {
         $kernel = self::kernel();
+        // Health must observe the same installed-extension registry exposed by
+        // the Extension Center API. Without this sync, a fresh request can
+        // report registered_extensions=0 while /extensions already lists
+        // active installed extensions.
+        self::syncInstalledExtensions();
         $runtime = (new RuntimeKernelInfoResolver())->resolve();
 
         if ($kernel->healthChecks->get('system.database') === null) {
@@ -531,9 +652,46 @@ final class CmsRuntimeServices
         return self::$cacheStore ??= new PinooxCacheStore();
     }
 
-    private static function queueRepository(): FileQueueRepository
+    private static function performanceRecorder(): FilePerformanceRecorder
+    {
+        return self::$performanceRecorder ??= new FilePerformanceRecorder(
+            self::storageRoot() . '/performance/samples.jsonl',
+        );
+    }
+
+    public static function queueRepository(): FileQueueRepository
     {
         return self::$queueRepository ??= new FileQueueRepository(self::storageRoot() . '/queue');
+    }
+
+    public static function queueRegistry(): QueueRegistry
+    {
+        $registry = self::kernel()->queueJobs;
+        if (!self::$searchQueueRegistered) {
+            (new SearchQueueRegistrar(self::searchDriver()))->register($registry);
+            self::$searchQueueRegistered = true;
+        }
+        return $registry;
+    }
+
+    public static function queueWorker(): QueueWorker
+    {
+        return self::$queueWorker ??= new QueueWorker(
+            self::queueRegistry(),
+            self::queueRepository(),
+            new PerformanceProfiler(self::performanceRecorder()),
+        );
+    }
+
+    public static function queueDispatcher(): QueueDispatcher
+    {
+        return self::$queueDispatcher ??= new QueueDispatcher(
+            self::queueRegistry(),
+            self::queueRepository(),
+            new QueuePayloadValidator(),
+            QueueMode::Auto,
+            class_exists('Pinoox\\Cron\\Schedule') && class_exists('Pinoox\\Cron\\ScheduledTask'),
+        );
     }
 
     private static function storageDriver(): PinooxStorageDriver
@@ -563,12 +721,39 @@ final class CmsRuntimeServices
 
     private static function semanticCache(): SemanticCache
     {
-        return new SemanticCache(
+        return self::$semanticCache ??= new SemanticCache(
             self::cacheStore(),
             new FileCacheTagClock(self::storageRoot() . '/cache/tag-clock'),
             'nanopino',
             self::cacheTracker(),
         );
+    }
+
+    private static function renderCacheInvalidator(): PublicRenderCacheInvalidator
+    {
+        return self::$renderCacheInvalidator ??= new PublicRenderCacheInvalidator(self::semanticCache());
+    }
+
+    private static function themeEngine(): ThemeEngine
+    {
+        if (self::$themeEngine !== null) return self::$themeEngine;
+
+        $native = new PinooxNativeThemeGateway();
+        return self::$themeEngine = new ThemeEngine(
+            self::kernel()->themes,
+            new ThemeInheritanceResolver($native),
+            new TemplateHierarchyResolver(self::kernel()->templateRules),
+        );
+    }
+
+    public static function cache(): SemanticCache
+    {
+        return self::semanticCache();
+    }
+
+    public static function storage(): CmsStorage
+    {
+        return self::$storage ??= new CmsStorage(self::storageDriver());
     }
 
     public static function infrastructureApi(): InfrastructureApiFacade
@@ -597,12 +782,53 @@ final class CmsRuntimeServices
             self::authorization(),
             new PerformanceSnapshotService(
                 self::kernel()->performanceBudgets,
-                new FilePerformanceRecorder(self::storageRoot() . '/performance/samples.jsonl'),
+                self::performanceRecorder(),
                 self::queryProbe(),
                 self::cacheTracker(),
                 self::extensionCostTracker(),
             ),
         );
+    }
+
+    /**
+     * Record a request-local API duration without allowing telemetry storage
+     * failures to affect the API response path.
+     */
+    public static function recordApiTiming(string $operation, int $startedNs): void
+    {
+        self::recordTiming('api.facade_response', PerformanceMetric::ApiMs, $operation, $startedNs);
+    }
+
+    /**
+     * Record a request-local search duration without allowing telemetry
+     * storage failures to affect the search response path.
+     */
+    public static function recordSearchTiming(string $operation, int $startedNs): void
+    {
+        self::recordTiming('search.response', PerformanceMetric::SearchMs, $operation, $startedNs);
+    }
+
+    private static function recordTiming(
+        string $name,
+        PerformanceMetric $metric,
+        string $operation,
+        int $startedNs,
+    ): void {
+        if ($name === '' || $operation === '' || $startedNs <= 0) {
+            return;
+        }
+
+        try {
+            self::performanceRecorder()->record(new PerformanceSample(
+                $name,
+                $metric,
+                max(0.0, (hrtime(true) - $startedNs) / 1_000_000),
+                microtime(true),
+                ['operation' => $operation],
+            ));
+        } catch (\Throwable) {
+            // Observability is best effort and must never break the request path.
+        }
     }
 
     public static function updateApi(): UpdateApiFacade

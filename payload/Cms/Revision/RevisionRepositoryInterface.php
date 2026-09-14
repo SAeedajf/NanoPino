@@ -18,5 +18,8 @@ interface RevisionRepositoryInterface
     /** @return list<RevisionRecord> */
     public function forContent(int $contentId, int $limit = 100): array;
 
+    /** @return list<RevisionSummary> */
+    public function summariesForContent(int $contentId, int $limit = 100): array;
+
     public function latestAutosave(int $contentId, ?int $actorId): ?RevisionRecord;
 }

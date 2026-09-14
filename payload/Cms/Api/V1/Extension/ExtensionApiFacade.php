@@ -35,7 +35,7 @@ final readonly class ExtensionApiFacade
         int $size,
         ?int $actorId = null,
         array $currentPermissions = [],
-        bool $requireSignature = false,
+        bool $requireSignature = true,
         bool $isUpdate = false,
         bool $isDowngrade = false,
     ): ExtensionApiResponse {
@@ -68,7 +68,7 @@ final readonly class ExtensionApiFacade
         bool $approved,
         ?int $actorId = null,
         array $currentPermissions = [],
-        bool $requireSignature = false,
+        bool $requireSignature = true,
         bool $isUpdate = false,
         bool $isDowngrade = false,
     ): ExtensionApiResponse {
@@ -103,7 +103,7 @@ final readonly class ExtensionApiFacade
         string $reviewToken,
         ?int $actorId = null,
         array $currentPermissions = [],
-        bool $requireSignature = false,
+        bool $requireSignature = true,
         bool $isDowngrade = false,
     ): ExtensionApiResponse {
         return $this->guard(function () use (

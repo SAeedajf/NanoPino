@@ -125,7 +125,7 @@ onMounted(async()=>{
 })
 
 function positiveId(value){const id=Number(value);return Number.isSafeInteger(id)&&id>0?String(id):''}
-function kindLabel(kind){return ({initial:t('revisions_page.kind_initial'),manual:t('revisions_page.kind_manual'),autosave:t('revisions_page.kind_autosave'),published:t('revisions_page.kind_published'),scheduled:t('revisions_page.kind_scheduled'),pre_restore:t('revisions_page.kind_pre_restore'),restored:t('revisions_page.kind_restored')})[kind]||kind}
+function kindLabel(kind){return ({initial:t('revisions_page.kind_initial'),manual:t('revisions_page.kind_manual'),autosave:t('revisions_page.kind_autosave'),submitted:t('revisions_page.kind_submitted'),approved:t('revisions_page.kind_approved'),published:t('revisions_page.kind_published'),scheduled:t('revisions_page.kind_scheduled'),archived:t('revisions_page.kind_archived'),pre_restore:t('revisions_page.kind_pre_restore'),restored:t('revisions_page.kind_restored')})[kind]||kind}
 function kindSeverity(kind){return kind==='published'||kind==='restored'?'success':kind==='autosave'?'info':kind==='pre_restore'?'warning':'secondary'}
 function formatDate(value){if(!value)return'—';try{return new Date(value).toLocaleString()}catch{return String(value)}}
 function displayValue(value){if(value===undefined)return'—';if(value===null)return'null';const text=typeof value==='string'?value:JSON.stringify(value,null,2);return String(text).length>700?String(text).slice(0,700)+'…':String(text)}

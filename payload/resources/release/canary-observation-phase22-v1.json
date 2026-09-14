@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "phase": 22,
+  "name": "NanoPino Canary Observation and Stable Decision",
+  "captured_at": "2026-09-14T10:03:03Z",
+  "release": {
+    "package": "com_pinoox_cms",
+    "version": "0.23.72",
+    "version_code": 2372,
+    "artifact": "releases/NanoPino-0.23.72-phase22-canary-observation.pinx",
+    "signed": true,
+    "key_id": "nanopino-local:main",
+    "fingerprint": "bae3db064a68d3ad"
+  },
+  "observation": {
+    "status": "observed_but_not_promotable",
+    "target": "https://test.boxpdf.ir",
+    "start": "2026-09-14T09:56:37Z",
+    "end": "2026-09-14T10:03:03Z",
+    "window_seconds": 386,
+    "samples": 20,
+    "failed_samples": 0,
+    "availability_percent": 100.0,
+    "error_rate_percent": 0.0,
+    "critical_incidents": 0,
+    "health_checks_passed": true,
+    "security_headers_passed_samples": 20,
+    "probe_requests": 80,
+    "probe_latency_p95_ms": 1992.764,
+    "probe_latency_max_ms": 3200.388,
+    "latency_policy_limit_ms": 1200.0
+  },
+  "deployment_boundary": {
+    "candidate_installed_on_target": false,
+    "canary_traffic_slice_verified": false,
+    "authenticated_target_monitoring": false,
+    "target_mutations_executed": false,
+    "classification": "read_only_target_observation_not_candidate_canary"
+  },
+  "promotion_decision": {
+    "canary_promotable": false,
+    "stable_approval": false,
+    "stable_promotable": false,
+    "blockers": [
+      "canary.deployment_not_verified",
+      "canary.p95_latency_exceeded",
+      "stable.approval_required"
+    ]
+  },
+  "next_actions": [
+    "measure the deployed candidate through authenticated target monitoring",
+    "investigate and reduce p95 latency below 1200ms",
+    "record a named release-owner Stable approval only after all blockers clear"
+  ]
+}

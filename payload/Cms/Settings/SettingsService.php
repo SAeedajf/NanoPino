@@ -7,6 +7,7 @@ use App\com_pinoox_cms\Cms\Audit\AuditLogger;
 use App\com_pinoox_cms\Cms\Audit\AuditOutcome;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationManager;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationRequest;
+use App\com_pinoox_cms\Cms\Cache\PublicRenderCacheInvalidator;
 
 final class SettingsService
 {
@@ -15,6 +16,7 @@ final class SettingsService
         private readonly SettingsRepositoryInterface $repository,
         private readonly AuthorizationManager $authorization,
         private readonly AuditLogger $audit,
+        private readonly ?PublicRenderCacheInvalidator $renderCache = null,
     ) {}
 
     public function get(
@@ -95,6 +97,8 @@ final class SettingsService
                 ],
             );
 
+            $this->invalidateRenderCache($key, $scope);
+
             return $record;
         } catch (\Throwable $e) {
             $this->audit->log(
@@ -142,7 +146,19 @@ final class SettingsService
             ['deleted' => $deleted],
         );
 
+        $this->invalidateRenderCache($key, $scope);
+
         return $deleted;
+    }
+
+    private function invalidateRenderCache(string $key, SettingScope $scope): void
+    {
+        if (
+            $key === 'theme.design.overrides'
+            && $scope->type === \App\com_pinoox_cms\Cms\Authorization\ScopeType::Site
+        ) {
+            $this->renderCache?->invalidateSite((int) $scope->id);
+        }
     }
 
     private function definition(string $key): SettingDefinition

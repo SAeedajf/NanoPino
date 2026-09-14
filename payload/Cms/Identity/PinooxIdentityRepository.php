@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\com_pinoox_cms\Cms\Identity;
 
 use Illuminate\Database\Eloquent\Builder;
+use App\com_pinoox_cms\Cms\Support\SearchTerm;
+use App\com_pinoox_cms\Cms\Support\QueryBounds;
 use Pinoox\Model\RoleModel;
 use Pinoox\Model\UserModel;
 use Pinoox\Portal\Auth;
@@ -23,7 +25,7 @@ final class PinooxIdentityRepository implements IdentityRepositoryInterface
         ?string $role = null,
     ): array {
         $limit = max(1, min($limit, 100));
-        $offset = max(0, $offset);
+        $offset = QueryBounds::offset($offset);
 
         return $this->filtered($query, $status, $role)
             ->with('roles')
@@ -49,15 +51,20 @@ final class PinooxIdentityRepository implements IdentityRepositoryInterface
 
     public function summary(): array
     {
-        $total = (int)UserModel::query()->count();
-        $statusCount = static fn (string $status): int => (int)UserModel::where('status', $status)->count();
+        $row = UserModel::query()
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS active', ['active'])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS inactive', ['inactive'])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS suspend', ['suspend'])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS pending', ['pending'])
+            ->first();
 
         return [
-            'total' => $total,
-            'active' => $statusCount('active'),
-            'inactive' => $statusCount('inactive'),
-            'suspend' => $statusCount('suspend'),
-            'pending' => $statusCount('pending'),
+            'total' => (int)($row?->getAttribute('total') ?? 0),
+            'active' => (int)($row?->getAttribute('active') ?? 0),
+            'inactive' => (int)($row?->getAttribute('inactive') ?? 0),
+            'suspend' => (int)($row?->getAttribute('suspend') ?? 0),
+            'pending' => (int)($row?->getAttribute('pending') ?? 0),
         ];
     }
 
@@ -91,8 +98,8 @@ final class PinooxIdentityRepository implements IdentityRepositoryInterface
         }
 
         $query = trim((string)$query);
-        if ($query !== '') {
-            $needle = '%' . addcslashes($query, '%_\\') . '%';
+        $needle = SearchTerm::contains($query);
+        if ($needle !== null) {
             $builder->where(static function (Builder $q) use ($needle): void {
                 $q->where('username', 'like', $needle)
                     ->orWhere('email', 'like', $needle)

@@ -15,6 +15,7 @@ use App\com_pinoox_cms\Cms\Taxonomy\TermRepositoryInterface;
 use DateTimeImmutable;
 use App\com_pinoox_cms\Cms\Revision\ContentRevisionRecorderInterface;
 use App\com_pinoox_cms\Cms\Revision\RevisionKind;
+use App\com_pinoox_cms\Cms\Cache\ContentCacheInvalidator;
 
 final class ContentService
 {
@@ -30,6 +31,7 @@ final class ContentService
         private readonly ContentWorkflow $workflow = new ContentWorkflow(),
         private readonly ?ContentRevisionRecorderInterface $revisions = null,
         private readonly ?UserLookupInterface $users = null,
+        private readonly ?ContentCacheInvalidator $cacheInvalidator = null,
     ) {}
 
     /**
@@ -101,6 +103,7 @@ final class ContentService
         );
 
         $record = $this->repository->create($mutation);
+        $this->cacheInvalidator?->invalidate($record);
         $this->revisions?->record($record, RevisionKind::Initial, $actorId, $correlationId);
 
         $this->audit->log(
@@ -184,10 +187,21 @@ final class ContentService
 
         $this->assertParent($type, $parentId, $current->siteId, $current->id);
 
+        // A review or approval belongs to the exact revision that was inspected.
+        // Editing either state invalidates that decision and returns the item to
+        // draft, while published content keeps the legacy live-edit contract.
+        $status = in_array($current->status, [
+            ContentStatus::PendingReview,
+            ContentStatus::Approved,
+        ], true) ? ContentStatus::Draft : $current->status;
+        if ($status !== $current->status) {
+            $this->workflow->assert($current->status, $status);
+        }
+
         $mutation = new ContentMutation(
             $current->siteId,
             $current->type,
-            $current->status,
+            $status,
             $title,
             $slug,
             array_key_exists('excerpt', $input)
@@ -209,6 +223,7 @@ final class ContentService
         );
 
         $record = $this->repository->update($id, $mutation);
+        $this->cacheInvalidator?->invalidate($record, $current);
         $this->revisions?->record($record, RevisionKind::Manual, $actorId, $correlationId);
 
         $this->audit->log(
@@ -241,6 +256,48 @@ final class ContentService
         );
     }
 
+    public function submitForReview(
+        int $id,
+        ?int $actorId = null,
+        ?string $correlationId = null,
+    ): ContentRecord {
+        return $this->transition(
+            $id,
+            ContentStatus::PendingReview,
+            null,
+            $actorId,
+            $correlationId,
+        );
+    }
+
+    public function approve(
+        int $id,
+        ?int $actorId = null,
+        ?string $correlationId = null,
+    ): ContentRecord {
+        return $this->transition(
+            $id,
+            ContentStatus::Approved,
+            null,
+            $actorId,
+            $correlationId,
+        );
+    }
+
+    public function archive(
+        int $id,
+        ?int $actorId = null,
+        ?string $correlationId = null,
+    ): ContentRecord {
+        return $this->transition(
+            $id,
+            ContentStatus::Archived,
+            null,
+            $actorId,
+            $correlationId,
+        );
+    }
+
     public function schedule(
         int $id,
         string $publishAt,
@@ -264,6 +321,53 @@ final class ContentService
             $actorId,
             $correlationId,
         );
+    }
+
+    /**
+     * Publish due records from the trusted native scheduler boundary.
+     *
+     * The scheduler has no interactive actor, so authorization is enforced at
+     * schedule creation and this internal execution path only accepts records
+     * atomically claimed by the repository's scheduled-status predicate.
+     * Every claimed record still receives the normal revision and audit trail.
+     *
+     * @return list<ContentRecord>
+     */
+    public function publishDue(
+        int $limit = 50,
+        ?DateTimeImmutable $now = null,
+        ?string $correlationId = null,
+    ): array {
+        $published = $this->repository->publishDue($limit, $now);
+        foreach ($published as $record) {
+            $this->cacheInvalidator?->invalidate($record);
+            $this->workflow->assert(ContentStatus::Scheduled, ContentStatus::Published);
+
+            $this->revisions?->record(
+                $record,
+                RevisionKind::Published,
+                null,
+                $correlationId,
+            );
+            $this->audit->log(
+                'content.scheduled_publish',
+                $this->type($record->type)->owner(),
+                AuditOutcome::Success,
+                null,
+                ScopeType::Site,
+                $record->siteId,
+                'content',
+                $record->id,
+                $correlationId,
+                [
+                    'from' => ContentStatus::Scheduled->value,
+                    'to' => ContentStatus::Published->value,
+                    'published_at' => $record->publishedAt,
+                ],
+            );
+        }
+
+        return $published;
     }
 
     public function moveToTrash(
@@ -348,6 +452,8 @@ final class ContentService
             $content = $this->requireContent($contentId);
         }
 
+        $this->cacheInvalidator?->invalidate($content);
+
         $this->revisions?->record($content, RevisionKind::Manual, $actorId, $correlationId);
 
         $this->audit->log(
@@ -424,6 +530,8 @@ final class ContentService
                 offset: $query->offset,
                 projection: $query->projection,
                 beforeId: $query->beforeId,
+                termId: $query->termId,
+                taxonomy: $query->taxonomy,
             );
         }
 
@@ -473,6 +581,8 @@ final class ContentService
                 offset: $query->offset,
                 projection: $query->projection,
                 beforeId: $query->beforeId,
+                termId: $query->termId,
+                taxonomy: $query->taxonomy,
             );
         }
 
@@ -489,11 +599,14 @@ final class ContentService
         $current = $this->requireContent($id);
         $type = $this->type($current->type);
 
-        $permission = $to === ContentStatus::Trash
-            ? $type->permissions['delete']
-            : ($to === ContentStatus::Draft
-                ? $type->permissions['update']
-                : $type->permissions['publish']);
+        $permission = match ($to) {
+            ContentStatus::Trash => $type->permissions['delete'],
+            ContentStatus::Draft => $type->permissions['update'],
+            ContentStatus::PendingReview => 'content.submit_review',
+            ContentStatus::Approved => 'content.approve',
+            ContentStatus::Archived => 'content.archive',
+            ContentStatus::Published, ContentStatus::Scheduled => $type->permissions['publish'],
+        };
 
         $this->authorizeOwnedContent($permission, $current, $actorId);
 
@@ -528,11 +641,15 @@ final class ContentService
         );
 
         $record = $this->repository->update($id, $mutation);
+        $this->cacheInvalidator?->invalidate($record, $current);
 
         if ($this->revisions !== null) {
             $kind = match ($to) {
+                ContentStatus::PendingReview => RevisionKind::Submitted,
+                ContentStatus::Approved => RevisionKind::Approved,
                 ContentStatus::Published => RevisionKind::Published,
                 ContentStatus::Scheduled => RevisionKind::Scheduled,
+                ContentStatus::Archived => RevisionKind::Archived,
                 default => RevisionKind::Manual,
             };
             $this->revisions->record($record, $kind, $actorId, $correlationId);

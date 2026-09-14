@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NanoPino — مدیریت محتوا</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./polish.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">N</div><div><strong>NanoPino</strong><small>پلتفرم محتوای پینوکس</small></div></div>
+      <div class="site-switch"><span class="site-dot"></span><div><small>سایت فعال</small><b>فروشگاه آفتاب</b></div><span class="chevron">⌄</span></div>
+      <nav class="nav" aria-label="منوی مدیریت">
+        <button class="nav-item active" data-page="dashboard"><span>⌂</span> پیشخوان</button>
+        <div class="nav-label">محتوا</div>
+        <button class="nav-item" data-page="posts"><span>▤</span> نوشته‌ها <em>۱۲</em></button>
+        <button class="nav-item" data-page="pages"><span>□</span> برگه‌ها</button>
+        <button class="nav-item" data-page="media"><span>▧</span> رسانه</button>
+        <button class="nav-item" data-page="comments"><span>◌</span> دیدگاه‌ها <em class="warn">۳</em></button>
+        <div class="nav-label">مدیریت</div>
+        <button class="nav-item" data-page="appearance"><span>✦</span> پوسته و ظاهر</button>
+        <button class="nav-item" data-page="plugins"><span>⌘</span> افزونه‌ها <em class="success">فعال</em></button>
+        <button class="nav-item" data-page="users"><span>♙</span> کاربران</button>
+        <button class="nav-item" data-page="settings"><span>⚙</span> تنظیمات</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="health"><span class="pulse"></span><div><b>همه‌چیز مرتب است</b><small>وضعیت سیستم عالی</small></div></div><button class="user-card"><span class="avatar">س</span><div><b>سعید احمدی</b><small>مدیر سایت</small></div><span>⋮</span></button></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div class="crumb"><span>سایت‌ها</span><b>/</b><strong id="crumb-title">پیشخوان</strong></div><div class="top-actions"><button class="command-search" id="command-search"><span>⌕</span><span>جست‌وجو در پنل...</span><kbd>⌘ K</kbd></button><button class="icon-btn notification" aria-label="اعلان‌ها" title="اعلان‌ها">♧<i></i></button><button class="view-site">مشاهده سایت <span>↗</span></button></div></header>
+      <section class="content" id="app-content"></section>
+    </main>
+  </div>
+  <div class="toast" id="toast">تغییرات ذخیره شد</div>
+  <dialog id="post-dialog"><form method="dialog" id="post-form"><div class="dialog-head"><h3>نوشته جدید</h3><button value="cancel" class="close">×</button></div><label>عنوان نوشته<input id="post-title" required placeholder="عنوان جذاب برای نوشته..." /></label><label>خلاصه<textarea placeholder="چند خط درباره این نوشته بنویسید..."></textarea></label><div class="dialog-actions"><button value="cancel" class="ghost">انصراف</button><button value="default" class="primary">ذخیره پیش‌نویس</button></div></form></dialog>
+  <script src="./app.js"></script>
+</body>
+</html>

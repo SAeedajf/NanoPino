@@ -9,7 +9,13 @@ final readonly class SingleSiteScopeGuard implements ScopeGuardInterface
         return match($request->scopeType){
             ScopeType::Global=>true,
             ScopeType::Site=>(string)$request->scopeId===(string)$this->siteId,
-            ScopeType::User=>$this->currentSubjectId!==null&&(string)$request->scopeId===(string)$this->currentSubjectId,
+            // A user scope is bound to both the authenticated actor and the
+            // requested subject. Checking only scopeId would allow an
+            // internal caller to mix another subject with the current user's
+            // scope and accidentally widen a user-scoped authorization.
+            ScopeType::User=>$this->currentSubjectId!==null
+                && $request->subjectId === $this->currentSubjectId
+                && (string)$request->scopeId===(string)$this->currentSubjectId,
             ScopeType::Extension=>$this->valid($request->scopeId,'/^com_[a-z0-9][a-z0-9_]{1,126}$/'),
             ScopeType::Theme=>$this->valid($request->scopeId,'/^[a-z0-9][a-z0-9._-]{1,126}$/'),
         };

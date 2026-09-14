@@ -51,7 +51,7 @@ final class CoreBlockRenderers implements BlockRendererInterface
 
         $class = $this->html->classList('cms-block-section', (string)($node->attributes['className'] ?? ''));
         return new RenderedBlock(
-            '<' . $tag . ' class="' . $this->html->text($class) . '">' .
+            '<' . $tag . ' class="' . $this->html->text($class) . '"' . $this->nodePresentation($node) . '>' .
             implode('', $children) .
             '</' . $tag . '>'
         );
@@ -62,13 +62,13 @@ final class CoreBlockRenderers implements BlockRendererInterface
         $level = max(1, min(6, (int)($node->attributes['level'] ?? 2)));
         $text = $this->html->text($node->attributes['text'] ?? '');
 
-        return new RenderedBlock('<h' . $level . '>' . $text . '</h' . $level . '>');
+        return new RenderedBlock('<h' . $level . $this->nodePresentation($node) . '>' . $text . '</h' . $level . '>');
     }
 
     private function paragraph(BlockNode $node): RenderedBlock
     {
         return new RenderedBlock(
-            '<p>' . $this->html->text($node->attributes['text'] ?? '') . '</p>'
+            '<p' . $this->nodePresentation($node) . '>' . $this->html->text($node->attributes['text'] ?? '') . '</p>'
         );
     }
 
@@ -81,9 +81,50 @@ final class CoreBlockRenderers implements BlockRendererInterface
         $target = $newTab ? ' target="_blank" rel="noopener noreferrer"' : '';
 
         return new RenderedBlock(
-            '<a class="cms-block-button" href="' . $url . '"' . $target . '>' .
+            '<a class="cms-block-button" href="' . $url . '"' . $target . $this->nodePresentation($node) . '>' .
             $label .
             '</a>'
         );
+    }
+
+    private function nodePresentation(BlockNode $node): string
+    {
+        $styleMap = [
+            'color' => 'color',
+            'backgroundColor' => 'background-color',
+            'fontSize' => 'font-size',
+            'fontWeight' => 'font-weight',
+            'lineHeight' => 'line-height',
+            'letterSpacing' => 'letter-spacing',
+            'margin' => 'margin',
+            'padding' => 'padding',
+            'width' => 'width',
+            'height' => 'height',
+            'minWidth' => 'min-width',
+            'maxWidth' => 'max-width',
+            'minHeight' => 'min-height',
+            'maxHeight' => 'max-height',
+            'display' => 'display',
+            'alignItems' => 'align-items',
+            'justifyContent' => 'justify-content',
+            'gap' => 'gap',
+            'gridTemplateColumns' => 'grid-template-columns',
+            'textAlign' => 'text-align',
+            'borderRadius' => 'border-radius',
+            'borderWidth' => 'border-width',
+            'borderColor' => 'border-color',
+            'opacity' => 'opacity',
+        ];
+        $declarations = [];
+        foreach ($node->styles as $key => $value) {
+            if ($value === null || !isset($styleMap[$key]) || trim((string)$value) === '') continue;
+            $declarations[] = $styleMap[$key] . ':' . trim((string)$value) . ';';
+        }
+
+        $attributes = ' data-cms-block-id="' . $this->html->text($node->id) . '"';
+        if ($declarations !== []) {
+            $attributes .= ' style="' . $this->html->text(implode('', $declarations)) . '"';
+        }
+        return $attributes;
     }
 }

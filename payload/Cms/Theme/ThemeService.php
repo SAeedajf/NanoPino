@@ -8,6 +8,7 @@ use App\com_pinoox_cms\Cms\Audit\AuditOutcome;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationManager;
 use App\com_pinoox_cms\Cms\Authorization\AuthorizationRequest;
 use App\com_pinoox_cms\Cms\Authorization\ScopeType;
+use App\com_pinoox_cms\Cms\Cache\PublicRenderCacheInvalidator;
 use RuntimeException;
 
 final class ThemeService
@@ -20,6 +21,7 @@ final class ThemeService
         private readonly AuthorizationManager $authorization,
         private readonly AuditLogger $audit,
         private readonly string $cmsVersion,
+        private readonly ?PublicRenderCacheInvalidator $renderCache = null,
     ) {}
 
     /** @return list<ThemeDefinition> */
@@ -114,6 +116,8 @@ final class ThemeService
                 'context' => $context,
             ],
         );
+
+        $this->renderCache?->invalidateSite($siteId, $theme->reference());
 
         return $theme;
     }

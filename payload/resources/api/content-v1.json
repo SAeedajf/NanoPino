@@ -54,6 +54,21 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/cms/content/{id}/submit-review",
+      "capability": "content.submit_review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content/{id}/approve",
+      "capability": "content.approve"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/content/{id}/archive",
+      "capability": "content.archive"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/cms/content/{id}/schedule",
       "capability": "content.publish"
     },
@@ -114,6 +129,7 @@
     "CONTENT_LIST_FAILED",
     "CONTENT_READ_FAILED",
     "CONTENT_MUTATION_FAILED"
+    ,"CONTENT_TRANSITION_INVALID"
   ],
   "authorization": {
     "base": "Each route requires the declared content capability.",

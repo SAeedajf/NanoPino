@@ -14,5 +14,6 @@ final readonly class SecurityRuntimeState
         public bool $cspEnforced = false,
         public bool $implicitPlatformSuperEnabled = true,
         public bool $explicitPlatformSuperReady = false,
+        public bool $ssrfGuardReady = false,
     ) {}
 }

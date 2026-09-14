@@ -7,7 +7,7 @@ import {
   select,
   message,
   confirmFa,
-  navigate, tr} from './common.mjs'
+  navigate, tr, can} from './common.mjs'
 
 function validContentId(value) {
   const id = Number(value)
@@ -51,8 +51,11 @@ function toLocalDateTime(value) {
 
 const styles = `
 .cms-content-shell{display:grid;gap:16px}.cms-content-top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.cms-content-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.cms-content-stat{border:1px solid var(--p-surface-200,#e5e7eb);border-radius:14px;padding:12px;display:grid;gap:4px;background:var(--p-surface-0,#fff)}.cms-content-stat strong{font-size:1.35rem}.cms-content-tabs{display:flex;gap:6px;overflow:auto;padding-bottom:2px}.cms-content-tab{border:1px solid var(--p-surface-300,#d1d5db);background:transparent;color:inherit;border-radius:999px;padding:8px 12px;white-space:nowrap;cursor:pointer}.cms-content-tab[data-active="true"]{background:var(--p-primary-color,#2563eb);border-color:var(--p-primary-color,#2563eb);color:#fff}.cms-content-filterbar{display:grid;grid-template-columns:minmax(220px,1fr) 180px 150px auto;gap:8px;align-items:end}.cms-content-bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;border:1px dashed var(--p-surface-300,#d1d5db);border-radius:12px}.cms-content-list{display:grid;gap:10px}.cms-content-row{display:grid;grid-template-columns:auto minmax(220px,1.5fr) minmax(120px,.7fr) minmax(120px,.7fr) minmax(260px,1fr);gap:10px;align-items:center;border:1px solid var(--p-surface-200,#e5e7eb);border-radius:14px;padding:12px;background:var(--p-surface-0,#fff)}.cms-content-title{display:grid;gap:4px;min-width:0}.cms-content-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cms-content-title small{opacity:.7;overflow-wrap:anywhere}.cms-content-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.cms-content-editor{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.75fr);gap:14px}.cms-content-editor-main,.cms-content-editor-side{display:grid;gap:12px;align-content:start}.cms-content-fieldset{display:grid;gap:10px;padding:12px;border:1px solid var(--p-surface-200,#e5e7eb);border-radius:12px}.cms-content-fieldset legend{padding:0 6px;font-weight:700}.cms-content-field-label{display:grid;gap:3px}.cms-content-technical{font-size:.78rem;opacity:.72}.cms-content-technical summary{cursor:pointer}.cms-richtext{border:1px solid var(--p-surface-300,#d1d5db);border-radius:12px;overflow:hidden}.cms-richtext-toolbar{display:flex;gap:5px;flex-wrap:wrap;padding:7px;border-bottom:1px solid var(--p-surface-200,#e5e7eb)}.cms-richtext-toolbar button{min-width:42px;min-height:40px;border:1px solid var(--p-surface-300,#d1d5db);border-radius:8px;background:var(--p-surface-0,#fff);color:inherit;cursor:pointer}.cms-richtext-editor{min-height:220px;padding:12px;outline:none;line-height:1.8}.cms-richtext-editor img{max-width:100%;height:auto}.cms-resource-value{display:grid;gap:8px}.cms-resource-chips{display:flex;gap:7px;flex-wrap:wrap}.cms-resource-chip{display:inline-flex;gap:6px;align-items:center;min-height:38px;padding:5px 9px;border:1px solid var(--p-surface-300,#d1d5db);border-radius:999px}.cms-resource-chip img{width:30px;height:30px;object-fit:cover;border-radius:50%}.cms-resource-chip button{border:0;background:transparent;color:inherit;cursor:pointer}.cms-resource-picker-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end}.cms-resource-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}.cms-resource-picker-item{min-height:72px;display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px;border:1px solid var(--p-surface-200,#e5e7eb);border-radius:12px;background:var(--p-surface-0,#fff);color:inherit;text-align:start;cursor:pointer}.cms-resource-picker-item[data-selected="true"]{border-color:var(--p-primary-color,#2563eb)}.cms-resource-picker-item img{width:54px;height:54px;object-fit:cover;border-radius:8px}.cms-content-empty{padding:28px 16px;text-align:center;border:1px dashed var(--p-surface-300,#d1d5db);border-radius:14px}.cms-content-pagination{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.cms-content-check{width:20px;height:20px}.cms-content-muted{opacity:.7;font-size:.86rem}.cms-content-advanced{border:1px solid var(--p-surface-200,#e5e7eb);border-radius:12px;padding:10px}.cms-content-advanced summary{cursor:pointer;font-weight:600}.cms-content-statusline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+ .cms-editorial-workflow{display:grid;gap:14px;padding:16px;border:1px solid var(--p-surface-200,#e5e7eb);border-radius:16px;background:linear-gradient(135deg,var(--p-surface-0,#fff),var(--p-surface-50,#f8fafc))}.cms-editorial-workflow-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.cms-editorial-workflow h2{margin:0;font-size:1.05rem}.cms-editorial-workflow p{margin:4px 0 0;max-width:70ch}.cms-editorial-workflow-current{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.cms-editorial-workflow-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;list-style:none;margin:0;padding:0}.cms-editorial-workflow-step{display:grid;gap:5px;min-height:88px;padding:11px;border:1px solid var(--p-surface-200,#e5e7eb);border-radius:12px;background:var(--p-surface-0,#fff)}.cms-editorial-workflow-step-number{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:var(--p-surface-200,#e5e7eb);font-weight:750}.cms-editorial-workflow-step small{opacity:.72;line-height:1.5}.cms-editorial-workflow-step[data-state="complete"],.cms-editorial-workflow-step[data-state="current"]{border-color:var(--p-primary-color,#2563eb)}.cms-editorial-workflow-step[data-state="complete"]{background:var(--p-primary-50,#f0f6ff)}.cms-editorial-workflow-step[data-state="complete"] .cms-editorial-workflow-step-number,.cms-editorial-workflow-step[data-state="current"] .cms-editorial-workflow-step-number{background:var(--p-primary-color,#2563eb);color:#fff}
 @media(max-width:960px){.cms-content-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.cms-content-filterbar{grid-template-columns:1fr 1fr}.cms-content-editor{grid-template-columns:1fr}.cms-content-row{grid-template-columns:auto 1fr}.cms-content-row>[data-mobile-hide="true"]{display:none}.cms-content-actions{grid-column:2;justify-content:flex-start}}
 @media(max-width:600px){.cms-content-filterbar,.cms-resource-picker-toolbar{grid-template-columns:1fr}.cms-content-stats{grid-template-columns:1fr 1fr}.cms-content-row{padding:10px}.cms-content-actions{grid-column:1 / -1}.cms-content-top>*{width:100%}.cms-content-top .cms-content-actions{width:auto}}
+@media(max-width:900px){.cms-editorial-workflow-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.cms-editorial-workflow{padding:12px}.cms-editorial-workflow-header{display:grid}.cms-editorial-workflow-current{justify-content:flex-start}.cms-editorial-workflow-steps{grid-template-columns:1fr 1fr}.cms-editorial-workflow-step{min-height:0}}
 `
 
 export function createComponent(host) {
@@ -82,6 +85,7 @@ export function createComponent(host) {
         previousType: 'post',
         parentLabel: '',
         resourceCache: {},
+        permissions: { create: can('content.create'), update: can('content.update'), publish: can('content.publish'), submitReview: can('content.submit_review'), approve: can('content.approve'), archive: can('content.archive'), delete: can('content.delete') },
         picker: { open:false, kind:'', fieldKey:'', title:'', query:'', items:[], loading:false, error:'', multiple:false, taxonomy:'', targetTypes:[], selected:[], pagination:{limit:24,offset:0,total:0,has_more:false}, richField:'' },
         form: {
           site_id: 1, type: 'post', title: '', slug: '', excerpt: '', locale: 'fa', parent_id: '', fields: {}, metadataJson: '{}',
@@ -148,18 +152,36 @@ export function createComponent(host) {
         return this.types.find((item) => item.key === key)?.singular_label || this.types.find((item) => item.key === key)?.label || key || '—'
       },
       statusLabel(value) {
-        return ({ draft: tr('content_page.draft'), published: tr('content_page.published'), scheduled: tr('content_page.scheduled_full'), trash: tr('content_page.trash_short') })[value] || value || tr('content_page.unknown')
+        return ({ draft: tr('content_page.draft'), pending_review: tr('content_page.pending_review'), approved: tr('content_page.approved'), published: tr('content_page.published'), scheduled: tr('content_page.scheduled_full'), archived: tr('content_page.archived'), trash: tr('content_page.trash_short') })[value] || value || tr('content_page.unknown')
       },
       statusSeverity(value) {
         if (value === 'published') return 'success'
-        if (value === 'scheduled') return 'info'
+        if (value === 'approved' || value === 'scheduled') return 'info'
+        if (value === 'pending_review') return 'warning'
+        if (value === 'archived') return 'secondary'
         if (value === 'trash') return 'danger'
         return 'secondary'
+      },
+      workflowStatus() {
+        return this.items.find((item) => validContentId(item.id) === validContentId(this.editing))?.status || this.status || 'draft'
+      },
+      workflowStage() {
+        return ({ draft: 0, pending_review: 1, approved: 2, scheduled: 2, published: 3, archived: 4 })[this.workflowStatus()] ?? 0
+      },
+      workflowSteps() {
+        return [
+          { key: 'draft', label: tr('content_page.draft'), hint: tr('content_page.workflow_draft_hint') },
+          { key: 'pending_review', label: tr('content_page.pending_review_tab'), hint: tr('content_page.workflow_review_hint') },
+          { key: 'approved', label: tr('content_page.approved_tab'), hint: tr('content_page.workflow_approval_hint') },
+          { key: 'published', label: tr('content_page.published'), hint: tr('content_page.workflow_publish_hint') },
+          { key: 'archived', label: tr('content_page.archived_tab'), hint: tr('content_page.workflow_archive_hint') },
+        ]
       },
       statusCount(value) {
         return this.items.filter((item) => item.status === value).length
       },
       startCreate() {
+        if(!this.permissions.create){this.error=tr('state.denied_message');return}
         if(this.status==='trash'){this.status='';this.notice=tr('content_page.create_left_trash')}
         this.resetForm(this.type || this.types?.[0]?.key || 'post')
         this.editorOpen = true
@@ -266,6 +288,7 @@ export function createComponent(host) {
       },
       async save(publishAfter = false) {
         if (this.saving) return
+        if ((!this.editing && !this.permissions.create) || (this.editing && !this.permissions.update) || (publishAfter && !this.permissions.publish)) { this.error=tr('state.denied_message'); return }
         this.saving = true
         this.error = ''
         this.notice = ''
@@ -306,6 +329,7 @@ export function createComponent(host) {
         const id = validContentId(this.editing)
         if (!id) return
         if (this.saving) return
+        if (!this.permissions.publish || !this.permissions.update) { this.error=tr('state.denied_message'); return }
         if (!this.scheduleAt) { this.error = tr('content_page.schedule_required'); return }
         this.saving = true
         this.error = ''
@@ -326,6 +350,7 @@ export function createComponent(host) {
       async act(id, action, skipConfirm = false) {
         const contentId = validContentId(id)
         if (!contentId) return
+        if ((action === 'publish' && !this.permissions.publish) || (action === 'submit-review' && !this.permissions.submitReview) || (action === 'approve' && !this.permissions.approve) || (action === 'archive' && !this.permissions.archive) || (action === 'trash' && !this.permissions.delete) || (action === 'restore' && !this.permissions.update)) { this.error=tr('state.denied_message'); return }
         this.error = ''
         try {
           if (action === 'trash') {
@@ -334,7 +359,7 @@ export function createComponent(host) {
           } else {
             await api(`/content/${contentId}/${action}`, { method: 'POST', body: {} })
           }
-          this.notice = tr('content_page.operation_done')
+          this.notice = tr(`content_page.${({ publish: 'published_notice', 'submit-review': 'submitted_notice', approve: 'approved_notice', archive: 'archived_notice', restore: 'restored_notice' })[action] || 'operation_done'}`)
           await this.load()
         } catch (e) { this.error = e.message }
       },
@@ -354,8 +379,9 @@ export function createComponent(host) {
         if (this.bulkBusy) return
         const action = this.bulkAction
         const ids = [...new Set(this.selected.map(validContentId).filter(Boolean))]
-        if (!['publish', 'restore', 'trash'].includes(action) || !ids.length) return
-        const labelText = ({ publish: tr('content_page.bulk_publish'), trash: tr('content_page.bulk_trash'), restore: tr('content_page.bulk_restore') })[action]
+        if (!['publish', 'submit-review', 'approve', 'archive', 'restore', 'trash'].includes(action) || !ids.length) return
+        if ((action === 'publish' && !this.permissions.publish) || (action === 'submit-review' && !this.permissions.submitReview) || (action === 'approve' && !this.permissions.approve) || (action === 'archive' && !this.permissions.archive) || (action === 'trash' && !this.permissions.delete) || (action === 'restore' && !this.permissions.update)) { this.error=tr('state.denied_message'); return }
+        const labelText = ({ publish: tr('content_page.bulk_publish'), 'submit-review': tr('content_page.submit_review'), approve: tr('content_page.approve'), archive: tr('content_page.archive'), trash: tr('content_page.bulk_trash'), restore: tr('content_page.bulk_restore') })[action]
         if (!confirmFa(tr('content_page.bulk_action_confirm','',{action:labelText,count:ids.length}))) return
         this.bulkBusy = true
         this.error = ''
@@ -576,15 +602,15 @@ export function createComponent(host) {
                   h('legend', {}, tr('content_page.publishing')),
                   this.editing ? h('div', { class: 'cms-content-statusline' }, [h('span', {}, `${tr('content_page.status')}:`), h(LBadge, { label: this.statusLabel(this.items.find((i) => validContentId(i.id) === validContentId(this.editing))?.status || 'draft') })]) : h('small', { class: 'cms-content-muted' }, tr('content_page.new_is_draft')),
                   h('div', { class: 'cms-content-actions' }, [
-                    h(LButton, { label: this.saving ? tr('content_page.saving') : (this.editing ? tr('content_page.save_changes') : tr('content_page.save_draft')), disabled: this.saving, onClick: () => this.save(false) }),
+                    h(LButton, { label: this.saving ? tr('content_page.saving') : (this.editing ? tr('content_page.save_changes') : tr('content_page.save_draft')), disabled: this.saving || (this.editing ? !this.permissions.update : !this.permissions.create), onClick: () => this.save(false) }),
                     this.items.find((i) => validContentId(i.id) === validContentId(this.editing))?.status !== 'trash'
-                      ? h(LButton, { label: this.items.find((i) => validContentId(i.id) === validContentId(this.editing))?.status === 'published' ? tr('content_page.save_published') : tr('content_page.save_publish'), disabled: this.saving, onClick: () => this.save(true) })
+                      ? h(LButton, { label: this.items.find((i) => validContentId(i.id) === validContentId(this.editing))?.status === 'published' ? tr('content_page.save_published') : tr('content_page.save_publish'), disabled: this.saving || !this.permissions.publish, onClick: () => this.save(true) })
                       : null,
                     h(LButton, { label: tr('content_page.cancel'), severity: 'secondary', onClick: this.closeEditor }),
                   ]),
                   this.editing ? h('div', { style: ui.page }, [
                     label(h, tr('content_page.schedule_label'), input(h, this.scheduleAt, (v) => (this.scheduleAt = v), 'datetime-local')),
-                    h(LButton, { label: tr('content_page.schedule_action'), severity: 'secondary', onClick: this.schedule }),
+                    h(LButton, { label: tr('content_page.schedule_action'), severity: 'secondary', disabled: !this.permissions.publish, onClick: this.schedule }),
                   ]) : null,
                 ]),
                 h('fieldset', { class: 'cms-content-fieldset' }, [
@@ -629,7 +655,7 @@ export function createComponent(host) {
       const rows = this.loading
         ? h('div', { class: 'cms-content-empty' }, tr('state.loading_message'))
         : this.items.length === 0
-          ? h('div', { class: 'cms-content-empty' }, [h('strong', {}, tr('content_page.empty_title')), h('p', { class: 'cms-content-muted' }, tr('content_page.empty_message')), h(LButton, { label: tr('content_page.add'), onClick: this.startCreate })])
+          ? h('div', { class: 'cms-content-empty' }, [h('strong', {}, tr('content_page.empty_title')), h('p', { class: 'cms-content-muted' }, tr('content_page.empty_message')), h(LButton, { label: tr('content_page.add'), disabled: !this.permissions.create, onClick: this.startCreate })])
           : h('div', { class: 'cms-content-list' }, this.items.map((item) => {
               const id = validContentId(item.id)
               return h('article', { class: 'cms-content-row', key: id }, [
@@ -642,12 +668,15 @@ export function createComponent(host) {
                 h('div', { 'data-mobile-hide': 'true' }, this.typeLabel(item.type)),
                 h('div', { 'data-mobile-hide': 'true' }, [h(LBadge, { label: this.statusLabel(item.status), severity: this.statusSeverity(item.status) })]),
                 h('div', { class: 'cms-content-actions' }, [
-                  h(LButton, { label: tr('content_page.edit').split(' :type')[0], onClick: () => this.edit(item) }),
+                  this.permissions.update ? h(LButton, { label: tr('content_page.edit').split(' :type')[0], onClick: () => this.edit(item) }) : null,
                   id ? h(LButton, { label: tr('content_page.history'), severity: 'secondary', onClick: () => navigate(`revisions?content=${id}`) }) : null,
-                  item.status !== 'published' && item.status !== 'trash' ? h(LButton, { label: tr('content_page.bulk_publish'), onClick: () => this.act(id, 'publish') }) : null,
+                  item.status === 'draft' && this.permissions.submitReview ? h(LButton, { label: tr('content_page.submit_review'), onClick: () => this.act(id, 'submit-review') }) : null,
+                  item.status === 'pending_review' && this.permissions.approve ? h(LButton, { label: tr('content_page.approve'), onClick: () => this.act(id, 'approve') }) : null,
+                  ['draft', 'approved', 'scheduled'].includes(item.status) && this.permissions.publish ? h(LButton, { label: tr('content_page.bulk_publish'), onClick: () => this.act(id, 'publish') }) : null,
+                  ['published', 'approved'].includes(item.status) && this.permissions.archive ? h(LButton, { label: tr('content_page.archive'), onClick: () => this.act(id, 'archive') }) : null,
                   item.status === 'trash'
-                    ? h(LButton, { label: tr('content_page.restore'), onClick: () => this.act(id, 'restore') })
-                    : h(LButton, { label: tr('content_page.trash_short'), severity: 'danger', onClick: () => this.act(id, 'trash') }),
+                    ? this.permissions.update ? h(LButton, { label: tr('content_page.restore'), onClick: () => this.act(id, 'restore') }) : null
+                    : this.permissions.delete ? h(LButton, { label: tr('content_page.trash_short'), severity: 'danger', onClick: () => this.act(id, 'trash') }) : null,
                 ]),
               ])
             }))
@@ -660,7 +689,7 @@ export function createComponent(host) {
             h('div', {}, [h('strong', {}, tr('content_page.admin_center')), h('div', { class: 'cms-content-muted' }, tr('content_page.daily_management'))]),
             h('div', { class: 'cms-content-actions' }, [
               h(LButton, { label: tr('content_page.refresh'), severity: 'secondary', disabled: this.loading, onClick: () => this.load() }),
-              h(LButton, { label: tr('content_page.add'), onClick: this.startCreate }),
+              h(LButton, { label: tr('content_page.add'), disabled: !this.permissions.create, onClick: this.startCreate }),
             ]),
           ]),
           h('div', { class: 'cms-content-stats' }, [
@@ -669,9 +698,18 @@ export function createComponent(host) {
             h('div', { class: 'cms-content-stat' }, [h('small', {}, tr('content_page.draft_page')), h('strong', {}, String(this.statusCount('draft')))]),
             h('div', { class: 'cms-content-stat' }, [h('small', {}, tr('content_page.active_type')), h('strong', {}, String(this.types.length))]),
           ]),
+          h('section', { class: 'cms-editorial-workflow', 'aria-labelledby': 'editorial-workflow-heading-runtime' }, [
+            h('div', { class: 'cms-editorial-workflow-header' }, [
+              h('div', {}, [h('h2', { id: 'editorial-workflow-heading-runtime' }, tr('content_page.workflow_title')), h('p', { class: 'cms-content-muted' }, tr('content_page.workflow_help'))]),
+              h('div', { class: 'cms-editorial-workflow-current', role: 'status', 'aria-live': 'polite' }, [h('span', { class: 'cms-content-muted' }, tr('content_page.workflow_status')), h(LBadge, { label: this.statusLabel(this.workflowStatus()), severity: this.statusSeverity(this.workflowStatus()) })]),
+            ]),
+            h('ol', { class: 'cms-editorial-workflow-steps', 'aria-label': tr('content_page.workflow_steps_aria') }, this.workflowSteps().map((step, index) => h('li', { class: 'cms-editorial-workflow-step', 'data-state': index === this.workflowStage() ? 'current' : index < this.workflowStage() ? 'complete' : 'upcoming', 'aria-current': index === this.workflowStage() ? 'step' : undefined, key: step.key }, [
+              h('span', { class: 'cms-editorial-workflow-step-number', 'aria-hidden': 'true' }, String(index + 1)), h('strong', {}, step.label), h('small', {}, step.hint),
+            ]))),
+          ]),
           h('div', { class: 'cms-content-tabs', role: 'tablist', 'aria-label': tr('a11y.content_status') }, [
             ...[
-              ['', tr('content_page.all')], ['draft', tr('content_page.draft')], ['scheduled', tr('content_page.scheduled')], ['published', tr('content_page.published')], ['trash', tr('content_page.trash_short')],
+              ['', tr('content_page.all')], ['draft', tr('content_page.draft')], ['pending_review', tr('content_page.pending_review_tab')], ['approved', tr('content_page.approved_tab')], ['scheduled', tr('content_page.scheduled')], ['published', tr('content_page.published')], ['archived', tr('content_page.archived_tab')], ['trash', tr('content_page.trash_short')],
             ].map(([value, text]) => {
               const selected = this.status === value
               return h('button', {
@@ -707,11 +745,14 @@ export function createComponent(host) {
                 h('strong', {}, tr('content_page.selected','',{count:this.selected.length})),
                 select(h, this.bulkAction, (v) => (this.bulkAction = v), [
                   { value: '', label: tr('content_page.bulk_action') },
+                  { value: 'submit-review', label: tr('content_page.submit_review') },
+                  { value: 'approve', label: tr('content_page.approve') },
                   { value: 'publish', label: tr('content_page.bulk_publish') },
+                  { value: 'archive', label: tr('content_page.archive') },
                   { value: 'restore', label: tr('content_page.bulk_restore') },
                   { value: 'trash', label: tr('content_page.bulk_trash') },
                 ], { disabled: this.bulkBusy, 'aria-label': tr('a11y.bulk_action') }),
-                h(LButton, { label: this.bulkBusy ? tr('content_page.executing') : tr('content_page.execute'), disabled: this.bulkBusy || !this.bulkAction || !this.selected.length, onClick: this.runBulk }),
+                h(LButton, { label: this.bulkBusy ? tr('content_page.executing') : tr('content_page.execute'), disabled: this.bulkBusy || !this.bulkAction || !this.selected.length || ({publish:!this.permissions.publish,'submit-review':!this.permissions.submitReview,approve:!this.permissions.approve,archive:!this.permissions.archive,trash:!this.permissions.delete,restore:!this.permissions.update}[this.bulkAction] ?? true), onClick: this.runBulk }),
               ]),
               rows,
               h('div', { class: 'cms-content-pagination' }, [

@@ -3,6 +3,7 @@ import { PageLayout } from '@pinooxhq/luma/layouts'
 export const coreComponentRegistry = Object.freeze({
   'core:dashboard': () => import('../pages/dashboard/page-dashboard-final.vue'),
   'core:content': () => import('../pages/content/page-content.vue'),
+  'core:taxonomies': () => import('../pages/taxonomies/page-taxonomies.vue'),
   'core:revisions': () => import('../pages/revisions/page-revisions.vue'),
   'core:media': () => import('../pages/media/page-media.vue'),
   'core:appearance': () => import('../pages/appearance/page-appearance.vue'),

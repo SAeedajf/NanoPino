@@ -2,10 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const runtime = readFileSync(resolve('../../Cms/Runtime/CmsRuntimeApiManifest.php'), 'utf8')
-const app = readFileSync(resolve('../../app.php'), 'utf8')
-const manifest = JSON.parse(readFileSync(resolve('../../../manifest.json'), 'utf8'))
+const themeRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const packageRoot = resolve(themeRoot, '../..')
+const runtime = readFileSync(resolve(packageRoot, 'Cms/Runtime/CmsRuntimeApiManifest.php'), 'utf8')
+const app = readFileSync(resolve(packageRoot, 'app.php'), 'utf8')
+const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'manifest.json'), 'utf8'))
 
 test('R3 binds every advertised core runtime API surface', () => {
   for (const path of [

@@ -40,13 +40,43 @@ final class PinooxInstalledExtensionDiscovery
 
     public function syncRegistry(ExtensionRegistry $registry): int
     {
+        return $this->syncManifests($registry, $this->manifests());
+    }
+
+    /**
+     * Synchronize discovered manifests without allowing a different owner to
+     * replace an existing registry entry. Same-owner refresh is required after
+     * an app upgrade so the Extension Center cannot expose stale version data.
+     *
+     * @param list<ExtensionManifest> $manifests
+     */
+    public function syncManifests(ExtensionRegistry $registry, array $manifests): int
+    {
         $count = 0;
-        foreach ($this->manifests() as $manifest) {
+        foreach ($manifests as $manifest) {
             $definition = ExtensionDefinition::fromManifest($manifest);
-            if ($registry->extension($definition->identifier()) !== null) continue;
-            $registry->register($definition);
-            $count++;
+            $existing = $registry->extension($definition->identifier());
+
+            if ($existing === null) {
+                $registry->register($definition);
+                ++$count;
+                continue;
+            }
+
+            if (
+                $existing->owner() === $definition->owner()
+                && (
+                    $existing->package() !== $definition->package()
+                    || $existing->type() !== $definition->type()
+                    || $existing->version() !== $definition->version()
+                    || $existing->publisher() !== $definition->publisher()
+                )
+            ) {
+                $registry->register($definition, true);
+                ++$count;
+            }
         }
+
         return $count;
     }
 

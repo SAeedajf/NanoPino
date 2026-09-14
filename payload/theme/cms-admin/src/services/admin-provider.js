@@ -98,6 +98,7 @@ const fallback = {
     csrfBound: false,
     rateLimitsRegistered: false,
     ssrfTransportBound: false,
+    ssrfGuardReady: false,
     rateLimits: [],
     apiMatrix: {},
     native: {
@@ -144,9 +145,10 @@ const fallback = {
     builderApi: [],
     apiBound: false,
   },
-  revisionSummary: { schemaVersion: 1, kinds: ['initial','manual','autosave','published','scheduled','pre_restore','restored'] },
+  revisionSummary: { schemaVersion: 1, kinds: ['initial','manual','autosave','submitted','approved','published','scheduled','archived','pre_restore','restored'] },
   auditEvents: [],
   currentUser: null,
+  authState: 'unknown',
   recoveryPoints: [],
   health: [],
   summary: {
@@ -280,6 +282,40 @@ export function readAdminBootData() {
     recoveryPoints: Array.isArray(data.recoveryPoints) ? data.recoveryPoints : [],
     health: Array.isArray(data.health) ? data.health : [],
   }
+}
+
+/**
+ * Keep permission checks consistent across pages. The API remains the source
+ * of truth; this helper only improves the client-side affordances by hiding
+ * or disabling actions that the current actor cannot perform.
+ */
+export function canAdmin(ability, data = readAdminBootData()) {
+  const requested = String(ability || '').trim()
+  if (!requested) return false
+  const authState = String(data.authState || '').trim().toLowerCase()
+  if (authState === 'anonymous') return false
+  // An absent identity is never enough to show a privileged affordance. The
+  // API remains the final authorization boundary, but the UI must fail closed
+  // for an explicit authenticated state while boot/auth hydration is incomplete.
+  // An omitted authState is retained as a legacy test/extension fixture mode.
+  if (authState === 'authenticated' && (!data.currentUser || typeof data.currentUser !== 'object')) return false
+  if (!data.currentUser || typeof data.currentUser !== 'object') return true
+  const granted = Array.isArray(data.currentUser?.abilities) ? data.currentUser.abilities : []
+  return granted.some((item) => {
+    const value = String(item || '').trim()
+    return value === '*' || value === requested || (value.endsWith('.*') && requested.startsWith(value.slice(0, -1)))
+  })
+}
+
+export function publicSiteUrl() {
+  const boot = typeof window !== 'undefined' ? window.__PINOOX__ || {} : {}
+  const configured = boot.cmsAdmin?.publicSiteUrl
+  if (typeof configured === 'string' && configured.startsWith('/') && !configured.startsWith('//')) {
+    return configured
+  }
+
+  const mount = String(boot.cmsAdmin?.mountPath || '/').replace(/^\/+|\/+$/g, '')
+  return `${mount ? `/${mount}` : ''}/site`
 }
 
 export async function performAdminAction(action, payload = {}) {

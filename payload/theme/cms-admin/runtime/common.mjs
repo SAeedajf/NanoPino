@@ -1,6 +1,16 @@
-import { readApiResponse } from './api-response.mjs'
+import { createRequestSignal, createRequestTimeoutError, readApiResponse } from './api-response.mjs'
 export function boot(){return globalThis.window?.__PINOOX__||{}}
 export function data(){return boot().cmsAdmin?.data||{}}
+export function can(ability){
+  const requested=String(ability||'').trim()
+  if(!requested)return false
+  const bootData=data()
+  const authState=String(bootData.authState||'').trim().toLowerCase()
+  if(authState==='anonymous'||(authState==='authenticated'&&(!bootData.currentUser||typeof bootData.currentUser!=='object')))return false
+  if(!bootData.currentUser||typeof bootData.currentUser!=='object')return true
+  const granted=Array.isArray(bootData.currentUser?.abilities)?bootData.currentUser.abilities:[]
+  return granted.some(item=>{const value=String(item||'').trim();return value==='*'||value===requested||(value.endsWith('.*')&&requested.startsWith(value.slice(0,-1)))})
+}
 
 export function locale(){return String(boot().cmsAdmin?.i18n?.locale||boot().locale||'fa')}
 export function direction(){return String(boot().cmsAdmin?.i18n?.direction||boot().direction||'rtl')}
@@ -14,6 +24,7 @@ export function tr(key,fallback='',replace={}){
   return text
 }
 export function brandName(){return String(boot().cmsAdmin?.brand?.name||tr('brand.name','NanoPino'))}
+export function publicSiteUrl(){const b=boot(),configured=b.cmsAdmin?.publicSiteUrl;if(typeof configured==='string'&&configured.startsWith('/')&&!configured.startsWith('//'))return configured;const mount=String(b.cmsAdmin?.mountPath||'/').replace(/^\/+|\/+$/g,'');return`${mount?`/${mount}`:''}/site`}
 export function apiBase(){
   const b=boot()
   const configured=b.cmsAdmin?.apiBase||b.cmsAdmin?.data?.runtimeApi?.base||''
@@ -21,31 +32,40 @@ export function apiBase(){
   const mount=String(b.cmsAdmin?.mountPath||'/').replace(/^\/+|\/+$/g,'')
   return `${mount?`/${mount}`:''}/api/v1/cms`
 }
-export async function api(path,{method='GET',body=null,form=null}={}){
-  const headers={Accept:'application/json'}
+function requestCorrelationId(){
+  return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`
+}
+export async function api(path,{method='GET',body=null,form=null,signal,timeoutMs=15000}={}){
+  const headers={Accept:'application/json','X-Correlation-ID':requestCorrelationId()}
   const mutation=!['GET','HEAD','OPTIONS'].includes(method.toUpperCase())
   if(mutation){
     const token=boot().csrf||''
     if(token)headers['X-CSRF-TOKEN']=token
-    headers['X-Correlation-ID']=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`
   }
-  const options={method,credentials:'same-origin',headers}
+  const requestSignal=createRequestSignal(signal,timeoutMs)
+  const options={method,credentials:'same-origin',headers,signal:requestSignal.signal}
   if(form)options.body=form
   else if(body!==null&&body!==undefined){headers['Content-Type']='application/json';options.body=JSON.stringify(body)}
-  const res=await fetch(`${apiBase()}${path}`,options)
-  const payload=await readApiResponse(res,tr,{method})
-  return payload?.data??payload??{}
+  try {
+    const res=await fetch(`${apiBase()}${path}`,options)
+    const payload=await readApiResponse(res,tr,{method})
+    return payload?.data??payload??{}
+  } catch (error) {
+    throw requestSignal.timedOut() ? createRequestTimeoutError(tr) : error
+  } finally {
+    requestSignal.dispose()
+  }
 }
 export const ui={
   page:{display:'grid',gap:'16px'},
   row:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap'},
   grid:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:'12px'},
   field:{display:'grid',gap:'6px'},
-  input:{width:'100%',minHeight:'44px',padding:'9px 11px',border:'1px solid var(--p-surface-300,#d1d5db)',borderRadius:'10px',background:'var(--p-surface-0,#fff)',color:'inherit',boxSizing:'border-box'},
-  textarea:{width:'100%',minHeight:'110px',padding:'9px 11px',border:'1px solid var(--p-surface-300,#d1d5db)',borderRadius:'10px',background:'var(--p-surface-0,#fff)',color:'inherit',boxSizing:'border-box',fontFamily:'inherit'},
-  card:{padding:'12px',border:'1px solid var(--p-surface-200,#e5e7eb)',borderRadius:'12px',display:'grid',gap:'8px'},
-  error:{padding:'10px 12px',border:'1px solid #ef4444',borderRadius:'10px'},
-  ok:{padding:'10px 12px',border:'1px solid #16a34a',borderRadius:'10px'},
+  input:{width:'100%',minHeight:'44px',padding:'var(--cms-space-2,9px) var(--cms-space-3,11px)',border:'1px solid var(--cms-border,var(--p-surface-300,#d1d5db))',borderRadius:'var(--cms-radius-md,10px)',background:'var(--cms-surface-panel,var(--p-surface-0,#fff))',color:'inherit',boxSizing:'border-box'},
+  textarea:{width:'100%',minHeight:'110px',padding:'var(--cms-space-2,9px) var(--cms-space-3,11px)',border:'1px solid var(--cms-border,var(--p-surface-300,#d1d5db))',borderRadius:'var(--cms-radius-md,10px)',background:'var(--cms-surface-panel,var(--p-surface-0,#fff))',color:'inherit',boxSizing:'border-box',fontFamily:'inherit'},
+  card:{padding:'var(--cms-space-3,12px)',border:'1px solid var(--cms-border,var(--p-surface-200,#e5e7eb))',borderRadius:'var(--cms-radius-md,12px)',display:'grid',gap:'var(--cms-space-2,8px)'},
+  error:{padding:'var(--cms-space-2,10px) var(--cms-space-3,12px)',border:'1px solid var(--cms-danger,#ef4444)',borderRadius:'var(--cms-radius-md,10px)'},
+  ok:{padding:'var(--cms-space-2,10px) var(--cms-space-3,12px)',border:'1px solid var(--cms-success,#16a34a)',borderRadius:'var(--cms-radius-md,10px)'},
   mono:{direction:'ltr',textAlign:'left',fontFamily:'monospace',fontSize:'12px',whiteSpace:'pre-wrap',overflowWrap:'anywhere'},
 }
 export function label(h,text,child){return h('label',{style:ui.field},[h('span',{},text),child])}

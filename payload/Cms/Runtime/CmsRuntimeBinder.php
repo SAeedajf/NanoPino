@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace App\com_pinoox_cms\Cms\Runtime;
 
 use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
-use App\com_pinoox_cms\Cms\Security\Http\{CmsRequestIntegrityFlow,PinooxSecurityResponseListener};
+use App\com_pinoox_cms\Cms\Security\Http\{CmsPermissionFlow,CmsRequestIntegrityFlow,PinooxSecurityResponseListener};
 use App\com_pinoox_cms\Cms\Security\RateLimit\{PinooxRateLimiterBridge,PinooxRateLimiterRegistrar};
 use Pinoox\Component\AppEvent\{AppRegister,AppResponseEvent};
 
@@ -21,7 +21,13 @@ final class CmsRuntimeBinder
         // Performance API instead of breaking application boot.
         CmsRuntimeServices::bindQueryProbe();
 
-        $register->flowAlias(['cms_csrf' => CmsRequestIntegrityFlow::class]);
+        // Replace only the CMS route permission adapter. The native decision
+        // remains Access::can(); this fixes JSON negotiation for mounted
+        // paths such as /nano/api/... without changing platform RBAC rules.
+        $register->flowAlias([
+            'permission' => CmsPermissionFlow::class,
+            'cms_csrf' => CmsRequestIntegrityFlow::class,
+        ]);
         RuntimeBindingState::markCsrf();
 
         (new PinooxRateLimiterRegistrar())->register(PinooxRateLimiterBridge::resolve());
@@ -30,7 +36,9 @@ final class CmsRuntimeBinder
         $register->listen(AppResponseEvent::class, new PinooxSecurityResponseListener());
         RuntimeBindingState::markHeaders();
 
-        $register->api(CmsRuntimeApiManifest::definition());
+        $apiManifest = CmsRuntimeApiManifest::definition();
+        CmsRuntimeApiManifest::validate($apiManifest);
+        $register->api($apiManifest);
         RuntimeBindingState::markApi();
     }
 }

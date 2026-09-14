@@ -165,3 +165,11 @@ test('R6 high-traffic Content and Dashboard surfaces no longer embed Persian UI 
     assert.doesNotMatch(read(file), persian, `${file} must resolve Persian copy from the language catalog`)
   }
 })
+
+test('R6 performance surface resolves visible labels and statuses through the catalog', () => {
+  const performance = read('src/pages/system/page-performance.vue')
+  assert.doesNotMatch(performance, /label="Budget"|label="Queries"|label="Memory"|>Performance Runtime<|>Query Probe<|>Cache Telemetry<|>Extension Cost<|>Recent Samples<|header="Metric"|header="Measured"|header="Target"|header="Limit"|header="Status"/)
+  assert.match(performance, /performance_page\.budget_heading/)
+  assert.match(performance, /function statusLabel\(status\)/)
+  assert.match(performance, /performance_page\.metric/)
+})

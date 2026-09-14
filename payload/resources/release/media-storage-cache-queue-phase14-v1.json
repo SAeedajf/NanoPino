@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "name": "NanoPino Media Storage Cache Queue Phase 14 gate",
+  "captured_at": "2026-09-14T07:45:00Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "media": {
+      "native_gateway": "Pinoox UploadBuilder",
+      "upload_validation": ["server_mime", "decoded_image_mime", "extension", "size", "sha256", "symlink_rejection"],
+      "usage_aware_delete": true,
+      "native_delete_compensation": true
+    },
+    "storage": {
+      "runtime_driver": "PinooxStorageDriver",
+      "scoped_keys": "site/domain/relative",
+      "traversal_rejection": true,
+      "health_probe": "write/read/delete"
+    },
+    "cache": {
+      "semantic_namespace": "nanopino",
+      "public_page_ttl_seconds": 60,
+      "content_mutation_invalidation": true,
+      "http_cache_contract": "no-cache"
+    },
+    "queue": {
+      "repository": "FileQueueRepository",
+      "core_job": "content.publish_due",
+      "scheduler": "cms.queue.drain",
+      "cadence": "every minute",
+      "without_overlapping": true,
+      "retry_dead_letter_recovery": true
+    }
+  },
+  "verification": {
+    "php_tests": "67/67",
+    "frontend_tests": "203/203",
+    "vite_build": true,
+    "production_assets": 62,
+    "native_scheduler_listing": ["cms.queue.drain", "cms.content.publish-due"],
+    "isolated_contracts": ["async_dispatch", "deduplication", "queue_completion", "cache_invalidation", "scoped_storage"]
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "read_only_boundary_probe": {
+      "manager": 200,
+      "public_site": 200,
+      "private_dashboard": 401,
+      "private_health": 401,
+      "security_headers": ["X-Content-Type-Options", "X-Frame-Options"]
+    },
+    "mutations": "not executed",
+    "cron_execution": "unverified",
+    "production_media_storage": "unverified",
+    "production_cache_backend": "unverified",
+    "production_queue_worker": "unverified"
+  },
+  "gate": {
+    "source_contracts": true,
+    "local_runtime_integration": true,
+    "target_infrastructure_e2e": false,
+    "production_ready": false
+  }
+}

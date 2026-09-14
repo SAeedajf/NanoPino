@@ -1,0 +1,67 @@
+name: NanoPino quality
+
+on:
+  push:
+    paths:
+      - 'apps/com_pinoox_cms/**'
+      - 'tests/php/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/nanopino-quality.yml'
+  pull_request:
+    paths:
+      - 'apps/com_pinoox_cms/**'
+      - 'tests/php/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/nanopino-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cms:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, mbstring, xml, ctype, json, tokenizer, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Install CMS frontend dependencies
+        working-directory: apps/com_pinoox_cms/theme/cms-admin
+        run: npm ci --no-audit --no-fund
+
+      - name: PHP syntax and runtime contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          find apps/com_pinoox_cms -type f -name '*.php' \
+            -not -path '*/theme/cms-admin/node_modules/*' \
+            -not -path '*/theme/cms-admin/dist/*' \
+            -print0 | xargs -0 -n1 php -l
+          composer test:cms
+
+      - name: Frontend tests
+        working-directory: apps/com_pinoox_cms/theme/cms-admin
+        run: npm test
+
+      - name: Production build and parity
+        working-directory: apps/com_pinoox_cms/theme/cms-admin
+        run: npm run build

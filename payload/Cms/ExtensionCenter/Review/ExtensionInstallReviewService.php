@@ -49,6 +49,19 @@ final readonly class ExtensionInstallReviewService
             $warnings[] = 'Update requests additional extension permissions.';
         }
 
+        $publisherChanged = false;
+        if ($isUpdate) {
+            foreach ($installed->find($manifest->identifier()) as $item) {
+                if ($item->publisher !== '' && $item->publisher !== $manifest->publisher()) {
+                    $publisherChanged = true;
+                    break;
+                }
+            }
+            if ($publisherChanged) {
+                $warnings[] = 'Update publisher differs from the installed extension publisher.';
+            }
+        }
+
         if ($security !== null && $security->findings !== []) {
             $warnings[] = sprintf(
                 'Static package review reported %d finding(s); review code before approval.',
@@ -70,6 +83,7 @@ final readonly class ExtensionInstallReviewService
         } elseif (
             $permissionReview->highestRisk()->value >= ExtensionPermissionRisk::High->value
             || ($isUpdate && $newPermissions !== [])
+            || $publisherChanged
             || $isDowngrade
         ) {
             $decision = ExtensionReviewDecision::ApprovalRequired;

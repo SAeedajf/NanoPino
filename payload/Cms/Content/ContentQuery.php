@@ -17,5 +17,7 @@ final readonly class ContentQuery
         public int $offset = 0,
         public ContentProjection $projection = ContentProjection::Detail,
         public ?int $beforeId = null,
+        public ?int $termId = null,
+        public ?string $taxonomy = null,
     ) {}
 }

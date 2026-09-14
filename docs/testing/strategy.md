@@ -1,13 +1,13 @@
 # Testing Strategy
 
-Repository CI is a release gate, not a substitute for target-runtime E2E.
+Repository CI is a merge/release gate, not a substitute for target-runtime E2E. The dedicated NanoPino quality workflow runs on CMS-affecting push and pull requests; the platform archive workflow remains release-oriented.
 
 Current CI has two layers:
 
-1. **PHP runtime matrix** on PHP 8.2, 8.3, 8.4 and 8.5:
-   - executes NanoPino PHP classes directly through `tests/php/run.php`;
-   - covers CSP policy behavior, SSRF enforcement, Recovery Manager orchestration, Security Posture and package/release contracts.
-2. **Primary release verification** on PHP 8.4 + Node 22:
+1. **PHP runtime contract suite**:
+   - executes NanoPino PHP classes through the discoverable `composer test:cms` command (backed by repository-level `tests/php/run.php`);
+   - covers the checked-in manifest, unsafe extension paths, deterministic package planning, API response envelopes, runtime route safety metadata, capability registration and single-site authorization behavior.
+2. **Primary release verification** (the workflow in this checkout currently uses PHP 8.3 and Node 24; older PHP/Node matrix claims are historical until a matrix workflow is present):
    - locked `npm ci`;
    - production admin build;
    - full PHP lint;
@@ -19,6 +19,7 @@ Current CI has two layers:
 The PHP harness is intentionally dependency-light and lives outside the PINX payload. It exercises actual PHP behavior rather than source-text assertions.
 
 Still open for Stable evidence:
+- the runtime suite currently covers package/API contracts; it does not replace full CMS domain, security-driver and database integration coverage;
 - controlled Pinoox + database integration tests;
 - authenticated API/permission tests with real users/roles;
 - signed PINX fresh-install/update/uninstall/rollback lifecycle;
@@ -29,7 +30,12 @@ A green repository CI proves source/runtime consistency and executable PHP domai
 
 
 ## R14 Pinoox lifecycle integration
-After the PHP compatibility matrix and primary source verification pass, CI provisions a clean MySQL 8.4 service and a pinned Pinoox runtime. It then:
+> **Historical branch evidence:** this section describes the R14 lifecycle
+> workflow and is not executed by the current `nanopino-quality.yml` checkout.
+> The current workflow covers the PHP/frontend source gate; native Pinoox and
+> MySQL lifecycle evidence remains an open Stable requirement.
+
+In the historical R14 workflow, after the PHP compatibility matrix and primary source verification passed, CI provisioned a clean MySQL 8.4 service and a pinned Pinoox runtime. It then:
 1. installs Pinoox non-interactively through the native installer;
 2. restores the verified NanoPino admin dist produced by the primary build;
 3. builds NanoPino through the native `pinx:build` path;

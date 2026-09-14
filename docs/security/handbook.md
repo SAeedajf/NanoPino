@@ -8,7 +8,7 @@ Remote Search is disabled unless explicit global settings select Meilisearch or 
 Database Search remains the fallback.
 
 ## CSP
-CSP remains **report-only**. Pinoox bootstrap output currently has no proven nonce integration in this repository; enforcement must not be enabled until browser E2E proves the complete shell/bootstrap/Luma/Vite path.
+CSP is **enforced by default**. The nonce-ready admin shell supports an explicit rollback with `PINOOX_CMS_CSP_MODE=report-only` while diagnosing a compatibility issue; return to enforcement after the diagnosis.
 
 ## Open access gate
 `platform_super=true` remains unchanged pending a lockout-safe migration to explicit privileged roles.
@@ -19,7 +19,7 @@ R12 no longer depends on the Pincore `pinoox_bootstrap()` HTML helper for the Na
 
 The policy additionally declares `script-src-attr 'none'`. Vue/Luma dynamic style attributes still require `style-src-attr 'unsafe-inline'`.
 
-CSP remains report-only until the production browser path is exercised under the target Pinoox/Luma runtime.
+CSP remains report-only until the production browser path is exercised under the target Pinoox/Luma runtime. The mode is intentionally environment-controlled so a failed cutover can be reverted without a code rebuild.
 
 ## Platform super transition
 Pincore documents that installer-created platform accounts may omit an explicit `group_key`. NanoPino therefore does not disable `platform_super` automatically. R12 audits every platform-scoped account and reports how many already have an explicit configured super role/group and how many still depend on the implicit platform bypass. A controlled cutover is safe to attempt only when no detected account is implicit-only and an explicit super account exists.

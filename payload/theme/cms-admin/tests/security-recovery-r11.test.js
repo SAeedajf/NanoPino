@@ -64,3 +64,17 @@ test('R11 CSP remains explicitly report-only until Pinoox bootstrap nonce compat
   assert.match(csp, /public bool \$reportOnly = true/)
   assert.match(state, /setCsp\(bool \$bound\)/)
 })
+
+test('Phase 17 recovery is fail-closed and exposes deterministic native fault checkpoints', () => {
+  const safeMode = readPackage('Cms/Recovery/SafeModeManager.php')
+  const state = readPackage('Cms/Recovery/SafeModeState.php')
+  const faults = readPackage('Cms/Recovery/FaultInjection/DeterministicFaultInjector.php')
+  const executor = readPackage('Cms/ExtensionCenter/Operation/PinooxExtensionOperationExecutor.php')
+
+  assert.match(safeMode, /Safe Mode state is unreadable; manual recovery is required/)
+  assert.match(safeMode, /Safe Mode is a fail-closed boot profile/)
+  assert.match(state, /public static function failClosed/)
+  assert.match(faults, /Test-only deterministic injector/)
+  assert.match(executor, /extension\.install_or_update\.after_native/)
+  assert.match(executor, /extension\.uninstall\.after_native/)
+})

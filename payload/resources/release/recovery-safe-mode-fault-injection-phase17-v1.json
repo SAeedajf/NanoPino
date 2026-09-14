@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "name": "NanoPino Recovery Safe Mode Fault Injection Phase 17 gate",
+  "captured_at": "2026-09-14T08:18:01Z",
+  "source": {
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "recovery": {
+      "atomic_recovery_point_metadata": true,
+      "provider_reverse_restore": true,
+      "failed_restore_is_persisted": true,
+      "direct_restore_failure_enables_safe_mode": true,
+      "filesystem_integrity_and_symlink_rejection": true,
+      "migration_rollback_is_batch_bounded": true
+    },
+    "safe_mode": {
+      "corrupt_state_fails_closed": true,
+      "only_explicit_core_packages_may_boot": true,
+      "activation_boundary_enforced": true,
+      "health_gated_exit": true
+    },
+    "fault_injection": {
+      "deterministic_named_checkpoints": true,
+      "bounded_failure_counts": true,
+      "not_constructed_by_runtime_services": true,
+      "native_post_mutation_checkpoints": true
+    }
+  },
+  "verification": {
+    "php_tests": "72/72",
+    "frontend_tests": "204/204",
+    "php_syntax": true,
+    "target_mutations": "not executed"
+  },
+  "target": {
+    "base_url": "https://test.boxpdf.ir",
+    "fault_injection": "not executed",
+    "recovery_restore": "not executed",
+    "safe_mode_mutation": "not executed"
+  },
+  "gate": {
+    "source_recovery_hardening": true,
+    "source_safe_mode_hardening": true,
+    "local_fault_injection": true,
+    "target_boot_order_e2e": false,
+    "target_fault_injection_e2e": false,
+    "production_ready": false
+  }
+}

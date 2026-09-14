@@ -30,7 +30,11 @@ final readonly class ExtensionOperationCoordinator
 
         if (
             $request->type === ExtensionOperationType::Activate
-            && $this->safeMode?->isQuarantined($request->extensionId)
+            && $this->safeMode !== null
+            && !$this->safeMode->mayBoot(
+                $request->extensionId,
+                in_array($request->extensionId, ['com_pinoox_cms', 'com_pinoox_manager'], true),
+            )
         ) {
             throw new \RuntimeException('Quarantined extension cannot be activated.');
         }

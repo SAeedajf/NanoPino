@@ -2,6 +2,8 @@
   "schema": 1,
   "release_version": "0.23.24",
   "release_version_code": 2324,
+  "evidence_status": "historical_snapshot",
+  "historical_reason": "R5 security snapshot; current security posture and target verification are governed by the Phase 7 and Phase 8 records.",
   "status": "source_verified_target_runtime_pending",
   "controls": {
     "content_ownership": {

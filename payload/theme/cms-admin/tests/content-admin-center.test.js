@@ -49,3 +49,19 @@ test('canonical content API exposes schedule operation', () => {
   const api = read('src/services/cms-api.js')
   assert.match(api, /schedule:\(id,publishAt\)=>cmsRequest\(`\/content\/\$\{id\}\/schedule`/)
 })
+
+test('content governance exposes review, approval, and archive actions end to end', () => {
+  const runtime = read('runtime/content.mjs')
+  const page = read('src/pages/content/page-content.vue')
+  const api = read('src/services/cms-api.js')
+  for (const action of ['submit-review', 'approve', 'archive']) {
+    assert.match(runtime, new RegExp(action.replace('-', '[-_]')))
+    assert.match(page, new RegExp(action.replace('-', '[-_]')))
+  }
+  assert.match(api, /submitReview:id=>cmsRequest\(`\/content\/\$\{id\}\/submit-review`/)
+  assert.match(api, /approve:id=>cmsRequest\(`\/content\/\$\{id\}\/approve`/)
+  assert.match(api, /archive:id=>cmsRequest\(`\/content\/\$\{id\}\/archive`/)
+  assert.match(runtime, /pending_review/)
+  assert.match(runtime, /approved/)
+  assert.match(runtime, /archived/)
+})

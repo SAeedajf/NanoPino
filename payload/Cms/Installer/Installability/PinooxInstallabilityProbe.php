@@ -230,6 +230,18 @@ final class PinooxInstallabilityProbe
                 'connected' => $pdo instanceof \PDO,
             ];
 
+            if ($driver === 'sqlite' && $this->isLocalSqliteRuntime()) {
+                $probe = $connection->selectOne('SELECT 1 AS nanopino_install_probe');
+                if ($probe === null) {
+                    $findings[] = $this->blocker(
+                        'install.database_probe_failed',
+                        'Database connection did not return the expected installation probe row.',
+                    );
+                }
+                $evidence['database']['local_test_connection'] = true;
+                return;
+            }
+
             if (!in_array($driver, ['mysql', 'mariadb'], true)) {
                 $findings[] = $this->blocker(
                     'install.database_driver_unsupported',
@@ -335,6 +347,14 @@ final class PinooxInstallabilityProbe
                 ['exception' => $error::class],
             );
         }
+    }
+
+    private function isLocalSqliteRuntime(): bool
+    {
+        $environment = strtolower(trim((string) env('APP_ENV', '')));
+        $testing = filter_var(env('PINOOX_TESTING', false), FILTER_VALIDATE_BOOL);
+
+        return $testing || in_array($environment, ['local', 'development', 'test', 'testing'], true);
     }
 
     private function pincoreVersion(): ?string

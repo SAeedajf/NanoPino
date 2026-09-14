@@ -34,3 +34,13 @@ test('canonical Vue Theme Center mirrors compatibility and safe activation contr
   assert.match(page, /!healthy\(theme\)/)
   assert.match(page, /canActivate/)
 })
+
+test('Theme Center hydrates from the server boot payload before refreshing its API data', () => {
+  const page = read('src/pages/appearance/page-appearance.vue')
+  const runtime = read('runtime/appearance.mjs')
+  assert.match(page, /const boot=readAdminBootData\(\)/)
+  assert.match(page, /Array\.isArray\(boot\.themes\)/)
+  assert.match(page, /loading && !themes\.length/)
+  assert.match(runtime, /Array\.isArray\(boot\.themes\)/)
+  assert.match(runtime, /this\.loading&&!this\.items\.length/)
+})

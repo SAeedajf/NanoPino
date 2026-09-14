@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "name": "NanoPino Security Verification and Threat Model Phase 20",
+  "captured_at": "2026-09-14T08:55:00Z",
+  "scope": {
+    "product": "com_pinoox_cms",
+    "release_version": "0.23.72",
+    "release_version_code": 2372,
+    "assets": [
+      "native Pinoox application runtime",
+      "mounted CMS API",
+      "Vue/Luma Admin",
+      "content/media/storage/cache/queue",
+      "Builder/Theme/PublicSite",
+      "PINX extension lifecycle",
+      "Safe Mode and recovery"
+    ],
+    "out_of_scope": [
+      "Pinoox core vulnerabilities not introduced or controlled by this app",
+      "target credentials and authenticated session state",
+      "third-party extension code after approved installation"
+    ]
+  },
+  "trust_boundaries": [
+    {
+      "id": "tb-browser-to-api",
+      "from": "browser or cross-origin client",
+      "to": "mounted CMS API",
+      "controls": ["native authentication", "capability flow", "same-origin policy", "subject-bound CSRF", "native rate limits", "structured denial envelope"]
+    },
+    {
+      "id": "tb-user-to-output",
+      "from": "stored content, Builder documents and media metadata",
+      "to": "Admin or public HTML response",
+      "controls": ["strict rich-text sanitizer", "escaped block renderer", "safe URL policy", "CSP and security headers"]
+    },
+    {
+      "id": "tb-package-to-runtime",
+      "from": "uploaded or staged PINX package",
+      "to": "native Pinoox installer and extension runtime",
+      "controls": ["path and symlink validation", "resource budget", "static-risk scan", "checksum", "mandatory signature at execution", "review-ticket digest binding", "recovery and Safe Mode"]
+    },
+    {
+      "id": "tb-runtime-to-network",
+      "from": "optional remote search configuration",
+      "to": "outbound network endpoint",
+      "controls": ["explicit host allowlist", "HTTPS and port policy", "DNS/IP validation", "pinned cURL resolution", "disabled database fallback"]
+    },
+    {
+      "id": "tb-runtime-to-storage",
+      "from": "request or uploaded object key",
+      "to": "native Pinoox storage and filesystem",
+      "controls": ["scoped object key", "traversal rejection", "MIME/decode validation", "size bounds", "native storage boundary"]
+    }
+  ],
+  "threats": [
+    {
+      "id": "T01",
+      "category": "spoofing",
+      "severity": "critical",
+      "threat": "Unauthenticated or stale session reaches a protected CMS operation.",
+      "control": "Native Auth context, capability flow and fail-closed anonymous mutation policy.",
+      "verification": "source and PHP contract suite",
+      "status": "source-verified",
+      "residual_risk": "Authenticated target role/session E2E remains pending."
+    },
+    {
+      "id": "T02",
+      "category": "tampering",
+      "severity": "critical",
+      "threat": "Cross-site request or stolen/mismatched CSRF token mutates session state.",
+      "control": "Exact same-origin check plus subject-bound, time-limited CSRF token verified with hash_equals.",
+      "verification": "RequestIntegrityPolicy, session CSRF tests and route manifest",
+      "status": "source-verified",
+      "residual_risk": "Proxy origin configuration and authenticated target browser transport require target verification."
+    },
+    {
+      "id": "T03",
+      "category": "elevation-of-privilege",
+      "severity": "critical",
+      "threat": "User crosses site scope, edits another author’s content or escalates through implicit platform access.",
+      "control": "Capability authorization, site scope guard, ownership/author-assignment policies and disabled implicit platform_super.",
+      "verification": "authorization contracts, route capability matrix and PHP suite",
+      "status": "source-verified",
+      "residual_risk": "Target role switching and anti-lockout E2E remain pending."
+    },
+    {
+      "id": "T04",
+      "category": "tampering",
+      "severity": "high",
+      "threat": "Stored HTML, Builder attributes or URLs execute script or unsafe navigation.",
+      "control": "Strict allowlist rich-text sanitizer, escaped block output, safe URL schemes and CSP.",
+      "verification": "output security contracts and PHP suite",
+      "status": "source-verified",
+      "residual_risk": "Fuzzing, browser assistive-technology verification and arbitrary third-party block review remain pending."
+    },
+    {
+      "id": "T05",
+      "category": "server-side request forgery",
+      "severity": "high",
+      "threat": "Configured remote search causes requests to private, reserved or rebinding addresses.",
+      "control": "Remote search is opt-in; allowlisted HTTPS hosts are DNS-resolved, public-address checked and pinned with CURLOPT_RESOLVE.",
+      "verification": "SsrfGuard, guarded transport and PHP contracts",
+      "status": "source-verified",
+      "residual_risk": "Target DNS, cURL and egress behavior require production verification."
+    },
+    {
+      "id": "T06",
+      "category": "tampering",
+      "severity": "critical",
+      "threat": "Malicious or substituted PINX package executes during install/update.",
+      "control": "Canonical path/symlink/resource checks, static-risk preflight, checksum, mandatory signature, one-time digest-bound review ticket and Safe Mode recovery.",
+      "verification": "PINX preflight on Phase 19 artifact, package contracts and PHP suite",
+      "status": "source-and-artifact-verified",
+      "residual_risk": "Publisher trust-chain and signed target lifecycle rehearsal remain pending."
+    },
+    {
+      "id": "T07",
+      "category": "tampering",
+      "severity": "high",
+      "threat": "Upload content escapes its scope, disguises an executable or exhausts resources.",
+      "control": "MIME/extension agreement, image decode checks, blocked executable types, size bounds, SHA-256 and native scoped storage.",
+      "verification": "MediaUploadValidator, storage contracts and PHP suite",
+      "status": "source-verified",
+      "residual_risk": "Production web-server storage permissions and direct-download policy remain target-bound."
+    },
+    {
+      "id": "T08",
+      "category": "denial-of-service",
+      "severity": "high",
+      "threat": "API, archive, query, rich-text, queue or telemetry inputs consume unbounded resources.",
+      "control": "Native rate limits, bounded query/page sizes, package/resource budgets, rich-text limits, queue leases and capped telemetry.",
+      "verification": "route manifest, resource budgets, performance budgets and PHP suite",
+      "status": "source-verified",
+      "residual_risk": "Authenticated concurrency/load measurements and target worker cadence remain pending."
+    },
+    {
+      "id": "T09",
+      "category": "information-disclosure",
+      "severity": "high",
+      "threat": "Tokens, credentials, private keys, SQL or internal diagnostics leak through logs or API errors.",
+      "control": "Central sensitive-data redaction, generic error envelopes, no-store API responses and safe correlation diagnostics.",
+      "verification": "redaction/error-boundary contracts and PHP suite",
+      "status": "source-verified",
+      "residual_risk": "Target log retention, proxy logs and operational access review remain pending."
+    },
+    {
+      "id": "T10",
+      "category": "tampering",
+      "severity": "high",
+      "threat": "Corrupt recovery state or failed restore re-enables unsafe extension code.",
+      "control": "Fail-closed Safe Mode state, core-only boot planner, quarantine, snapshot integrity and deterministic recovery checkpoints.",
+      "verification": "Phase 17 fault-injection and recovery PHP contracts",
+      "status": "source-verified",
+      "residual_risk": "Real target boot order, filesystem and database fault injection remain pending."
+    },
+    {
+      "id": "T11",
+      "category": "tampering",
+      "severity": "high",
+      "threat": "Security headers or CSP disappear at a mounted path or are weakened by response normalization.",
+      "control": "Native response listener, strict headers, HSTS on HTTPS, CSP nonce and structured API denial normalization.",
+      "verification": "target read-only header scan and source/PHP contracts",
+      "status": "source-and-target-read-only-verified",
+      "residual_risk": "Authenticated target Admin and proxy/header behavior across all mounted routes remain pending."
+    }
+  ],
+  "verification": {
+    "frontend_tests": "218/218",
+    "php_tests": "72/72",
+    "docs_audit": "passed",
+    "phase19_pinx_preflight": "passed; 0 high findings, 2 warnings",
+    "target_read_only": {
+      "public_site": "HTTP 200 with security headers and enforced CSP",
+      "cms_mount_without_session": "HTTP 401",
+      "manager": "HTTP 200 after redirect; no state changed"
+    },
+    "target_mutations": "not executed"
+  },
+  "gate": {
+    "threat_model_complete": true,
+    "source_security_controls_verified": true,
+    "artifact_preflight_verified": true,
+    "target_read_only_headers_verified": true,
+    "authenticated_target_e2e": false,
+    "signed_target_lifecycle": false,
+    "production_ready": false
+  }
+}

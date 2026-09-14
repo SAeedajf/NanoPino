@@ -5,10 +5,19 @@ declare(strict_types=1);
 namespace App\com_pinoox_cms\Cms\Installer;
 
 use App\com_pinoox_cms\Cms\Lifecycle\ExtensionState;
+use App\com_pinoox_cms\Cms\Recovery\FaultInjection\FaultInjectorInterface;
+use App\com_pinoox_cms\Cms\Recovery\FaultInjection\NullFaultInjector;
 use Throwable;
 
 final class TransactionalInstallCoordinator
 {
+    private readonly FaultInjectorInterface $faults;
+
+    public function __construct(?FaultInjectorInterface $faults = null)
+    {
+        $this->faults = $faults ?? new NullFaultInjector();
+    }
+
     /** @param list<InstallStepInterface> $steps */
     public function run(InstallContext $context, array $steps): InstallTransactionResult
     {
@@ -23,13 +32,16 @@ final class TransactionalInstallCoordinator
             $context->lifecycle->transitionTo(ExtensionState::Installing);
 
             foreach ($steps as $step) {
+                $this->faults->checkpoint('install.step.' . $step->id() . '.before');
                 $journal->record($step->id(), $step->phase(), 'started');
                 // Add before execute: rollback() must be partial-execution safe.
                 $completed[] = $step;
                 $step->execute($context);
+                $this->faults->checkpoint('install.step.' . $step->id() . '.after');
                 $journal->record($step->id(), $step->phase(), 'ok');
             }
 
+            $this->faults->checkpoint('install.commit.before');
             $context->lifecycle->transitionTo(ExtensionState::Installed);
             $journal->record('transaction', InstallPhase::Commit, 'ok');
             return new InstallTransactionResult(true, $context->lifecycle->state(), $journal);
@@ -46,6 +58,7 @@ final class TransactionalInstallCoordinator
             $rollbackErrors = [];
             foreach (array_reverse($completed) as $step) {
                 try {
+                    $this->faults->checkpoint('install.rollback.' . $step->id() . '.before');
                     $step->rollback($context);
                     $journal->record($step->id(), InstallPhase::Rollback, 'rolled_back');
                 } catch (Throwable $rollbackError) {

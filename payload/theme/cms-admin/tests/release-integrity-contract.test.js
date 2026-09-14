@@ -26,7 +26,7 @@ test('release version has one Pinoox-native source of truth and matching evidenc
   assert.equal(evidence.app_sha256, sha256(app))
 })
 
-test('packaged documentation audit is explicit and fail-closed without source evidence', () => {
+test('packaged documentation audit is explicit and tied to source evidence', () => {
   const manifestRaw = readPackage('resources/docs/documentation-manifest-v1.json')
   const manifest = JSON.parse(manifestRaw)
   const evidence = JSON.parse(readPackage('resources/docs/source-audit-evidence-v1.json'))
@@ -37,7 +37,7 @@ test('packaged documentation audit is explicit and fail-closed without source ev
   assert.equal(manifest.distribution.artifact_requires_source_audit, true)
   assert.equal(manifest.distribution.artifact_evidence, 'resources/docs/source-audit-evidence-v1.json')
   assert.ok(Array.isArray(manifest.release_blockers) && manifest.release_blockers.length > 0)
-  assert.equal(evidence.status, 'not_available')
+  assert.equal(evidence.status, 'passed')
   assert.equal(evidence.documentation_manifest_sha256, sha256(manifestRaw))
   assert.match(audit, /docs\.source_audit_not_passed/)
   assert.match(gate, /release\.declared_blockers_present/)

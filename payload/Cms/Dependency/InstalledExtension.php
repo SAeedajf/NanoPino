@@ -17,19 +17,21 @@ final readonly class InstalledExtension
         public array $provides = [],
         public array $replaces = [],
         public bool $active = true,
+        public string $publisher = '',
     ) {
     }
 
     public static function fromManifest(ExtensionManifest $manifest, bool $active = true): self
     {
         return new self(
-            $manifest->identifier(),
-            $manifest->package(),
-            $manifest->version(),
-            $manifest->versionCode(),
-            $manifest->provides(),
-            $manifest->replaces(),
-            $active,
+            identifier: $manifest->identifier(),
+            package: $manifest->package(),
+            version: $manifest->version(),
+            versionCode: $manifest->versionCode(),
+            provides: $manifest->provides(),
+            replaces: $manifest->replaces(),
+            active: $active,
+            publisher: $manifest->publisher(),
         );
     }
 

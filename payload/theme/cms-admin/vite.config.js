@@ -14,6 +14,7 @@ export default defineConfig({
     vue(),
     luma({
       entry: 'src/main.js',
+      perf: false,
     }),
   ],
 
@@ -23,6 +24,18 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       input: resolve(process.cwd(), 'src/main.js'),
+      output: {
+        manualChunks(id) {
+          const normalized = id.replaceAll('\\\\', '/')
+          if (/node_modules\/@pinooxhq\/luma\/node_modules\/@vueuse\/gesture\//.test(normalized)) return 'vendor-luma-gesture'
+          if (/node_modules\/@pinooxhq\/luma\/node_modules\/(?:primevue|@primeuix|primeicons)\//.test(normalized)) return 'vendor-prime'
+          if (/node_modules\/(?:primevue|@primeuix|primeicons)\//.test(normalized)) return 'vendor-prime'
+          if (/node_modules\/@pinooxhq\/luma\/src\/(?:ui|layouts|core)\//.test(normalized)) return 'vendor-luma-ui'
+          if (/node_modules\/@pinooxhq\/luma\//.test(normalized)) return 'vendor-luma-rest'
+          if (/node_modules\/(?:vue|vue-router|pinia|vue-i18n|@vue)\//.test(normalized)) return 'vendor-vue'
+          if (/node_modules\/(?:@lucide\/vue|lucide-vue-next)\//.test(normalized)) return 'vendor-icons'
+        },
+      },
     },
   },
 })

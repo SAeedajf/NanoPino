@@ -7,6 +7,8 @@ use App\com_pinoox_cms\Cms\Extension\ExtensionType;
 use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
 use App\com_pinoox_cms\Cms\Recovery\FileRecoveryPointRepository;
 use App\com_pinoox_cms\Cms\Recovery\FilesystemSnapshotProvider;
+use App\com_pinoox_cms\Cms\Recovery\FaultInjection\FaultInjectorInterface;
+use App\com_pinoox_cms\Cms\Recovery\FaultInjection\NullFaultInjector;
 use App\com_pinoox_cms\Cms\Recovery\PinooxMigrationSnapshotProvider;
 use App\com_pinoox_cms\Cms\Recovery\RecoveryManager;
 use App\com_pinoox_cms\Cms\Recovery\SafeModeManager;
@@ -16,11 +18,16 @@ use Pinoox\Portal\Pinx;
 
 final readonly class PinooxExtensionOperationExecutor implements ExtensionOperationExecutorInterface
 {
+    private FaultInjectorInterface $faults;
+
     public function __construct(
         private string $storageRoot,
         private CmsKernel $kernel,
         private ?PinooxPinxPackagePreflight $preflight = null,
-    ) {}
+        ?FaultInjectorInterface $faults = null,
+    ) {
+        $this->faults = $faults ?? new NullFaultInjector();
+    }
 
     public function execute(
         ExtensionOperationRequest $request,
@@ -41,6 +48,7 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         ExtensionOperationRequest $request,
         callable $progress,
     ): ExtensionExecutionResult {
+        $this->faults->checkpoint('extension.install_or_update.before');
         if ($request->package === null || $request->inspection === null) {
             throw new \LogicException('PINX install/update requires inspected staged package.');
         }
@@ -96,12 +104,15 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         );
 
         try {
+            $this->faults->checkpoint('extension.install_or_update.before_native');
             $result = $installer->install(
                 $request->package->localPath,
                 [
                     'force' => false,
                     'skip_verify' => false,
-                    'require_signature' => (bool)($request->options['require_signature'] ?? false),
+                    // Signed lifecycle is mandatory at the native mutation boundary;
+                    // callers cannot downgrade this requirement through options.
+                    'require_signature' => true, // request->options cannot downgrade signed lifecycle
                     'reset_overrides' => false,
                 ],
             );
@@ -117,7 +128,9 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
                 );
             }
 
+            $this->faults->checkpoint('extension.install_or_update.after_native');
             AppEngine::__rebuild();
+            $this->faults->checkpoint('extension.install_or_update.after_rebuild');
             $progress('runtime', 'ok', 'Pinoox AppEngine rebuilt after PINX operation.');
             return new ExtensionExecutionResult(true, $point->id, false, null);
         } catch (\Throwable $error) {
@@ -186,6 +199,7 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
         );
 
         try {
+            $this->faults->checkpoint('extension.uninstall.before_native');
             $result = $uninstaller->uninstallApp($definition->package());
             if (!$result->success) {
                 return $this->recoverFailedOperation(
@@ -198,7 +212,9 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
                 );
             }
 
+            $this->faults->checkpoint('extension.uninstall.after_native');
             AppEngine::__rebuild();
+            $this->faults->checkpoint('extension.uninstall.after_rebuild');
             return new ExtensionExecutionResult(true, $point->id);
         } catch (\Throwable $error) {
             return $this->recoverFailedOperation(
@@ -274,7 +290,7 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
             $providers[] = new PinooxMigrationSnapshotProvider($package);
         }
 
-        return new RecoveryManager($this->recoveryRepository(), $providers);
+        return new RecoveryManager($this->recoveryRepository(), $providers, $this->faults);
     }
 
     private function recoverFailedOperation(
@@ -325,6 +341,9 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
 
     private function safeMode(): SafeModeManager
     {
-        return new SafeModeManager(rtrim($this->storageRoot, '/\\') . '/recovery/safe-mode.json');
+        return new SafeModeManager(
+            rtrim($this->storageRoot, '/\\') . '/recovery/safe-mode.json',
+            $this->faults,
+        );
     }
 }

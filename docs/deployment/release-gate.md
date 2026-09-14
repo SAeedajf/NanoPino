@@ -5,11 +5,33 @@ A NanoPino release candidate is acceptable for merge only when repository CI pas
 Stable/production claims additionally require target-environment evidence for install/upgrade/rollback, database migrations, admin browser behavior/accessibility, native theme activation, security pipeline, Safe Mode recovery and performance/health probes.
 
 Known R11 non-closed gates:
-- CSP remains report-only;
+- CSP is enforced by default; a controlled `PINOOX_CMS_CSP_MODE=report-only` rollback is allowed only while diagnosing a browser compatibility issue;
 - full database snapshot/restore is not implemented;
 - `platform_super` is not yet migrated to an explicit-role-only policy.
 
 A green CI result proves repository consistency; it does not by itself prove the target hosting environment.
+
+## Phase 21 final RC snapshot
+
+The 0.23.72 / code 2372 candidate is locally technically ready after the
+frontend, PHP, documentation, Vite, source/runtime parity, release metadata,
+security preflight and PINX archive checks pass. This does not override the
+10 declared Stable blockers: target integration/database lifecycle, signed
+PINX lifecycle, authenticated browser/WCAG, Theme persistence, Safe Mode
+boot-order, deployment health, production security/performance and Admin i18n
+evidence remain required. See the Phase 21 audit and its machine-readable
+evidence for the exact snapshot.
+
+## Phase 22 promotion and support gate
+
+Phase 22 adds a typed, fail-closed decision boundary for `canary` and
+`stable`. Both channels require a signed artifact, verified archive, zero High
+security findings, a passing bounded Canary health window and a ready
+post-release support plan. Stable additionally requires a recorded Canary
+promotion, a closed Canary window and explicit Stable approval. The policy is
+decision-only and performs no installation, deployment, migration or target
+mutation. See `docs/deployment/canary-stable-support.md` and
+`resources/release/stable-canary-support-phase22-v1.json`.
 
 
 ## R12 access/CSP cutover gates
@@ -19,20 +41,29 @@ Before setting `platform_super=false`, Security Center must report zero implicit
 
 
 ## R13 PHP runtime gate
-Repository validation now includes an executable PHP suite across PHP 8.2, 8.3, 8.4 and 8.5. The release verification job also runs the same suite after full payload lint.
+The historical compatibility matrix included PHP 8.2, 8.3, 8.4 and 8.5. The
+current checkout's release workflow runs the executable PHP suite on PHP 8.3
+and does not claim the full historical matrix.
 
 This closes the previous “PHP lint only” gap for framework-independent NanoPino domain behavior. It does not replace controlled Pinoox/database integration, signed PINX lifecycle testing or browser E2E; those remain Stable release gates.
 
 
 ## R14 native PINX lifecycle gate
-Repository CI now requires a clean Pinoox + MySQL lifecycle after source verification. A candidate cannot pass the repository gate unless native platform installation, PINX build, fresh install, force-update and uninstall all complete successfully and the CMS table count remains stable across update and returns to zero after uninstall.
 
-This materially closes the previous “no real Pinoox/DB package lifecycle” gap for unsigned packages in CI. Signed trust-chain validation, fault-injected recovery and target-host/browser E2E remain separate Stable gates.
+> **Historical workflow note:** the native Pinoox/MySQL lifecycle described in
+> the R14/R15 sections was validated in historical branch workflows. The
+> current checkout's `.github/workflows/nanopino-quality.yml` runs source
+> verification, PHP contracts, frontend tests and the production build; it does
+> not currently provision MySQL or execute native install/update/uninstall.
+
+The historical R14 workflow required a clean Pinoox + MySQL lifecycle after source verification. Under that workflow a candidate could not pass unless native platform installation, PINX build, fresh install, force-update and uninstall all completed successfully and the CMS table count remained stable across update and returned to zero after uninstall.
+
+The historical results materially closed the previous “no real Pinoox/DB package lifecycle” gap for unsigned packages in that branch workflow. Signed trust-chain validation, fault-injected recovery and target-host/browser E2E remain separate Stable gates.
 
 
 ## R15 installability and versioned-upgrade gate
 
-R15 supersedes the R14 same-version force-update probe with a versioned native lifecycle. CI now installs the previous official NanoPino 0.23.28 release and upgrades it to 0.23.29 **without force**, then performs a separate clean 0.23.29 fresh install/uninstall cycle.
+R15 superseded the R14 same-version force-update probe with a versioned native lifecycle. Its historical workflow installed the previous official NanoPino 0.23.28 release and upgraded it to 0.23.29 **without force**, then performed a separate clean 0.23.29 fresh install/uninstall cycle.
 
 The lifecycle matrix runs against:
 - Pincore 3.14.0 / native version code 232 — the declared minimum supported kernel;

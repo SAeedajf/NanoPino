@@ -19,6 +19,10 @@ use App\com_pinoox_cms\Controller\Api\SystemRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\TaxonomyRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\ThemeRuntimeApiController;
 use App\com_pinoox_cms\Controller\Api\UserRuntimeApiController;
+use App\com_pinoox_cms\Cms\Capability\CoreCapabilities;
+use Pinoox\Component\Kernel\Controller\ApiController;
+use ReflectionMethod;
+use RuntimeException;
 
 final class CmsRuntimeApiManifest
 {
@@ -35,6 +39,9 @@ final class CmsRuntimeApiManifest
                 self::route('GET','/content/{id}',[ContentRuntimeApiController::class,'show'],'cms.content.show','content.read','cms.api.read',false,['id'=>'\d+']),
                 self::route('PUT','/content/{id}',[ContentRuntimeApiController::class,'update'],'cms.content.update','content.update','cms.api.write',true,['id'=>'\d+']),
                 self::route('POST','/content/{id}/publish',[ContentRuntimeApiController::class,'publish'],'cms.content.publish','content.publish','cms.api.write',true,['id'=>'\d+']),
+                self::route('POST','/content/{id}/submit-review',[ContentRuntimeApiController::class,'submitReview'],'cms.content.submit-review','content.submit_review','cms.api.write',true,['id'=>'\d+']),
+                self::route('POST','/content/{id}/approve',[ContentRuntimeApiController::class,'approve'],'cms.content.approve','content.approve','cms.api.write',true,['id'=>'\d+']),
+                self::route('POST','/content/{id}/archive',[ContentRuntimeApiController::class,'archive'],'cms.content.archive','content.archive','cms.api.write',true,['id'=>'\d+']),
                 self::route('POST','/content/{id}/schedule',[ContentRuntimeApiController::class,'schedule'],'cms.content.schedule','content.publish','cms.api.write',true,['id'=>'\d+']),
                 self::route('DELETE','/content/{id}',[ContentRuntimeApiController::class,'trash'],'cms.content.trash','content.delete','cms.api.write',true,['id'=>'\d+']),
                 self::route('POST','/content/{id}/restore',[ContentRuntimeApiController::class,'restoreDraft'],'cms.content.restore','content.update','cms.api.write',true,['id'=>'\d+']),
@@ -44,6 +51,9 @@ final class CmsRuntimeApiManifest
 
                 // Taxonomy
                 self::route('GET','/taxonomies/{key}/terms',[TaxonomyRuntimeApiController::class,'terms'],'cms.taxonomy.terms','taxonomy.read','cms.api.read',false,['key'=>'[a-z][a-z0-9_-]{1,63}']),
+                self::route('POST','/taxonomies/{key}/terms',[TaxonomyRuntimeApiController::class,'create'],'cms.taxonomy.term.create','taxonomy.manage','cms.api.write',true,['key'=>'[a-z][a-z0-9_-]{1,63}']),
+                self::route('PATCH','/taxonomies/{key}/terms/{id}',[TaxonomyRuntimeApiController::class,'update'],'cms.taxonomy.term.update','taxonomy.manage','cms.api.write',true,['key'=>'[a-z][a-z0-9_-]{1,63}','id'=>'\\d+']),
+                self::route('DELETE','/taxonomies/{key}/terms/{id}',[TaxonomyRuntimeApiController::class,'delete'],'cms.taxonomy.term.delete','taxonomy.manage','cms.api.write',true,['key'=>'[a-z][a-z0-9_-]{1,63}','id'=>'\\d+']),
 
                 // Media
                 self::route('GET','/media',[MediaApiController::class,'index'],'cms.media.index','media.read','cms.api.read'),
@@ -134,6 +144,111 @@ final class CmsRuntimeApiManifest
                 self::route('GET','/system/security',[SecurityRuntimeApiController::class,'index'],'cms.security.index','system.security.view','cms.api.read'),
             ],
         ];
+    }
+
+    /**
+     * Validate the executable API contract before the platform registers it.
+     *
+     * A malformed route manifest otherwise fails later in the native router
+     * with an opaque runtime error. Keeping this check at the boundary makes
+     * package/build mistakes deterministic and prevents an incomplete API
+     * surface from being advertised as available.
+     *
+     * @param array<string,mixed> $definition
+     */
+    public static function validate(array $definition): void
+    {
+        if (!is_string($definition['version'] ?? null) || preg_match('/^v[1-9][0-9]*$/', $definition['version']) !== 1) {
+            throw new RuntimeException('CMS API manifest version is invalid.');
+        }
+
+        if (!is_string($definition['prefix'] ?? null) || preg_match('/^[a-z][a-z0-9_-]{1,63}$/', $definition['prefix']) !== 1) {
+            throw new RuntimeException('CMS API manifest prefix is invalid.');
+        }
+
+        $routes = $definition['routes'] ?? null;
+        if (!is_array($routes) || $routes === []) {
+            throw new RuntimeException('CMS API manifest has no routes.');
+        }
+
+        $seen = [];
+        foreach ($routes as $index => $route) {
+            if (!is_array($route)) {
+                throw new RuntimeException(sprintf('CMS API route #%s is not an array.', (string) $index));
+            }
+
+            foreach (['method', 'path', 'action', 'name', 'permission', 'rate_limit', 'flow', 'filters'] as $key) {
+                if (!array_key_exists($key, $route)) {
+                    throw new RuntimeException(sprintf('CMS API route #%s is missing %s.', (string) $index, $key));
+                }
+            }
+
+            $method = strtoupper((string) $route['method']);
+            $path = (string) $route['path'];
+            $routeName = (string) $route['name'];
+            if (!in_array($method, ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+                throw new RuntimeException(sprintf('CMS API route %s uses an unsupported method.', $routeName));
+            }
+            if (preg_match('#^/[A-Za-z0-9/_{}.-]+$#', $path) !== 1 || str_contains($path, '//')) {
+                throw new RuntimeException(sprintf('CMS API route %s has an unsafe path.', $routeName));
+            }
+
+            $identity = $method . ' ' . $path;
+            if (isset($seen[$identity])) {
+                throw new RuntimeException(sprintf('CMS API route %s duplicates %s.', $routeName, $identity));
+            }
+            $seen[$identity] = true;
+
+            if (!is_string($route['name']) || preg_match('/^[a-z][a-z0-9._-]{1,126}$/', $routeName) !== 1) {
+                throw new RuntimeException(sprintf('CMS API route #%s has an invalid name.', (string) $index));
+            }
+            if (!is_string($route['permission']) || !array_key_exists($route['permission'], CoreCapabilities::definitions())) {
+                throw new RuntimeException(sprintf('CMS API route %s references an unregistered capability.', $routeName));
+            }
+            if (!is_string($route['rate_limit']) || preg_match('/^[a-z][a-z0-9._-]{1,126}$/', $route['rate_limit']) !== 1) {
+                throw new RuntimeException(sprintf('CMS API route %s has an invalid rate-limit profile.', $routeName));
+            }
+            if (!is_array($route['flow']) || $route['flow'] === [] || !in_array('throttle:' . $route['rate_limit'], $route['flow'], true)) {
+                throw new RuntimeException(sprintf('CMS API route %s has an incomplete request flow.', $routeName));
+            }
+            if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true) && !in_array('cms_csrf', $route['flow'], true)) {
+                throw new RuntimeException(sprintf('CMS API mutation %s is missing cms_csrf.', $routeName));
+            }
+
+            $action = $route['action'];
+            if (!is_array($action) || count($action) !== 2 || !is_string($action[0] ?? null) || !is_string($action[1] ?? null)) {
+                throw new RuntimeException(sprintf('CMS API route %s has an invalid action.', $routeName));
+            }
+            if (!class_exists($action[0]) || !is_a($action[0], ApiController::class, true)) {
+                throw new RuntimeException(sprintf('CMS API route %s action controller is invalid.', $routeName));
+            }
+            $reflection = new ReflectionMethod($action[0], $action[1]);
+            if (!$reflection->isPublic() || $reflection->isStatic()) {
+                throw new RuntimeException(sprintf('CMS API route %s action method is not public and instance-bound.', $routeName));
+            }
+
+            $placeholders = [];
+            preg_match_all('/\{([A-Za-z][A-Za-z0-9_]*)\}/', $path, $matches);
+            foreach ($matches[1] ?? [] as $placeholder) {
+                $placeholders[$placeholder] = true;
+            }
+            if (!is_array($route['filters'])) {
+                throw new RuntimeException(sprintf('CMS API route %s filters are invalid.', $routeName));
+            }
+            foreach (array_keys($route['filters']) as $filter) {
+                if (!isset($placeholders[$filter])) {
+                    throw new RuntimeException(sprintf('CMS API route %s has a filter for a missing placeholder.', $routeName));
+                }
+                if (!is_string($route['filters'][$filter]) || $route['filters'][$filter] === '') {
+                    throw new RuntimeException(sprintf('CMS API route %s has an empty placeholder filter.', $routeName));
+                }
+            }
+            foreach (array_keys($placeholders) as $placeholder) {
+                if (!array_key_exists($placeholder, $route['filters'])) {
+                    throw new RuntimeException(sprintf('CMS API route %s leaves placeholder %s unconstrained.', $routeName, $placeholder));
+                }
+            }
+        }
     }
 
     /** @param array<string,string> $filters @return array<string,mixed> */

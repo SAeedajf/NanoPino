@@ -17,6 +17,9 @@ final readonly class SearchQuery
         if ($siteId < 1 || $limit < 1 || $limit > 100 || $offset < 0 || $offset > 100_000) {
             throw new \InvalidArgumentException('Invalid search pagination/scope.');
         }
+        if (count($types) > 32) {
+            throw new \InvalidArgumentException('Too many search type filters.');
+        }
         if (strlen($text) > 500) {
             throw new \InvalidArgumentException('Search query is too long.');
         }

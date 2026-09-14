@@ -2,6 +2,12 @@
 
 NanoPino uses the extracted Git repository as the development source of truth.
 
+> **Checkout status (2026-09-10):** the historical helper scripts
+> `tools/release/build-pinx.sh`, `tools/release/verify-source.sh` and
+> `tools/release/bump-version.php` are **Not found in current codebase**. The
+> checkout does provide the native Pinoox commands `pinx:build`, `pinx:info`
+> and `release`; use those commands for the current source tree.
+
 ## Source of truth
 
 - GitHub stores extracted source only.
@@ -11,10 +17,10 @@ NanoPino uses the extracted Git repository as the development source of truth.
 
 ## Versioning
 
-Use:
+Native current-checkout command:
 
 ```bash
-php tools/release/bump-version.php <version-name> <version-code>
+php pinoox release com_pinoox_cms --bump=<patch|minor|major|version-name> --yes
 ```
 
 The command updates:
@@ -28,10 +34,10 @@ Version code must increase monotonically.
 
 ## Verification
 
-Run:
+Native current-checkout verification command:
 
 ```bash
-tools/release/verify-source.sh
+php pinoox pinx:info /path/to/NanoPino.pinx
 ```
 
 The verifier fails closed when:
@@ -46,8 +52,14 @@ The verifier fails closed when:
 
 `pinx:build` does not accept an arbitrary source path, so NanoPino uses a dedicated Pinoox build root.
 
+The dedicated `tools/release/build-pinx.sh` helper referenced by the historical
+process is not present in the current checkout. Do not treat a manually renamed
+ZIP as a PINX; use the native Pinoox builder and record both commands:
+
 ```bash
-PHP_BIN=php8.4 tools/release/build-pinx.sh /path/to/pinoox-build-root /path/to/output.pinx
+php pinoox pinx:build com_pinoox_cms --no-sign --yes --output=/path/to/NanoPino.pinx
+php tools/release/ensure-pinx-cms-profile.php /path/to/NanoPino.pinx
+php pinoox pinx:info /path/to/NanoPino.pinx
 ```
 
 The build root must not already contain `apps/com_pinoox_cms`.

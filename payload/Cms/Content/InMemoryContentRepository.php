@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\com_pinoox_cms\Cms\Content;
 
+use DateTimeImmutable;
+
 final class InMemoryContentRepository implements ContentRepositoryInterface
 {
     /** @var array<int,ContentRecord> */
@@ -39,6 +41,27 @@ final class InMemoryContentRepository implements ContentRepositoryInterface
         return $record?->project($projection);
     }
 
+    public function findPublishedBySlug(
+        int $siteId,
+        string $type,
+        string $locale,
+        string $slug,
+    ): ?ContentRecord {
+        foreach ($this->records as $record) {
+            if (
+                $record->siteId === $siteId
+                && $record->type === $type
+                && $record->locale === $locale
+                && $record->slug === $slug
+                && $record->status === ContentStatus::Published
+            ) {
+                return $record;
+            }
+        }
+
+        return null;
+    }
+
     public function findMany(
         array $ids,
         ContentProjection $projection = ContentProjection::List,
@@ -58,13 +81,14 @@ final class InMemoryContentRepository implements ContentRepositoryInterface
     {
         $records = array_values(array_filter(
             $this->records,
-            static function (ContentRecord $record) use ($query): bool {
+            function (ContentRecord $record) use ($query): bool {
                 if ($record->siteId !== $query->siteId) return false;
                 if ($query->type !== null && $record->type !== $query->type) return false;
                 if ($query->status !== null && $record->status !== $query->status) return false;
                 if ($query->locale !== null && $record->locale !== $query->locale) return false;
                 if ($query->authorId !== null && $record->authorId !== $query->authorId) return false;
                 if ($query->parentId !== null && $record->parentId !== $query->parentId) return false;
+                if ($query->termId !== null && !$this->hasTerm($record, $query->termId, $query->taxonomy)) return false;
                 if ($query->beforeId !== null && $record->id >= $query->beforeId) return false;
                 if ($query->search !== null && $query->search !== '') {
                     $needle = strtolower($query->search);
@@ -93,13 +117,14 @@ final class InMemoryContentRepository implements ContentRepositoryInterface
     {
         return count(array_filter(
             $this->records,
-            static function (ContentRecord $record) use ($query): bool {
+            function (ContentRecord $record) use ($query): bool {
                 if ($record->siteId !== $query->siteId) return false;
                 if ($query->type !== null && $record->type !== $query->type) return false;
                 if ($query->status !== null && $record->status !== $query->status) return false;
                 if ($query->locale !== null && $record->locale !== $query->locale) return false;
                 if ($query->authorId !== null && $record->authorId !== $query->authorId) return false;
                 if ($query->parentId !== null && $record->parentId !== $query->parentId) return false;
+                if ($query->termId !== null && !$this->hasTerm($record, $query->termId, $query->taxonomy)) return false;
                 if ($query->beforeId !== null && $record->id >= $query->beforeId) return false;
                 if ($query->search !== null && trim($query->search) !== '') {
                     $needle = strtolower(trim($query->search));
@@ -112,6 +137,67 @@ final class InMemoryContentRepository implements ContentRepositoryInterface
                 return true;
             },
         ));
+    }
+
+    /** @return list<ContentRecord> */
+    public function publishDue(int $limit = 50, ?DateTimeImmutable $now = null): array
+    {
+        $now ??= new DateTimeImmutable('now');
+        $due = array_values(array_filter(
+            $this->records,
+            static function (ContentRecord $record) use ($now): bool {
+                if ($record->status !== ContentStatus::Scheduled || $record->scheduledAt === null) {
+                    return false;
+                }
+
+                try {
+                    return new DateTimeImmutable($record->scheduledAt) <= $now;
+                } catch (\Throwable) {
+                    return false;
+                }
+            },
+        ));
+        usort($due, static function (ContentRecord $left, ContentRecord $right): int {
+            return strcmp((string) $left->scheduledAt, (string) $right->scheduledAt)
+                ?: $left->id <=> $right->id;
+        });
+
+        $published = [];
+        foreach (array_slice($due, 0, max(1, min(500, $limit))) as $record) {
+            $publishedAt = $now->format(DATE_ATOM);
+            $updated = new ContentRecord(
+                $record->id,
+                $record->siteId,
+                $record->type,
+                ContentStatus::Published,
+                $record->title,
+                $record->slug,
+                $record->excerpt,
+                $record->authorId,
+                $record->parentId,
+                $record->locale,
+                $record->document,
+                $record->metadata,
+                $record->revisionId,
+                $publishedAt,
+                null,
+                $record->createdAt,
+                $publishedAt,
+                $record->fields,
+                $record->relations,
+                $record->terms,
+            );
+            // The in-memory repository is single-process; replacing only a
+            // still-scheduled record preserves the same compare-and-set rule
+            // as the database repository.
+            if (($this->records[$record->id] ?? null)?->status !== ContentStatus::Scheduled) {
+                continue;
+            }
+            $this->records[$record->id] = $updated;
+            $published[] = $updated;
+        }
+
+        return $published;
     }
 
     public function slugExists(
@@ -131,6 +217,15 @@ final class InMemoryContentRepository implements ContentRepositoryInterface
             ) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    private function hasTerm(ContentRecord $record, int $termId, ?string $taxonomy): bool
+    {
+        $taxonomies = $taxonomy !== null ? [$taxonomy] : array_keys($record->terms);
+        foreach ($taxonomies as $key) {
+            if (in_array($termId, $record->terms[$key] ?? [], true)) return true;
         }
         return false;
     }

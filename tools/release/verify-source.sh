@@ -19,6 +19,12 @@ fi
 
 "$PHP_BIN" -l "$ROOT/payload/app.php" >/dev/null
 "$PHP_BIN" -r '
+if (!function_exists("env")) {
+    function env(string $key, mixed $default = null): mixed {
+        $value = getenv($key);
+        return $value === false ? $default : $value;
+    }
+}
 $root=$argv[1];
 $app=require $root."/payload/app.php";
 $manifest=json_decode(file_get_contents($root."/manifest.json"),true,512,JSON_THROW_ON_ERROR);

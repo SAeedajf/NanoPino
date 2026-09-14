@@ -3,17 +3,21 @@ name: NanoPino quality
 on:
   push:
     paths:
-      - 'apps/com_pinoox_cms/**'
+      - 'payload/**'
       - 'tests/php/**'
-      - 'composer.json'
-      - 'composer.lock'
+      - 'tests/release/**'
+      - 'tools/**'
+      - 'manifest.json'
+      - 'docs/**'
       - '.github/workflows/nanopino-quality.yml'
   pull_request:
     paths:
-      - 'apps/com_pinoox_cms/**'
+      - 'payload/**'
       - 'tests/php/**'
-      - 'composer.json'
-      - 'composer.lock'
+      - 'tests/release/**'
+      - 'tools/**'
+      - 'manifest.json'
+      - 'docs/**'
       - '.github/workflows/nanopino-quality.yml'
   workflow_dispatch:
 
@@ -41,27 +45,26 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
-
       - name: Install CMS frontend dependencies
-        working-directory: apps/com_pinoox_cms/theme/cms-admin
+        working-directory: payload/theme/cms-admin
         run: npm ci --no-audit --no-fund
 
       - name: PHP syntax and runtime contracts
         shell: bash
         run: |
           set -euo pipefail
-          find apps/com_pinoox_cms -type f -name '*.php' \
+          find payload -type f -name '*.php' \
             -not -path '*/theme/cms-admin/node_modules/*' \
             -not -path '*/theme/cms-admin/dist/*' \
             -print0 | xargs -0 -n1 php -l
-          composer test:cms
+          php tests/php/run.php
+          node --test tests/release/*.test.mjs
+          bash tools/release/verify-source.sh
 
       - name: Frontend tests
-        working-directory: apps/com_pinoox_cms/theme/cms-admin
+        working-directory: payload/theme/cms-admin
         run: npm test
 
       - name: Production build and parity
-        working-directory: apps/com_pinoox_cms/theme/cms-admin
+        working-directory: payload/theme/cms-admin
         run: npm run build

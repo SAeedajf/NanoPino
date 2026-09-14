@@ -3,7 +3,21 @@ name: Validate source
 on:
   push:
     branches: [main]
+    paths:
+      - 'payload/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'manifest.json'
+      - 'docs/**'
+      - '.github/workflows/**'
   pull_request:
+    paths:
+      - 'payload/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'manifest.json'
+      - 'docs/**'
+      - '.github/workflows/**'
 
 jobs:
   php-runtime:

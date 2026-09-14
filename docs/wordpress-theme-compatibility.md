@@ -118,6 +118,29 @@ validated before repository calls. Raw SQL and unsupported registered sources
 are rejected, while `CmsRuntimeServices::dataBinding()` provides the native
 Pinoox repository wiring for later public/template render integration.
 
+## Phase 7 static asset pipeline
+
+`WordPressThemeAssetPipeline` builds a bounded, deterministic manifest for CSS,
+JavaScript, fonts and RTL variants. It records file size, SHA-256 content hash,
+normalized relative path, direction, version, local references and resolved
+dependencies. JavaScript `*.asset.php` sidecars are parsed as static metadata;
+they are never included, evaluated or allowed to execute PHP.
+
+CSS `url(...)` references are classified without fetching remote content. Local
+font and stylesheet references become graph edges, while data URLs and external
+URLs remain explicit deferred warnings. Absolute paths, traversal outside the
+theme root, unsafe references, normalized-key collisions and dependency cycles
+are blockers. Symlinks and ignored development directories are excluded, and
+file-count, per-file and total-byte budgets are enforced before a manifest is
+usable. Topological ordering is deterministic and places dependencies before
+consumers, with fonts before stylesheets and stylesheets before JavaScript when
+no stronger graph edge exists.
+
+The pipeline is exposed through `CmsRuntimeServices::wordpressAssetPipeline()`
+for the native runtime, but it remains an intake/inspection service: it does not
+bundle, publish, enqueue or execute theme assets, and it does not activate a
+WordPress theme.
+
 ## Planned implementation phases
 
 1. Scanner and compatibility report.
@@ -135,8 +158,8 @@ Pinoox repository wiring for later public/template render integration.
 9. Plugin adapters, preview, cache invalidation and activation rollback.
 10. Fixture corpus, browser/WCAG, security, performance and Canary gates.
 
-Phases 1–5 deliberately stop before theme installation, activation and public
-runtime execution. Classic PHP templates, query/data binding, asset execution
-and plugin behavior remain later adapters. GitHub and deployment changes
+Phases 1–7 deliberately stop before theme installation, activation and public
+runtime execution. Classic PHP templates, asset bundling/enqueueing, and plugin
+behavior remain later adapters. GitHub and deployment changes
 remain deferred until the complete compatibility implementation has passed its
 local and target gates.

@@ -95,6 +95,7 @@ use App\com_pinoox_cms\Cms\Theme\ThemeView;
 use App\com_pinoox_cms\Cms\Theme\Design\DesignSchemaValidator;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateHierarchyResolver;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeAssetPipeline;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityMutationGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxUserLookup;
 use App\com_pinoox_cms\Cms\Identity\UserAdministrationService;
@@ -169,6 +170,7 @@ final class CmsRuntimeServices
     private static ?SemanticCache $semanticCache = null;
     private static ?PublicRenderCacheInvalidator $renderCacheInvalidator = null;
     private static ?ThemeEngine $themeEngine = null;
+    private static ?WordPressThemeAssetPipeline $wordpressAssetPipeline = null;
     private static ?FileQueueRepository $queueRepository = null;
     private static ?QueueWorker $queueWorker = null;
     private static ?QueueDispatcher $queueDispatcher = null;
@@ -519,6 +521,17 @@ final class CmsRuntimeServices
             CmsRelease::version(),
             self::renderCacheInvalidator(),
         );
+    }
+
+    /**
+     * Return the read-only WordPress asset intake service.
+     *
+     * The service only builds a bounded manifest; it never evaluates PHP
+     * sidecars, executes JavaScript, fetches remote assets or publishes files.
+     */
+    public static function wordpressAssetPipeline(): WordPressThemeAssetPipeline
+    {
+        return self::$wordpressAssetPipeline ??= new WordPressThemeAssetPipeline();
     }
 
     /**

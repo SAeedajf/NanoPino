@@ -158,7 +158,10 @@ converted template counts, and a structured unsupported-feature list. Findings
 cover PHP runtime, template tags, hooks, shortcodes, plugin dependencies,
 dynamic includes, images, inline styles, unmapped HTML and active markup such
 as scripts, forms and iframes. Each finding carries a category, severity,
-occurrence count and a concrete adapter recommendation.
+occurrence count and a concrete adapter recommendation. Common presentation
+tags also produce machine-readable `binding_suggestions` such as
+`the_title -> content.current.title`, `the_content -> content.current.body`,
+`wp_nav_menu -> navigation.primary` and `paginate_links -> pagination.current`.
 
 Active markup, parser failures and resource violations are blockers. Ordinary
 WordPress runtime behavior is reported as a warning and therefore does not make

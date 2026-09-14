@@ -12,6 +12,7 @@ final readonly class WordPressClassicThemeConversionReport
      * @param array<string,mixed> $metadata
      * @param array<string,mixed> $features
      * @param list<string> $dependencies
+     * @param array<string,list<string>> $bindingSuggestions
      */
     public function __construct(
         public string $themeRoot,
@@ -23,6 +24,7 @@ final readonly class WordPressClassicThemeConversionReport
         public array $metadata = [],
         public array $features = [],
         public array $dependencies = [],
+        public array $bindingSuggestions = [],
     ) {}
 
     public function hasBlockers(): bool
@@ -55,6 +57,7 @@ final readonly class WordPressClassicThemeConversionReport
             'metadata' => $this->metadata,
             'features' => $this->features,
             'dependencies' => $this->dependencies,
+            'binding_suggestions' => $this->bindingSuggestions,
         ];
     }
 }

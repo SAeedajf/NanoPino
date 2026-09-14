@@ -12,6 +12,8 @@ return [
         $root = phase8_make_theme([
             'style.css' => "/* Theme Name: Classic Aurora\nLicense: GPL-2.0-or-later */",
             'index.php' => "<?php get_header(); if (have_posts()) { the_post(); } ?>\n<main class=\"site\"><h1>Welcome</h1><p>Intro text</p><a href=\"/contact\" target=\"_blank\">Contact</a><img src=\"hero.jpg\" alt=\"Hero image\"></main><?php get_footer(); ?>",
+            'attachment.php' => '<h1>Attachment</h1>',
+            'comments.php' => '<p>Comments</p>',
             'template-parts/content.php' => "<article><!-- wp:heading {\"level\":2} --><h2>Article</h2><!-- /wp:heading --></article>",
             'functions.php' => "<?php add_action('wp_head', 'classic_head');",
         ]);
@@ -27,10 +29,12 @@ return [
             np_assert_same(WordPressThemeType::Hybrid, $report->themeType);
             np_assert_same('static-no-execution', $report->isolationMode);
             np_assert_true($report->safeToUse());
-            np_assert_same(2, count($report->templates));
-            np_assert_true($report->features['converted_template_count'] === 2);
+            np_assert_same(4, count($report->templates));
+            np_assert_true($report->features['converted_template_count'] === 4);
             np_assert_true(is_string($report->templates[0]->document->toArray()['blocks'][0]['type'] ?? null));
             np_assert_true(in_array('classic.php_runtime', array_column(array_map(static fn ($feature): array => $feature->toArray(), $report->unsupportedFeatures), 'code'), true));
+            np_assert_same(['content.items'], $report->bindingSuggestions['have_posts'] ?? []);
+            np_assert_same(['content.current'], $report->bindingSuggestions['the_post'] ?? []);
             np_assert_false(is_file($marker), 'Classic PHP must never be executed.');
             np_assert_same('Classic Aurora', $report->metadata['name'] ?? null);
         } finally {

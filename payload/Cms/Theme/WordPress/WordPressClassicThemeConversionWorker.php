@@ -25,7 +25,7 @@ final class WordPressClassicThemeConversionWorker
 {
     private const MAX_TEMPLATES = 100;
     private const MAX_FILE_BYTES = 2_000_000;
-    private const TEMPLATE_BASENAMES = '/^(?:index|front-page|home|single(?:-[a-z0-9_-]+)?|page(?:-[a-z0-9_-]+)?|archive(?:-[a-z0-9_-]+)?|author(?:-[a-z0-9_-]+)?|category(?:-[a-z0-9_-]+)?|tag(?:-[a-z0-9_-]+)?|taxonomy(?:-[a-z0-9_-]+)?|date|search|404|header(?:-[a-z0-9_-]+)?|footer(?:-[a-z0-9_-]+)?|sidebar(?:-[a-z0-9_-]+)?)\.php$/i';
+    private const TEMPLATE_BASENAMES = '/^(?:index|front-page|home|single(?:-[a-z0-9_-]+)?|page(?:-[a-z0-9_-]+)?|archive(?:-[a-z0-9_-]+)?|author(?:-[a-z0-9_-]+)?|category(?:-[a-z0-9_-]+)?|tag(?:-[a-z0-9_-]+)?|taxonomy(?:-[a-z0-9_-]+)?|attachment(?:-[a-z0-9_-]+)?|singular|date|search|404|comments|header(?:-[a-z0-9_-]+)?|footer(?:-[a-z0-9_-]+)?|sidebar(?:-[a-z0-9_-]+)?)\.php$/i';
 
     public function __construct(
         private readonly WordPressThemeScanner $scanner = new WordPressThemeScanner(),
@@ -63,12 +63,13 @@ final class WordPressClassicThemeConversionWorker
 
         $this->addScanFeatures($scan, $unsupported);
         $templates = [];
+        $bindingSuggestions = [];
         $candidates = $this->templateCandidates($scan->files, $issues);
         foreach ($candidates as $relative) {
             $path = $scan->root . '/' . $relative;
             try {
                 $content = $this->read($path);
-                $templates[] = $this->convertTemplate($relative, $content, $issues, $unsupported);
+                $templates[] = $this->convertTemplate($relative, $content, $issues, $unsupported, $bindingSuggestions);
             } catch (Throwable $error) {
                 $issues[] = $this->issue('classic.template_conversion_failed', 'blocker', $error->getMessage(), $relative);
             }
@@ -100,6 +101,7 @@ final class WordPressClassicThemeConversionWorker
             metadata: $scan->metadata,
             features: $features,
             dependencies: $scan->dependencies,
+            bindingSuggestions: $bindingSuggestions,
         );
     }
 
@@ -124,10 +126,10 @@ final class WordPressClassicThemeConversionWorker
         return $candidates;
     }
 
-    /** @param list<array{code:string,severity:string,message:string,path?:string}> $issues @param list<WordPressClassicUnsupportedFeature> $unsupported */
-    private function convertTemplate(string $relative, string $content, array &$issues, array &$unsupported): WordPressConvertedTemplate
+    /** @param list<array{code:string,severity:string,message:string,path?:string}> $issues @param list<WordPressClassicUnsupportedFeature> $unsupported @param array<string,list<string>> $bindingSuggestions */
+    private function convertTemplate(string $relative, string $content, array &$issues, array &$unsupported, array &$bindingSuggestions): WordPressConvertedTemplate
     {
-        $static = $this->stripPhp($relative, $content, $issues, $unsupported);
+        $static = $this->stripPhp($relative, $content, $issues, $unsupported, $bindingSuggestions);
         $templateIssues = [];
         try {
             if (preg_match('/<!--\s*\/?wp:/i', $static) === 1) {
@@ -157,8 +159,8 @@ final class WordPressClassicThemeConversionWorker
         }
     }
 
-    /** @param list<array{code:string,severity:string,message:string,path?:string}> $issues @param list<WordPressClassicUnsupportedFeature> $unsupported */
-    private function stripPhp(string $relative, string $content, array &$issues, array &$unsupported): string
+    /** @param list<array{code:string,severity:string,message:string,path?:string}> $issues @param list<WordPressClassicUnsupportedFeature> $unsupported @param array<string,list<string>> $bindingSuggestions */
+    private function stripPhp(string $relative, string $content, array &$issues, array &$unsupported, array &$bindingSuggestions): string
     {
         $phpTags = preg_match_all('/<\?(?:php|=)?/i', $content, $matches) ?: 0;
         if ($phpTags > 0) {
@@ -174,21 +176,42 @@ final class WordPressClassicThemeConversionWorker
                 'Map the behavior to a native data source, Builder block or approved adapter.',
             );
         }
-        $this->detectUnsupportedPhp($relative, $content, $unsupported);
+        $this->detectUnsupportedPhp($relative, $content, $unsupported, $bindingSuggestions);
         return preg_replace('/<\?(?:php|=)?[\s\S]*?(?:\?>|$)/i', '', $content) ?? '';
     }
 
-    /** @param list<WordPressClassicUnsupportedFeature> $unsupported */
-    private function detectUnsupportedPhp(string $relative, string $content, array &$unsupported): void
+    /** @param list<WordPressClassicUnsupportedFeature> $unsupported @param array<string,list<string>> $bindingSuggestions */
+    private function detectUnsupportedPhp(string $relative, string $content, array &$unsupported, array &$bindingSuggestions): void
     {
         foreach ([
-            'classic.template_tags' => ['presentation', '/\b(?:get_header|get_footer|get_sidebar|get_template_part|the_title|the_content|the_excerpt|the_permalink|get_permalink|the_post_thumbnail|have_posts|the_post)\s*\(/i', 'Map template tags to validated NanoPino data bindings.'],
+            'classic.template_tags' => ['presentation', '/\b(?:get_header|get_footer|get_sidebar|get_template_part|the_title|the_content|the_excerpt|the_permalink|get_permalink|the_post_thumbnail|have_posts|the_post|wp_nav_menu|dynamic_sidebar|get_search_form|comments_template|paginate_links|wp_link_pages)\s*\(/i', 'Map template tags to validated NanoPino data bindings.'],
             'classic.hooks' => ['runtime-hook', '/\b(?:add_action|add_filter|do_action|apply_filters|remove_action|remove_filter)\s*\(/i', 'Create an explicit hook adapter; do not run WordPress hooks in the public runtime.'],
             'classic.shortcodes' => ['shortcode', '/\b(?:add_shortcode|do_shortcode)\s*\(/i', 'Convert the shortcode to a registered block or approved adapter.'],
             'classic.dynamic_include' => ['php-runtime', '/\b(?:include|include_once|require|require_once|eval)\s*(?:\(|["\'])/i', 'Resolve the dependency statically and import only approved output.'],
+            'classic.theme_registration' => ['theme-registration', '/\b(?:wp_enqueue_style|wp_enqueue_script|register_nav_menus|register_sidebar|add_theme_support)\s*\(/i', 'Replace theme registration with native asset, navigation or capability configuration.'],
         ] as $code => [$category, $pattern, $recommendation]) {
             $count = preg_match_all($pattern, $content, $matches) ?: 0;
             if ($count > 0) $unsupported[] = new WordPressClassicUnsupportedFeature($code, $category, 'warning', 'Classic PHP contains runtime behavior that was not executed.', $relative, $count, $recommendation);
+        }
+        foreach ([
+            'the_title' => 'content.current.title',
+            'the_content' => 'content.current.body',
+            'the_excerpt' => 'content.current.excerpt',
+            'the_permalink' => 'content.current.url',
+            'get_permalink' => 'content.current.url',
+            'the_post_thumbnail' => 'media.featured',
+            'have_posts' => 'content.items',
+            'the_post' => 'content.current',
+            'wp_nav_menu' => 'navigation.primary',
+            'dynamic_sidebar' => 'navigation.sidebar',
+            'get_search_form' => 'content.search',
+            'comments_template' => 'content.comments',
+            'paginate_links' => 'pagination.current',
+            'wp_link_pages' => 'pagination.current',
+        ] as $tag => $binding) {
+            if (preg_match('/\b' . preg_quote($tag, '/') . '\s*\(/i', $content) === 1) {
+                $bindingSuggestions[$tag] = array_values(array_unique([...(array)($bindingSuggestions[$tag] ?? []), $binding]));
+            }
         }
         $shortcodeCount = preg_match_all('/\[[a-z][a-z0-9_-]*(?:\s[^\]]*)?\]/i', $content, $matches) ?: 0;
         if ($shortcodeCount > 0) $unsupported[] = new WordPressClassicUnsupportedFeature('classic.inline_shortcodes', 'shortcode', 'warning', 'Template contains shortcode syntax that requires an explicit adapter.', $relative, $shortcodeCount, 'Convert the shortcode to a native block or approved adapter.');

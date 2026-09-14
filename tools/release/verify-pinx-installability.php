@@ -12,6 +12,17 @@ $maxPinxBytes = 16 * 1024 * 1024;
 $maxUncompressedBytes = 64 * 1024 * 1024;
 $maxEntries = 5000;
 
+// PINX verification runs outside the native Pinoox bootstrap. Keep the
+// payload metadata read compatible with the platform env() contract without
+// importing or mutating a host runtime.
+if (!function_exists('env')) {
+    function env(string $key, mixed $default = null): mixed
+    {
+        $value = getenv($key);
+        return $value === false ? $default : $value;
+    }
+}
+
 $failures = [];
 $fail = static function (string $message) use (&$failures): void {
     $failures[] = $message;

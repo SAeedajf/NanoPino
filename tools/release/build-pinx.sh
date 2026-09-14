@@ -20,8 +20,22 @@ for dependency in "$PHP_BIN" node npm python3 rsync sha256sum mktemp; do
 done
 "$ROOT/tools/release/verify-source.sh"
 
-version_name="$("$PHP_BIN" -r '$a=require $argv[1]; echo $a["version-name"];' "$ROOT/payload/app.php")"
-version_code="$("$PHP_BIN" -r '$a=require $argv[1]; echo $a["version-code"];' "$ROOT/payload/app.php")"
+version_name="$("$PHP_BIN" -r '
+if (!function_exists("env")) {
+    function env(string $key, mixed $default = null): mixed {
+        $value = getenv($key);
+        return $value === false ? $default : $value;
+    }
+}
+$a=require $argv[1]; echo $a["version-name"];' "$ROOT/payload/app.php")"
+version_code="$("$PHP_BIN" -r '
+if (!function_exists("env")) {
+    function env(string $key, mixed $default = null): mixed {
+        $value = getenv($key);
+        return $value === false ? $default : $value;
+    }
+}
+$a=require $argv[1]; echo $a["version-code"];' "$ROOT/payload/app.php")"
 OUTPUT="${2:-$ROOT/../output/NanoPino-${PACKAGE}-${version_name}-${version_code}.pinx}"
 # Resolve against the caller's directory before entering the native build root.
 OUTPUT="$(python3 - "$OUTPUT" "$ROOT" "$PINOX_ROOT" <<'PYTHON'

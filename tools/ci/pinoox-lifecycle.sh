@@ -132,6 +132,12 @@ echo (int)($m["cms"]["runtime_schema"]["required_tables"]??0);
 verify_installed_release() {
   local manifest="$1"
   "$PHP_BIN" -r '
+  if (!function_exists("env")) {
+      function env(string $key, mixed $default = null): mixed {
+          $value = getenv($key);
+          return $value === false ? $default : $value;
+      }
+  }
   $app=require $argv[1];
   $manifest=json_decode(file_get_contents($argv[2]),true,512,JSON_THROW_ON_ERROR);
   if (($app["package"]??null)!==($manifest["package"]??null)) exit(2);

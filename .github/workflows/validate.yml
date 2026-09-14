@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -45,13 +45,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -73,7 +73,7 @@ jobs:
         run: tools/release/verify-source.sh
 
       - name: Upload verified production admin
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nanopino-admin-dist
           path: payload/theme/cms-admin/dist
@@ -122,7 +122,7 @@ jobs:
       NANOPINO_FAULT_INJECTION: ${{ matrix.fault_injection }}
       NANOPINO_UPGRADE_BASE_REF: 6f251890a503fa9968dcbe36c6d8e8604f00618b
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -140,12 +140,12 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Restore verified production admin
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: nanopino-admin-dist
           path: payload/theme/cms-admin/dist
@@ -179,7 +179,7 @@ jobs:
         run: bash tools/ci/pinoox-lifecycle.sh
 
       - name: Upload verified PINX lifecycle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nanopino-pinx-e2e-pincore-${{ matrix.pincore }}
           path: ${{ runner.temp }}/NanoPino-e2e.pinx

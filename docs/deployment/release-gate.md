@@ -13,7 +13,7 @@ A green CI result proves repository consistency; it does not by itself prove the
 
 ## Phase 21 final RC snapshot
 
-The 0.23.72 / code 2372 candidate is locally technically ready after the
+The 0.23.73 / code 2373 candidate is locally technically ready after the
 frontend, PHP, documentation, Vite, source/runtime parity, release metadata,
 security preflight and PINX archive checks pass. This does not override the
 10 declared Stable blockers: target integration/database lifecycle, signed

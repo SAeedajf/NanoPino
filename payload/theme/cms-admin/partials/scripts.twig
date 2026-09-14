@@ -2,7 +2,9 @@
 {% if cmsBootGuard %}
 <script defer nonce="{{ cspNonce|e('html_attr') }}" src="{{ cmsBootGuard }}"></script>
 {% endif %}
+{% if adminFrontend.ready|default(false) %}
 <script nonce="{{ cspNonce|e('html_attr') }}">window.__PINOOX__ = {{ pinooxBootstrapJson|raw }};</script>
+{% endif %}
 {% if adminFrontend.ready|default(false) %}
 {{ vite_tags(adminFrontend.entry|default('src/main.js'))|raw }}
 {% endif %}

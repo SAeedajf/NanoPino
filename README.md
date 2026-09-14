@@ -4,9 +4,9 @@ NanoPino is the native Pinoox CMS and extension platform package (`com_pinoox_cm
 
 License: [MIT](LICENSE)
 
-Current release candidate: **0.23.72 / code 2372**.
+Current release candidate: **0.23.73 / code 2373**.
 
-Installable artifact: [NanoPino 0.23.72 RC2](https://github.com/SAeedajf/NanoPino/releases/tag/v0.23.72-rc2).
+Installable artifact: [NanoPino 0.23.73 manager-frame-fix](https://github.com/SAeedajf/NanoPino/releases/tag/v0.23.73-rc1).
 Download the `.pinx` asset and its adjacent `.sha256` file from that release,
 then install it through the native Pinoox PINX installer.
 

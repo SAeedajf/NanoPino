@@ -2,7 +2,7 @@
 
 This directory documents the current NanoPino source contract.
 
-**Freeze Candidate:** 0.23.72 / code 2372. R15 installability evidence is historical. Machine-readable API/schema files under `resources` remain authoritative where a prose document and a machine contract disagree.
+**Freeze Candidate:** 0.23.73 / code 2373. R15 installability evidence is historical. Machine-readable API/schema files under `resources` remain authoritative where a prose document and a machine contract disagree.
 
 Start here:
 - [Architecture](architecture/overview.md)

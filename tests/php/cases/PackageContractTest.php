@@ -155,4 +155,14 @@ return [
         np_assert_contains('verify-pinx-installability.php', $script);
         np_assert_contains('sha256sum', $script);
     },
+
+    'Release tooling provides canonical PINX signing after native build' => static function (): void {
+        $script = (string)file_get_contents(NANOPINO_ROOT . '/tools/release/sign-pinx.php');
+
+        np_assert_contains('PinxSignature::payloadHashes', $script);
+        np_assert_contains('PinxSignature::create', $script);
+        np_assert_contains("['require_signature' => true]", $script);
+        np_assert_contains('Input PINX is already signed.', $script);
+        np_assert_contains('Signed output must be different from the unsigned input.', $script);
+    },
 ];

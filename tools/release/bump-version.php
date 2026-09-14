@@ -10,6 +10,16 @@ $root = dirname(__DIR__, 2);
 $versionName = trim((string) $argv[1]);
 $versionCode = filter_var($argv[2], FILTER_VALIDATE_INT);
 
+// payload/app.php follows the native Pinoox env() contract. Keep this
+// standalone release helper usable outside a fully booted Pinoox process.
+if (!function_exists('env')) {
+    function env(string $key, mixed $default = null): mixed
+    {
+        $value = getenv($key);
+        return $value === false ? $default : $value;
+    }
+}
+
 if (!preg_match('/^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$/', $versionName)) {
     fwrite(STDERR, "Invalid version name: {$versionName}\n");
     exit(65);

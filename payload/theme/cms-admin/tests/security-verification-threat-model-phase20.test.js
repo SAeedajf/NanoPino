@@ -77,6 +77,18 @@ test('Phase 20 response boundary emits defensive headers and redacts credentials
   assert.match(listener, /Cache-Control/, 'API denials must be non-cacheable')
 })
 
+test('manager app-view framing is same-origin only while public framing remains denied', () => {
+  const headers = read('Cms/Security/Http/SecurityHeadersPolicy.php')
+  const csp = read('Cms/Security/Http/CspPolicy.php')
+  const listener = read('Cms/Security/Http/PinooxSecurityResponseListener.php')
+
+  assert.match(headers, /allowSameOriginFrame/)
+  assert.match(headers, /\$allowSameOriginFrame \? 'SAMEORIGIN' : 'DENY'/)
+  assert.match(csp, /\$allowSameOriginFrame \? \["'self'"\] : \["'none'"\]/)
+  assert.match(listener, /\/manager\/app\/com_pinoox_cms/)
+  assert.doesNotMatch(listener, /__manager_token/)
+})
+
 test('Phase 20 evidence keeps target and signed lifecycle claims explicit', () => {
   const model = JSON.parse(read('resources/release/security-threat-model-phase20-v1.json'))
   const evidence = model.verification

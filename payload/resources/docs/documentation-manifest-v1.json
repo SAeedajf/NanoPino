@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "documentation_version": "0.23.72",
+  "documentation_version": "0.23.74",
   "freeze_state": "candidate",
   "authoritative_entry": "docs/index.md",
   "policy": "docs/documentation/freeze-policy.md",
@@ -80,7 +80,6 @@
     "breaking_change_requires_migration_docs": true
   },
   "release_blockers": [
-    "target shared-hosting Pinoox integration E2E",
     "production Luma/Vite dist build and browser WCAG E2E",
     "signed PINX lifecycle E2E",
     "target database migration evidence",

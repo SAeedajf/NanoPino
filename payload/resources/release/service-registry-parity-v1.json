@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "package": "com_pinoox_cms",
-  "version": "0.23.72",
+  "version": "0.23.74",
   "canonical_source": "resources/release/service-registry-parity-v1.json",
   "sources": {
     "app": "app.php",

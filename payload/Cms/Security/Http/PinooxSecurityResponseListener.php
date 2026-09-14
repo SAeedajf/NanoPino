@@ -26,11 +26,23 @@ final readonly class PinooxSecurityResponseListener
         }
 
         $https = $event->request->isSecure();
-        foreach ($this->policy->headers($nonce, $https) as $name => $value) {
+        $allowSameOriginFrame = self::allowsSameOriginFrame($event->request->getPathInfo());
+        foreach ($this->policy->headers($nonce, $https, $allowSameOriginFrame) as $name => $value) {
             if (!$event->response->headers->has($name)) {
                 $event->response->headers->set($name, $value);
             }
         }
+    }
+
+    /**
+     * Pinoox Manager renders an installed app in a same-origin iframe at this
+     * exact mount. Do not infer trust from the manager JWT query parameter:
+     * the Manager has already authenticated the request, while the CMS only
+     * needs to recognize the platform-owned route for response framing.
+     */
+    public static function allowsSameOriginFrame(string $path): bool
+    {
+        return preg_match('#^/manager/app/com_pinoox_cms(?:/|$)#', $path) === 1;
     }
 
     private function normalizeApiDenial(AppResponseEvent $event): void

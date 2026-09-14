@@ -35,7 +35,7 @@ final readonly class CspPolicy
         return rtrim(strtr(base64_encode(random_bytes(18)), '+/', '-_'), '=');
     }
 
-    public function header(string $nonce): string
+    public function header(string $nonce, bool $allowSameOriginFrame = false): string
     {
         if (preg_match('/^[A-Za-z0-9_-]{16,64}$/', $nonce) !== 1) {
             throw new \InvalidArgumentException('Invalid CSP nonce.');
@@ -45,7 +45,10 @@ final readonly class CspPolicy
             'default-src' => ["'self'"],
             'base-uri' => ["'self'"],
             'object-src' => ["'none'"],
-            'frame-ancestors' => ["'none'"],
+            // The CMS admin shell is embedded by Pinoox Manager on the same
+            // origin. The default remains fail-closed; callers must opt in
+            // explicitly for that trusted, same-origin manager mount.
+            'frame-ancestors' => $allowSameOriginFrame ? ["'self'"] : ["'none'"],
             'form-action' => ["'self'"],
             'script-src' => ["'self'", "'nonce-" . $nonce . "'"],
             'script-src-attr' => ["'none'"],

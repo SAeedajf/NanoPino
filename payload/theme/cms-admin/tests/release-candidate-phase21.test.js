@@ -13,8 +13,8 @@ const readRepository = (path) => readFileSync(resolve(repositoryRoot, path), 'ut
 test('Phase 21 RC evidence covers every canonical phase through 21', () => {
   const evidence = JSON.parse(readPayload('resources/release/release-candidate-phase21-v1.json'))
   assert.equal(evidence.release.package, 'com_pinoox_cms')
-  assert.equal(evidence.release.version, '0.23.72')
-  assert.equal(evidence.release.version_code, 2372)
+  assert.equal(evidence.release.version, '0.23.74')
+  assert.equal(evidence.release.version_code, 2374)
   assert.deepEqual(evidence.phase_coverage.completed_source_phases, Array.from({ length: 21 }, (_, i) => i + 1))
   assert.equal(evidence.release_gate.local_technical_candidate, true)
   assert.equal(evidence.release_gate.stable, false)
@@ -27,27 +27,28 @@ test('Phase 21 RC keeps package metadata and signed lifecycle boundaries explici
   const gate = readPayload('Cms/Release/ProductionReleaseGate.php')
 
   assert.match(manifest, /com_pinoox_cms/)
-  assert.match(manifest, /0\.23\.72/)
-  assert.match(app, /'version-name' => '0\.23\.72'/)
-  assert.match(app, /'version-code' => 2372/)
+  assert.match(manifest, /0\.23\.74/)
+  assert.match(app, /'version-name' => '0\.23\.74'/)
+  assert.match(app, /'version-code' => 2374/)
   assert.match(gate, /verifyReleaseMetadata/)
   assert.match(gate, /declared_release_blockers_present|release\.declared_blockers_present/)
-  assert.equal(evidence.release.signed, false)
+  assert.equal(evidence.release.signed, true)
 })
 
 test('Phase 21 RC records all local integrity and parity gates', () => {
   const evidence = JSON.parse(readPayload('resources/release/release-candidate-phase21-v1.json'))
   const verification = evidence.verification
 
-  assert.equal(verification.frontend_tests, '223/223')
-  assert.equal(verification.php_tests, '72/72')
+  assert.equal(verification.frontend_tests, '235/235')
+  assert.equal(verification.php_tests, '35/35')
   assert.equal(verification.documentation_audit.status, 'passed')
   assert.equal(verification.vite_build, true)
   assert.equal(verification.reachable_assets, 62)
   assert.equal(verification.admin_source_dist_parity, true)
   assert.equal(verification.admin_runtime_parity, true)
   assert.equal(verification.release_metadata_parity, true)
-  assert.equal(verification.archive_integrity, 'verified after final build')
+  assert.equal(verification.archive_integrity, 'verified after canonical signed csp-nonce-fix build')
+  assert.equal(verification.signature_verification, 'PASS via native PinxVerifier with require_signature')
 })
 
 test('Phase 21 RC carries forward security and performance evidence without overclaiming', () => {
@@ -65,9 +66,9 @@ test('Phase 21 target boundary is read-only and stable remains blocked', () => {
   const evidence = JSON.parse(readPayload('resources/release/release-candidate-phase21-v1.json'))
   const blockers = evidence.release_gate.declared_open_blockers
 
-  assert.equal(evidence.verification.target_mutations, 'not executed')
-  assert.equal(evidence.target_read_only.deployment, 'not executed')
-  assert.equal(blockers.length, 10)
+  assert.match(evidence.verification.target_mutations, /^PASS; target accepted signed 0\.23\.74 update/)
+  assert.match(evidence.target_read_only.deployment, /^PASS — Manager UI reports update success;/)
+  assert.equal(blockers.length, 9)
   assert.ok(blockers.includes('signed PINX lifecycle E2E'))
   assert.ok(blockers.includes('target database migration evidence'))
   assert.ok(blockers.includes('production security verification'))

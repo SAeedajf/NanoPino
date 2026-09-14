@@ -40,11 +40,37 @@ The scores are triage estimates, not a claim of rendered fidelity. They must be
 replaced or refined by fixture-based conversion and browser visual tests in
 later phases.
 
+## Phase 2 intake boundary
+
+`WordPressThemeIntakeService` accepts either a theme directory or a ZIP archive
+for read-only inspection. It builds a deterministic SHA-256 file manifest,
+rejects traversal, absolute paths, case collisions, symlinks and bounded
+resource violations, and extracts only non-executable metadata. A provenance
+envelope can be signed and verified with Ed25519 against an explicit trusted
+publisher-key map. A missing signature is an inspection warning; an untrusted
+or invalid signature is a blocker. No extraction, installation or activation is
+performed by this service.
+
+## Phase 3 Block Markup boundary
+
+`WordPressBlockMarkupParser` parses nested serialized block comments without
+executing PHP, shortcodes or dynamic blocks. WordPress core shorthand such as
+`wp:paragraph` is normalized to `core/paragraph`; namespaced blocks remain
+namespaced. Paragraph, heading and button blocks map directly to canonical
+NanoPino nodes, including bounded text, safe URLs and selected style values.
+Other blocks become warning-bearing structural `core/section` wrappers so their
+children remain available for later specialized adapters. Malformed nesting,
+invalid attributes and parser budget violations fail closed.
+
 ## Planned implementation phases
 
 1. Scanner and compatibility report.
-2. Import intake, archive safety, license and signed provenance.
-3. Block Markup parser and canonical NanoPino block mapping.
+2. Import intake, archive safety, license and signed provenance. The local
+   trust boundary accepts unsigned sources for inspection only; conversion and
+   activation must apply the configured publisher trust policy.
+3. Block Markup parser and canonical NanoPino block mapping. Supported core
+   paragraph, heading and button blocks map directly; unsupported blocks keep
+   their children inside a warning-bearing structural section wrapper.
 4. `theme.json` compiler, style variations and design-token bridge.
 5. Template/part/pattern hierarchy conversion and Builder integration.
 6. Query/data binding for content, taxonomy, media, navigation and pagination.
@@ -53,6 +79,6 @@ later phases.
 9. Plugin adapters, preview, cache invalidation and activation rollback.
 10. Fixture corpus, browser/WCAG, security, performance and Canary gates.
 
-The first phase deliberately stops before import, conversion, installation or
-activation. GitHub and deployment changes remain deferred until the complete
-compatibility implementation has passed its local and target gates.
+Phases 1–3 deliberately stop before theme installation, activation and public
+runtime execution. GitHub and deployment changes remain deferred until the
+complete compatibility implementation has passed its local and target gates.

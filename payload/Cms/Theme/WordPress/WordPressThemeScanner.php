@@ -152,6 +152,11 @@ final class WordPressThemeScanner
         $metadata = [];
         if ($style === '') return $metadata;
 
+        // WordPress headers are usually on lines inside /* ... */, but compact
+        // one-line headers are also common in imported fixtures.
+        $style = preg_replace('/^\s*\/\*+/', '', $style) ?? $style;
+        $style = preg_replace('/\*\/\s*$/', '', $style) ?? $style;
+
         foreach (['Theme Name' => 'name', 'Version' => 'version', 'Text Domain' => 'text_domain', 'License' => 'license', 'License URI' => 'license_uri', 'Template' => 'parent', 'Requires at least' => 'requires_at_least', 'Requires PHP' => 'requires_php'] as $header => $key) {
             if (preg_match('/^\s*' . preg_quote($header, '/') . '\s*:\s*(.+)$/mi', $style, $match) === 1) {
                 $metadata[$key] = trim($match[1]);
@@ -165,7 +170,7 @@ final class WordPressThemeScanner
     {
         $hasBlockTemplates = in_array('templates/index.html', $files, true)
             || in_array('block-templates/index.html', $files, true)
-            || $this->contains($contents, '/<!--\s*\/?wp:[a-z0-9_-]+(?:\s[^>]*)?\s*-->/i');
+            || $this->contains($contents, '/<!--\s*\/?wp:[a-z0-9_-]+(?:\/[a-z0-9_-]+)?(?:\s[^>]*)?\s*-->/i');
         $hasClassicTemplates = in_array('index.php', $files, true)
             || in_array('functions.php', $files, true)
             || count(array_filter($files, static fn (string $file): bool => preg_match('/^(single|page|archive|404|header|footer|sidebar)(-[^\/]+)?\.php$/', basename($file)) === 1)) > 0;

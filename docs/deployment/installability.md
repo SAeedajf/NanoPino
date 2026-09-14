@@ -20,7 +20,7 @@ not the current NanoPino candidate version.
 | Requirement | Current contract / historical R15 reference |
 |---|---|
 | Package | `com_pinoox_cms` |
-| Current candidate | `0.23.72` / code `2372` |
+| Current candidate | `0.23.73` / code `2373` |
 | Historical R15 lifecycle reference | `0.23.29` / code `2329` |
 | PHP | `>= 8.2` |
 | Pincore | `>= 3.14.0` |
@@ -164,8 +164,8 @@ A successful native `pinx:build` is therefore necessary but not sufficient for r
 
 After installation/update, verify at minimum:
 
-1. the installed version matches the approved candidate (`0.23.72` / code
-   `2372`; the historical R15 scenario uses `0.23.29` / code `2329`);
+1. the installed version matches the approved candidate (`0.23.73` / code
+   `2373`; the historical R15 scenario uses `0.23.29` / code `2329`);
 2. the NanoPino admin route opens and production Vite assets load;
 3. Settings and Security pages open without runtime errors;
 4. System Health can execute;

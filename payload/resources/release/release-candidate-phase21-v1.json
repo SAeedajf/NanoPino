@@ -1,16 +1,16 @@
 {
   "schema": 1,
   "name": "NanoPino Final Release Candidate Phase 21",
-  "captured_at": "2026-09-14T08:57:54Z",
+  "captured_at": "2026-09-14T15:35:00Z",
   "release": {
     "package": "com_pinoox_cms",
     "product": "NanoPino",
-    "version": "0.23.72",
-    "version_code": 2372,
+    "version": "0.23.73",
+    "version_code": 2373,
     "minimum_pincore": "3.14.0",
     "minimum_kernel_code": 232,
-    "artifact": "releases/NanoPino-0.23.72-phase21-final-release-candidate.pinx",
-    "signed": false
+    "artifact": "releases/NanoPino-0.23.73-manager-frame-fix.pinx",
+    "signed": true
   },
   "phase_coverage": {
     "canonical_matrix": "phases 1-21",
@@ -19,8 +19,8 @@
     "phase_19_performance_budgets": true
   },
   "verification": {
-    "frontend_tests": "223/223",
-    "php_tests": "72/72",
+    "frontend_tests": "235/235",
+    "php_tests": "33/33",
     "documentation_audit": {
       "status": "passed",
       "required_docs": 31,
@@ -38,14 +38,14 @@
       "high_findings": 0,
       "warnings": 2
     },
-    "archive_integrity": "verified after final build",
+    "archive_integrity": "verified after signed manager-frame-fix build",
     "target_mutations": "not executed"
   },
   "release_gate": {
     "local_technical_candidate": true,
     "production_release_gate": false,
     "declared_open_blockers": [
-      "target shared-hosting Pinoox integration E2E",
+      "target shared-hosting Pinoox integration and manager app-view E2E",
       "production Luma/Vite dist build and browser WCAG E2E",
       "signed PINX lifecycle E2E",
       "target database migration evidence",

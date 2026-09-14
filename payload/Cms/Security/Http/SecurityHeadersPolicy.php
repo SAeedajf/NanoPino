@@ -15,12 +15,12 @@ final readonly class SecurityHeadersPolicy
     }
 
     /** @return array<string,string> */
-    public function headers(string $nonce, bool $https): array
+    public function headers(string $nonce, bool $https, bool $allowSameOriginFrame = false): array
     {
         $headers = [
-            $this->csp->headerName() => $this->csp->header($nonce),
+            $this->csp->headerName() => $this->csp->header($nonce, $allowSameOriginFrame),
             'X-Content-Type-Options' => 'nosniff',
-            'X-Frame-Options' => 'DENY',
+            'X-Frame-Options' => $allowSameOriginFrame ? 'SAMEORIGIN' : 'DENY',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'Permissions-Policy' => 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
             'Cross-Origin-Opener-Policy' => 'same-origin',

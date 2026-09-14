@@ -140,6 +140,11 @@ return [
         np_assert_contains('fault_terminal_records=', $lifecycle);
         np_assert_contains('fault_recovery_mode=', $lifecycle);
         np_assert_contains('fault_injection_recovery=PASS', $lifecycle);
+        np_assert_contains('NANOPINO_SIGNED_LIFECYCLE:', $workflow);
+        np_assert_contains('prepare_signed_lifecycle', $lifecycle);
+        np_assert_contains('tools/release/sign-pinx.php', $lifecycle);
+        np_assert_contains("'require_signature' => true", $lifecycle);
+        np_assert_contains('trusted_keys', $lifecycle);
     },
 
     'Release tooling verifies source before invoking native Pinoox PINX build' => static function (): void {

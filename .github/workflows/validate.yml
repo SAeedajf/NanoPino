@@ -120,6 +120,7 @@ jobs:
       PINOOX_E2E_REF: 5e7d65bb4c6c71edbf0e0b47735479f620640d07
       PINCORE_E2E_VERSION: ${{ matrix.pincore }}
       NANOPINO_FAULT_INJECTION: ${{ matrix.fault_injection }}
+      NANOPINO_SIGNED_LIFECYCLE: '1'
       NANOPINO_UPGRADE_BASE_REF: 6f251890a503fa9968dcbe36c6d8e8604f00618b
     steps:
       - uses: actions/checkout@v7

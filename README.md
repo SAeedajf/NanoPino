@@ -6,7 +6,7 @@ License: [MIT](LICENSE)
 
 Current release candidate: **0.23.72 / code 2372**.
 
-Installable artifact: [NanoPino 0.23.72 RC1](https://github.com/SAeedajf/NanoPino/releases/tag/v0.23.72-rc1).
+Installable artifact: [NanoPino 0.23.72 RC2](https://github.com/SAeedajf/NanoPino/releases/tag/v0.23.72-rc2).
 Download the `.pinx` asset and its adjacent `.sha256` file from that release,
 then install it through the native Pinoox PINX installer.
 

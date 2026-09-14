@@ -2,13 +2,14 @@
 
 NanoPino installation and update must use the native Pinoox PINX lifecycle. Do not extract a PINX manually into `apps/` and do not rename a generic ZIP to `.pinx`.
 
-> **Evidence boundary (2026-09-12):** this document contains historical R15/R16
+> **Evidence boundary (2026-09-14):** this document contains historical R15/R16
 > lifecycle claims and examples. The current checkout is `0.23.72 / 2372` and
-> the historical release helpers (`tools/release/build-pinx.sh` and
-> `tools/release/verify-pinx-installability.php`) are **Not found in current
-> codebase**. The native `php pinoox pinx:build`/`pinx:info` commands are
-> available, and current install/upgrade/rollback evidence must still be
-> regenerated before a Stable or Production Ready claim.
+> includes the release helpers
+> (`tools/release/build-pinx.sh` and
+> `tools/release/verify-pinx-installability.php`). The native
+> `php pinoox pinx:build`/`pinx:info` commands are also available. Current
+> install/upgrade/rollback evidence must still be regenerated before a Stable
+> or Production Ready claim.
 
 ## Installability contract
 
@@ -163,12 +164,14 @@ A successful native `pinx:build` is therefore necessary but not sufficient for r
 
 After installation/update, verify at minimum:
 
-1. the installed version is 0.23.29 / code 2329;
+1. the installed version matches the approved candidate (`0.23.72` / code
+   `2372`; the historical R15 scenario uses `0.23.29` / code `2329`);
 2. the NanoPino admin route opens and production Vite assets load;
 3. Settings and Security pages open without runtime errors;
 4. System Health can execute;
 5. all 16 required CMS tables exist;
-6. there is exactly one successful record for the R15 installability preflight migration;
+6. there is exactly one successful record for the NanoPino installability
+   preflight migration (`2026_09_01_000000_preflight_nanopino_environment`);
 7. Safe Mode is not unexpectedly active;
 8. there are no new active critical errors in NanoPino diagnostics.
 

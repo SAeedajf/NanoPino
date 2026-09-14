@@ -63,6 +63,17 @@ Other blocks become warning-bearing structural `core/section` wrappers so their
 children remain available for later specialized adapters. Malformed nesting,
 invalid attributes and parser budget violations fail closed.
 
+## Phase 4 design-token bridge
+
+`WordPressThemeJsonCompiler` accepts theme.json versions 2 and 3 and emits the
+existing NanoPino `DesignDocument` contract. It maps color, gradient, font,
+font-size, spacing, layout, shadow, global typography, element styles and
+selected accessibility settings. WordPress preset references are normalized to
+safe `--wp--...` custom properties. Template metadata, block-specific styles,
+custom CSS and other behavior-heavy fields are reported as deferred warnings;
+they are not silently treated as implemented. Compiled output is validated by
+the existing NanoPino design schema before later theme stages can consume it.
+
 ## Planned implementation phases
 
 1. Scanner and compatibility report.

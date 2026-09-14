@@ -9,7 +9,6 @@ use App\com_pinoox_cms\Cms\Support\CmsRelease;
 use App\com_pinoox_cms\Cms\Health\HealthCheckDefinition;
 use App\com_pinoox_cms\Cms\Admin\Frontend\AdminFrontendAssetProbe;
 use App\com_pinoox_cms\Cms\Admin\Frontend\AdminFrontendResponseFactory;
-use App\com_pinoox_cms\Cms\Admin\AdminComponentDefinition;
 use App\com_pinoox_cms\Cms\Admin\AdminRuntimeUrl;
 use App\com_pinoox_cms\Cms\Admin\AdminI18n;
 use App\com_pinoox_cms\Cms\Kernel\CmsKernel;
@@ -105,35 +104,29 @@ final class AdminController extends Controller
 
         $adminMountPath = AdminRuntimeUrl::currentMountPath();
         $runtimeApiBase = AdminRuntimeUrl::apiBase($adminMountPath);
-
-        // RC control-plane compatibility modules override the historical read-only
-        // compiled pages without weakening the same-origin module boundary. The canonical
-        // Vue SFC sources remain the target for the next full Vite build.
-        foreach ([
-            'core:dashboard' => 'dashboard.mjs',
-            'core:content' => 'content.mjs',
-            'core:revisions' => 'revisions.mjs',
-            'core:media' => 'media.mjs',
-            'core:settings' => 'settings.mjs',
-            'core:system' => 'system.mjs',
-            'core:logs' => 'logs.mjs',
-            'core:appearance' => 'appearance.mjs',
-            'core:blocks' => 'blocks.mjs',
-            'core:users' => 'users.mjs',
-            'core:extensions' => 'extensions.mjs',
-            'core:updates' => 'updates.mjs',
-            'core:recovery' => 'recovery.mjs',
-            'core:builder' => 'builder.mjs',
-            'core:site-editor' => 'site-editor.mjs',
-        ] as $componentId => $asset) {
-            if (!$kernel->admin->components->has($componentId)) {
-                $kernel->admin->components->register(new AdminComponentDefinition(
-                    $componentId,
-                    'cms.core',
-                    AdminRuntimeUrl::controlPlaneModule($asset, $adminMountPath),
-                ));
+        $envBool = static function (string $key, bool $default = false): bool {
+            $value = getenv($key);
+            if ($value === false || trim((string) $value) === "") {
+                return $default;
             }
-        }
+            return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? $default;
+        };
+        $envString = static function (string $key): string {
+            $value = getenv($key);
+            return $value === false ? "" : trim((string) $value);
+        };
+        $telemetryEnabled = $envBool("CMS_TELEMETRY_ENABLED");
+        $telemetryConsent = $envBool("CMS_TELEMETRY_CONSENT");
+        $telemetry = [
+            "enabled" => $telemetryEnabled,
+            "consent" => $telemetryConsent,
+            "ga4MeasurementId" => $telemetryEnabled && $telemetryConsent ? $envString("CMS_GA4_MEASUREMENT_ID") : "",
+            "googleTagManagerId" => $telemetryEnabled && $telemetryConsent ? $envString("CMS_GOOGLE_TAG_MANAGER_ID") : "",
+            "matomoUrl" => $telemetryEnabled && $telemetryConsent ? $envString("CMS_MATOMO_URL") : "",
+            "matomoSiteId" => $telemetryEnabled && $telemetryConsent ? $envString("CMS_MATOMO_SITE_ID") : "",
+            "matomoTagManagerId" => $telemetryEnabled && $telemetryConsent ? $envString("CMS_MATOMO_TAG_MANAGER_ID") : "",
+            "sentryDsn" => $telemetryEnabled && $telemetryConsent ? $envString("CMS_SENTRY_DSN") : "",
+        ];
 
         $manifest = $kernel->admin->manifest(
             static fn (?string $permission): bool =>
@@ -499,6 +492,7 @@ final class AdminController extends Controller
                     'manifest' => $manifestData,
                     'mountPath' => $adminMountPath,
                     'apiBase' => $runtimeApiBase,
+                    'telemetry' => $telemetry,
                     'frontend' => $adminFrontend->toArray(),
                     'data' => [
                         'extensions' => $extensions,

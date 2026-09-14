@@ -7,6 +7,7 @@ import { mergeComponentRegistries } from './registry/admin-components.js'
 import { buildThemeConfig } from './registry/theme-config.js'
 import './styles/admin.scss'
 import { applyCmsDocumentLocale } from './i18n/index.js'
+import { configureTelemetry, installUnhandledErrorCapture, trackPage } from './services/telemetry.js'
 
 const signal = (name, detail = {}) => {
   window.dispatchEvent(new CustomEvent(name, { detail }))
@@ -30,6 +31,13 @@ async function bootAdmin() {
       mount: '#app',
       themeConfig: buildThemeConfig(manifest),
     })
+
+    configureTelemetry(boot.cmsAdmin?.telemetry)
+    installUnhandledErrorCapture()
+    runtime?.router?.afterEach?.((to) => {
+      trackPage(to.fullPath, to.meta?.title || document.title)
+    })
+    trackPage(runtime?.router?.currentRoute?.value?.fullPath || window.location.pathname, document.title)
 
     document.documentElement.dataset.cmsBoot = 'ready'
     signal('pinoox-cms:boot-ready', {

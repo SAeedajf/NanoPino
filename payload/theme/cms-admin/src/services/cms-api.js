@@ -1,5 +1,6 @@
 import { readApiResponse } from '../../runtime/api-response.mjs'
 import { t } from '../i18n/index.js'
+import { captureError, createCorrelationId } from './telemetry.js'
 function boot(){return typeof window!=='undefined'?(window.__PINOOX__||{}):{}}
 export function cmsApiBase(){
   const b=boot()
@@ -13,21 +14,26 @@ function csrfToken(){
   return typeof window!=='undefined'?(window.__PINOOX__?.csrf||''):''
 }
 export async function cmsRequest(path,{method='GET',body=null,headers={},signal}={}){
-  const options={method,credentials:'same-origin',headers:{Accept:'application/json',...headers},signal}
+  const correlationId=headers['X-Correlation-ID']||headers['x-correlation-id']||createCorrelationId()
+  const options={method,credentials:'same-origin',headers:{Accept:'application/json',...headers,'X-Correlation-ID':correlationId},signal}
   const mutation=!['GET','HEAD','OPTIONS'].includes(method.toUpperCase())
   if(mutation){
     const token=csrfToken()
     if(token)options.headers['X-CSRF-TOKEN']=token
-    options.headers['X-Correlation-ID']=crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`
   }
   if(body instanceof FormData)options.body=body
   else if(body!==null&&body!==undefined){
     options.headers['Content-Type']='application/json'
     options.body=JSON.stringify(body)
   }
+  try {
   const response=await fetch(`${cmsApiBase()}${path}`,options)
   const payload=await readApiResponse(response,(key,fallback)=>t(key,{},fallback),{method})
   return{status:response.status,data:payload?.data??payload,body:payload,headers:response.headers}
+  } catch (error) {
+    captureError(error,{operation:'cmsRequest',path,method,status:error?.status,correlationId})
+    throw error
+  }
 }
 export const mediaApi={
   list:(params={})=>{const q=new URLSearchParams();Object.entries(params).forEach(([k,v])=>v!==''&&v!=null&&q.set(k,String(v)));return cmsRequest(`/media${q.size?`?${q}`:''}`)},

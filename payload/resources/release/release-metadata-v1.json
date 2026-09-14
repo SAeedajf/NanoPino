@@ -5,7 +5,7 @@
     "version_code": 2374,
     "minpin": 232,
     "min_pincore": "3.14.0",
-    "app_sha256": "ddea39692b8be8987dd71811cfd00ce87ff1853a7b4655b57f33202445c59f54",
+    "app_sha256": "9e1fd3d9ae3b3ee694ab9bf1d0d7296ed0ca03d0ecf841a847294d573cc9cef6",
     "generated_at": "2026-09-14T16:04:24Z",
     "product_name": "NanoPino",
     "package": "com_pinoox_cms"

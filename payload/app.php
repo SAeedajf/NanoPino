@@ -72,6 +72,24 @@ return [
             'legacy_package' => 'com_pinoox_cms',
             'compatibility_mode' => 'non-breaking-brand-rename',
         ],
+        'platform' => [
+            'id' => 'nanoshell',
+            'name' => 'NanoShell',
+            'contract' => 'nanoshell-platform-v1',
+            'version' => 1,
+            'standalone' => true,
+            'product' => 'NanoPino',
+            'runtime' => [
+                'execution' => 'native-only',
+                'document' => 'block-document-v1',
+                'api' => 'cms-api-v1',
+                'identity_source' => 'nanoshell-platform-contract',
+            ],
+            'source_adapters' => [
+                'static-theme-import',
+                'static-asset-intake',
+            ],
+        ],
         'requires' => [
             'php' => '>=8.2',
             'pincore' => '>=3.14.0',
@@ -84,6 +102,7 @@ return [
             'cms.kernel',
             'cms.extension-platform',
             'cms.admin-platform',
+            'nanoshell.platform',
         ],
         'replaces' => [],
         'permissions' => [],

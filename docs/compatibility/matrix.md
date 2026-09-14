@@ -3,6 +3,7 @@
 | Component | Current contract |
 |---|---|
 | NanoPino | 0.23.73 / code 2373 |
+| Platform identity | NanoShell / nanoshell-platform-v1 |
 | Package | com_pinoox_cms |
 | PHP | >= 8.2 |
 | Pincore | >= 3.14.0 |

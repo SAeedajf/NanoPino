@@ -140,6 +140,7 @@ use App\com_pinoox_cms\Cms\UpdatePolicy\FileExtensionUpdatePolicyRepository;
 use App\com_pinoox_cms\Cms\UpdatePolicy\UpdateCandidateSelector;
 use App\com_pinoox_cms\Cms\UpdateHistory\FileUpdateHistoryRepository;
 use App\com_pinoox_cms\Cms\Recovery\RecoveryCatalogService;
+use App\com_pinoox_cms\Cms\Platform\NanoShellPlatform;
 use Pinoox\Portal\App\AppEngine;
 use Pinoox\Support\SystemConfig;
 
@@ -186,6 +187,12 @@ final class CmsRuntimeServices
     private static ?int $actorContextId = null;
 
     public static function kernel(): CmsKernel { return CmsKernel::instance(); }
+
+    /** @return array<string,mixed> */
+    public static function nanoShellPlatform(): array
+    {
+        return NanoShellPlatform::profile();
+    }
 
     public static function actorId(): ?int
     {

@@ -495,6 +495,7 @@ final class AdminController extends Controller
                 'direction' => $adminDirection,
                 'csrf' => $csrfToken,
                 'cmsAdmin' => [
+                    'platform' => CmsRuntimeServices::nanoShellPlatform(),
                     'brand' => [
                         'name' => AdminI18n::text('brand.name', locale: $adminLocale),
                         'subtitle' => AdminI18n::text('brand.subtitle', locale: $adminLocale),

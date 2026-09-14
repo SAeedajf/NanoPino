@@ -31,8 +31,12 @@ elif [[ "$1" == pinoox && "$2" == pinx:info ]]; then
 else
   [[ "\${FAIL_STAGE:-}" != verify ]]
 fi`)
+  const fixtureEnv = { ...process.env }
+  for (const key of ['NANOPINO_SOURCE_ROOT', 'NANOPINO_TOOL_ROOT', 'NANOPINO_VERIFY_PROFILE']) {
+    delete fixtureEnv[key]
+  }
   const run = (output, fail = '') => spawnSync('bash', [script, native, output], {
-    cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, PHP_BIN: join(bin, 'php'), FAIL_STAGE: fail },
+    cwd: root, encoding: 'utf8', env: { ...fixtureEnv, PATH: `${bin}:${process.env.PATH}`, PHP_BIN: join(bin, 'php'), FAIL_STAGE: fail },
   })
   return { root, repo, native, run }
 }

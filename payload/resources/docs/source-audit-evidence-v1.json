@@ -3,7 +3,7 @@
   "status": "passed",
   "release_version": "0.23.72",
   "release_version_code": 2372,
-  "documentation_manifest_sha256": "a309f71e11b214524d0839cf9e749f2b8645a379580f8e96fd18673f51ab2b0b",
+  "documentation_manifest_sha256": "a1bd717162aebf355f8795111a1d79df55dd39d0425588e8da73d2f38d3d89b9",
   "required_docs": 33,
   "machine_contracts": 25,
   "adr_count": 2,

@@ -1,10 +1,10 @@
 <template>
   <LPage icon="shield-check" class="cms-recovery-center">
-    <SafeModeBanner :safe-mode="data.safeMode" />
+    <SafeModeBanner :safe-mode="safeMode" />
     <div class="cms-stat-grid cms-stat-grid--three">
       <LStatCard :label="t('recovery_page.recovery_point')" :value="data.recoveryPoints.length" icon="history" />
-      <LStatCard :label="t('recovery_page.quarantine')" :value="data.safeMode.quarantined?.length || 0" icon="shield-alert" />
-      <LStatCard :label="t('recovery_page.safe_mode')" :value="data.safeMode.enabled ? t('recovery_page.enabled') : t('recovery_page.disabled')" icon="shield-check" />
+      <LStatCard :label="t('recovery_page.quarantine')" :value="safeMode.quarantined?.length || 0" icon="shield-alert" />
+      <LStatCard :label="t('recovery_page.safe_mode')" :value="safeMode.enabled ? t('recovery_page.enabled') : t('recovery_page.disabled')" icon="shield-check" />
     </div>
     <LPanel>
       <template #header>{{ t('recovery_page.policy') }}</template>
@@ -20,16 +20,25 @@
         <div class="cms-stack" :aria-busy="actionBusy ? 'true' : 'false'">
           <article v-for="point in data.recoveryPoints" :key="point.id" class="cms-list-card cms-list-card--wide">
             <div><strong>{{ point.extensionId || point.extension_id }}</strong><small>{{ point.id }} · {{ point.operation }}</small><small v-if="point.safeModeTarget">{{ t('recovery_page.safe_mode_target') }}</small></div>
-            <div class="cms-card-actions"><LBadge :severity="point.status === 'ready' ? 'success' : 'warning'">{{ point.status }}</LBadge><LButton variant="outline" severity="neutral" size="sm" shape="rounded" :loading="actionBusy === `restore:${point.id}`" :disabled="Boolean(actionBusy) || !center.apiBound || point.restorable === false" @click="requestRestore(point)">{{ actionBusy === `restore:${point.id}` ? t('recovery_page.restoring') : t('recovery_page.restore') }}</LButton></div>
+            <div class="cms-card-actions"><LBadge :severity="point.status === 'ready' ? 'success' : point.status === 'failed' ? 'danger' : 'warning'">{{ pointStatusLabel(point.status) }}</LBadge><LButton variant="outline" severity="neutral" size="sm" shape="rounded" :loading="actionBusy === `restore:${point.id}`" :disabled="Boolean(actionBusy) || !center.apiBound || point.restorable === false" @click="requestRestore(point)">{{ actionBusy === `restore:${point.id}` ? t('recovery_page.restoring') : t('recovery_page.restore') }}</LButton></div>
           </article>
         </div>
       </CmsPageState>
+      <div v-if="!data.recoveryPoints.length" class="cms-card-actions">
+        <LButton variant="outline" severity="neutral" shape="rounded" @click="router.push({name:'cms.extensions'})">{{ t('recovery_page.open_extensions') }}</LButton>
+        <LButton variant="outline" severity="neutral" shape="rounded" @click="router.push({name:'cms.updates'})">{{ t('recovery_page.open_updates') }}</LButton>
+      </div>
     </LPanel>
     <LPanel>
       <template #header>{{ t('recovery_page.safe_mode_control') }}</template>
       <p class="cms-muted">{{ t('recovery_page.safe_mode_explanation') }}</p>
+      <div v-if="safeMode.enabled" class="cms-recovery-safe-details">
+        <div><strong>{{ t('recovery_page.reason') }}</strong><span>{{ safeMode.reason || t('recovery_page.reason_unknown') }}</span></div>
+        <div v-if="safeMode.recoveryPointId || safeMode.recovery_point_id"><strong>{{ t('recovery_page.recovery_point') }}</strong><code>{{ safeMode.recoveryPointId || safeMode.recovery_point_id }}</code></div>
+        <div v-if="safeMode.quarantined?.length"><strong>{{ t('recovery_page.quarantined_extensions') }}</strong><div class="cms-capability-cloud"><LBadge v-for="id in safeMode.quarantined" :key="id" severity="danger">{{ extensionName(id) }}</LBadge></div></div>
+      </div>
       <div class="luma-actions">
-        <LButton v-if="data.safeMode.enabled" variant="outline" severity="danger" shape="rounded" :loading="actionBusy === 'safe-mode-disable'" :disabled="Boolean(actionBusy) || !center.apiBound" @click="requestSafeModeDisable">{{ actionBusy === 'safe-mode-disable' ? t('recovery_page.requesting') : t('recovery_page.disable_request') }}</LButton>
+        <LButton v-if="safeMode.enabled" variant="outline" severity="danger" shape="rounded" :loading="actionBusy === 'safe-mode-disable'" :disabled="Boolean(actionBusy) || !center.apiBound" @click="requestSafeModeDisable">{{ actionBusy === 'safe-mode-disable' ? t('recovery_page.requesting') : t('recovery_page.disable_request') }}</LButton>
         <LBadge v-else severity="success">{{ t('recovery_page.safe_mode_off') }}</LBadge>
       </div>
       <small v-if="!center.apiBound" class="cms-muted">{{ t('recovery_page.api_unbound') }}</small>
@@ -45,28 +54,34 @@
 </template>
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { LBadge, LButton, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 import CmsPageState from '../../components/cms-page-state.vue'
 import SafeModeBanner from '../../components/safe-mode-banner.vue'
-import { performAdminAction, readAdminBootData } from '../../services/admin-provider.js'
+import { readAdminBootData } from '../../services/admin-provider.js'
+import { recoveryApi } from '../../services/cms-api.js'
 import { t } from '../../i18n/index.js'
+const router = useRouter()
 const data = readAdminBootData()
 const center = data.recoveryCenter
+const safeMode = ref({ ...(data.safeMode || { enabled:false, quarantined:[] }) })
 const actionMessage = ref('')
 const actionError = ref('')
 const actionBusy = ref('')
 function confirmed(message) { return typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(message) }
+function extensionName(id){return data.extensions?.find(item=>item.id===id||item.package===id)?.name||id}
+function pointStatusLabel(value){return ({ready:t('recovery_page.ready'),creating:t('recovery_page.creating'),failed:t('recovery_page.failed'),restored:t('recovery_page.restored_status')})[value]||value||t('recovery_page.unknown')}
 async function requestRestore(point) {
   if (!point?.id || actionBusy.value || !confirmed(t('recovery_page.restore_confirm', { id: point.id }))) return
   actionBusy.value = `restore:${point.id}`; actionMessage.value = ''; actionError.value = ''
-  try { await performAdminAction('restoreRecoveryPoint', { id: point.id }); actionMessage.value = t('recovery_page.restore_requested') }
+  try { await recoveryApi.restore(point.id); actionMessage.value = t('recovery_page.restore_requested'); window.setTimeout(() => window.location.reload(), 350) }
   catch (error) { actionError.value = error?.message || t('recovery_page.action_failed') }
   finally { actionBusy.value = '' }
 }
 async function requestSafeModeDisable() {
   if (actionBusy.value || !confirmed(t('recovery_page.disable_confirm'))) return
   actionBusy.value = 'safe-mode-disable'; actionMessage.value = ''; actionError.value = ''
-  try { await performAdminAction('disableSafeMode'); actionMessage.value = t('recovery_page.disable_requested') }
+  try { const response = await recoveryApi.disableSafeMode(); safeMode.value = { ...safeMode.value, ...(response.data || response) }; actionMessage.value = t('recovery_page.disable_requested') }
   catch (error) { actionError.value = error?.message || t('recovery_page.action_failed') }
   finally { actionBusy.value = '' }
 }

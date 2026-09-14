@@ -36,5 +36,5 @@ test('high-impact admin pages gate mutation affordances before calling the API',
   assert.match(common, /export function can\(ability\)/)
   assert.match(runtimeContent, /permissions: \{ create: can\('content\.create'\)/)
   assert.match(runtimeMedia, /permissions:\{upload:can\('media\.upload'\)/)
-  assert.match(runtimeExtensions, /permissions:\{install:can\('extensions\.install'\)/)
+  assert.match(runtimeExtensions, /capabilities:\{install:can\('extensions\.install'\)/)
 })

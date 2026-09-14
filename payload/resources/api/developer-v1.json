@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "base": "/api/v1/cms/developer",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/developer/starter",
+      "capability": "system.developer.generate",
+      "csrf": true,
+      "rate_limit": "cms.api.write"
+    }
+  ],
+  "starter": {
+    "types": [
+      "module",
+      "plugin",
+      "integration",
+      "theme",
+      "admin-extension",
+      "block",
+      "block-package",
+      "driver",
+      "language-pack"
+    ],
+    "core_module_generation": false,
+    "source_export_max_bytes": 1048576,
+    "archive_export_max_bytes": 2097152,
+    "archive_optional": true
+  },
+  "errors": [
+    "DEVELOPER_STARTER_INVALID",
+    "DEVELOPER_STARTER_TYPE_FORBIDDEN",
+    "DEVELOPER_STARTER_FAILED",
+    "FORBIDDEN"
+  ]
+}

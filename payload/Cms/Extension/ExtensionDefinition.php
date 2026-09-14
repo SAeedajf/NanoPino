@@ -15,6 +15,7 @@ final readonly class ExtensionDefinition implements ExtensionDefinitionInterface
 
     public function __construct(
         private string $package,
+        private string $name,
         private ExtensionType $type,
         private string $version,
         private string $publisher,
@@ -39,6 +40,7 @@ final readonly class ExtensionDefinition implements ExtensionDefinitionInterface
     {
         return new self(
             package: $manifest->package(),
+            name: $manifest->name(),
             type: $manifest->extensionType(),
             version: $manifest->version(),
             publisher: $manifest->publisher(),
@@ -50,6 +52,7 @@ final readonly class ExtensionDefinition implements ExtensionDefinitionInterface
     public function identifier(): string { return $this->identifier; }
     public function owner(): string { return $this->owner; }
     public function package(): string { return $this->package; }
+    public function name(): string { return $this->name; }
     public function type(): ExtensionType { return $this->type; }
     public function version(): string { return $this->version; }
     public function publisher(): string { return $this->publisher; }

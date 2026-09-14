@@ -24,6 +24,7 @@ use Pinoox\Component\Http\Request;
 use Pinoox\Component\Helpers\PinooxScriptHelper;
 use Pinoox\Portal\View;
 use App\com_pinoox_cms\Cms\Api\V1\Builder\BuilderApiContract;
+use App\com_pinoox_cms\Cms\Api\V1\Developer\DeveloperApiContract;
 use App\com_pinoox_cms\Cms\Api\V1\Extension\ExtensionApiContract;
 use App\com_pinoox_cms\Cms\Api\V1\Update\UpdateApiContract;
 use App\com_pinoox_cms\Cms\Api\V1\Recovery\RecoveryApiContract;
@@ -620,6 +621,8 @@ final class AdminController extends Controller
                             ],
                             'apiBase' => '/api/v1/extensions/{package}',
                             'starters' => SdkStarterCatalog::all(),
+                            'generatorApi' => DeveloperApiContract::routes(),
+                            'generatorApiBound' => RuntimeBindingState::api(),
                             'packageValidator' => true,
                             'testHarness' => true,
                             'coreEdits' => false,

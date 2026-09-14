@@ -113,6 +113,12 @@ Remaining sequence: finish/review P3 -> P4 identity and observability integratio
 -> P5 accessibility/mobile -> P6 target-host and native lifecycle verification.
 P4a is a reviewable slice, not completion of P4 or all 76 findings.
 
+## P3 implementation notes
+
+PR #12 repairs the Extension, Update, Recovery and Developer SDK surfaces without introducing a second Extension lifecycle. Core Modules remain protected, package review is structured around trust/dependencies/permissions/security, and the versioned APIs are used by the canonical Admin/runtime surfaces.
+
+P3 remains open until source verification, production Admin build/runtime evidence, PHP matrix and PINX lifecycle gates pass.
+
 ## P4b — truthful API responses and incident correlation (2026-09-08)
 
 Source-confirmed follow-up to #58 and the P0 truthful-failure contract:

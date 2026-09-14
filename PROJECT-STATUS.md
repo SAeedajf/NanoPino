@@ -4,6 +4,8 @@ Current package: **0.23.72 / code 2372**.
 
 **Documentation Freeze:** current 0.23.72 candidate; R15 installability evidence is historical and Stable 1.0 is not declared.
 
+**Installable RC:** [v0.23.72-rc1](https://github.com/SAeedajf/NanoPino/releases/tag/v0.23.72-rc1) points to the verified, locally signed PINX artifact built from the green `main` commit. Install through the native Pinoox PINX installer; do not extract it manually.
+
 **Architecture audit:** the 2026-09-10 full audit classifies the package as Beta / functional but immature. It adds a repository-level PHP runtime contract gate and records the remaining database, security, target-runtime and browser evidence gaps. See `docs/audit/2026-09-10-full-architecture-audit.md`.
 
 **Latest release operations status:** Phase 22 adds a fail-closed Canary/Stable promotion policy and post-release support readiness contract. A 20-sample read-only target observation recorded 100% availability and 0% errors, but probe p95 latency was 1992.764ms against the 1200ms limit; the signed candidate was not installed or traffic-sliced on target. Canary promotion and explicit Stable approval remain pending. See `docs/audit/2026-09-14-phase-22-canary-observation.md` and `docs/audit/2026-09-14-phase-22-stable-canary-support.md`.
@@ -12,12 +14,12 @@ Current package: **0.23.72 / code 2372**.
 
 **Canonical phase map:** the current product phases 1–21 and their evidence boundaries are recorded in `docs/audit/2026-09-12-phase-matrix.md`.
 
-**Latest Final Release Candidate pass:** Phase 21 re-runs the full local
-source/build/package/security chain. The technical RC is ready with 223/223
-frontend tests, 72/72 PHP tests, documentation/metadata/parity checks and a
-read-only target smoke. The PINX is intentionally unsigned and production
-Stable remains blocked by the 10 declared target/operational gates. See
-`docs/audit/2026-09-14-phase-21-final-release-candidate.md`.
+**Latest Final Release Candidate pass:** Phase 22 records the current signed
+0.23.72 artifact and the final local evidence: 228/228 frontend tests, 76/76
+PHP tests, documentation/metadata/parity checks, source/runtime verification,
+and a read-only target smoke. Stable remains blocked by target deployment,
+authenticated lifecycle, performance and operational gates. See
+`docs/audit/2026-09-14-phase-22-stable-canary-support.md`.
 
 **Latest Security Verification/Threat Model pass:** Phase 20 records five
 trust boundaries and an 11-threat STRIDE-oriented register. Source controls,

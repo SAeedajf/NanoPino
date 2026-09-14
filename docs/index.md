@@ -16,7 +16,7 @@ Start here:
 - [Latest phase audit](audit/2026-09-11-capability-selection-public-navigation.md)
 - [Canonical Phase Matrix](audit/2026-09-12-phase-matrix.md)
 - [Canonical Service Registry](../resources/release/service-registry-parity-v1.json)
-- [Latest release candidate audit](audit/2026-09-12-phase-8-release-candidate.md)
+- [Latest release candidate audit](audit/2026-09-14-phase-21-final-release-candidate.md)
 - [Live Pinoox test environment audit](audit/2026-09-12-phase-10-real-pinoox-test-environment.md)
 - [Auth, Session and Role E2E audit](audit/2026-09-12-phase-11-auth-session-role-e2e.md)
 - [Database lifecycle and migration audit](audit/2026-09-12-phase-12-database-lifecycle-migration.md)

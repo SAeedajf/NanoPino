@@ -84,7 +84,7 @@ sign_artifact() {
     return 0
   fi
   rm -f -- "$signed"
-  PHP_BIN="$PHP_BIN" "$ROOT/tools/release/sign-pinx.php" \
+  "$PHP_BIN" "$ROOT/tools/release/sign-pinx.php" \
     "$PINOX_ROOT" "$unsigned" "$SIGN_KEY" "$signed"
   mv -fT -- "$signed" "$unsigned"
 }

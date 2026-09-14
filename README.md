@@ -2,6 +2,8 @@
 
 NanoPino is the native Pinoox CMS and extension platform package (`com_pinoox_cms`).
 
+License: [MIT](LICENSE)
+
 Current release candidate: **0.23.72 / code 2372**.
 
 Installable artifact: [NanoPino 0.23.72 RC1](https://github.com/SAeedajf/NanoPino/releases/tag/v0.23.72-rc1).

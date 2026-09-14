@@ -1,6 +1,6 @@
 import { h } from 'vue'
 import { cmsBrand, cmsDirection, cmsI18nContext, cmsLocale, createScopedTranslator, t } from '../i18n/index.js'
-import { cmsPlatform } from '../services/nanoshell-platform.js'
+import { cmsPlatform, cmsPlatformSupports } from '../services/nanoshell-platform.js'
 import { LBadge, LButton, LIcon, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
 
 const HOST_API = Object.freeze({
@@ -14,6 +14,7 @@ const HOST_API = Object.freeze({
   LStatCard,
   brand: cmsBrand(),
   platform: cmsPlatform(),
+  platformSupports: cmsPlatformSupports,
   i18n: cmsI18nContext(),
 })
 
@@ -23,6 +24,7 @@ function createExtensionHost(definition = {}) {
     ...HOST_API,
     brand: cmsBrand(),
     platform: cmsPlatform(),
+    platformSupports: cmsPlatformSupports,
     i18n: Object.freeze({
       version: 'v1',
       locale: cmsLocale(),

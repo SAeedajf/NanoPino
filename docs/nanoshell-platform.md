@@ -20,6 +20,28 @@ The Admin bootstrap emits this profile once under `cmsAdmin.platform`.
 Canonical Vue consumers, extension hosts and direct runtime modules reuse that
 single value; fallback normalization is cached and rejects malformed identities.
 
+## Capability and compatibility profile
+
+The v1 contract now publishes a bounded capability set so UI, extensions and
+direct runtime modules can discover supported platform surfaces without
+guessing from package names:
+
+- `auth.rbac`
+- `content.editorial`
+- `storage.native`
+- `theme.native`
+- `builder.native`
+- `extensions.signed`
+- `recovery.safe-mode`
+
+The compatibility block records the contract, minimum compatible version and
+the host binding (`pinoox-native`). `assertCompatible()` validates this boundary
+for compatible profiles, while `assertProfile()` remains the strict exact
+profile check used by source metadata tests. Client consumers expose the same
+question through `cmsPlatformSupports()` and the extension host's
+`platformSupports()` function. Unknown or incomplete profiles fall back to the
+known-safe v1 profile.
+
 ## Platform boundary
 
 NanoShell owns the native block-document, CMS API, authorization, storage,
@@ -45,6 +67,8 @@ not allowed to appear as the platform identity or as a runtime requirement.
 
 Phase 9 verifies that the same NanoShell profile is projected into the app and
 both package manifests, that the package advertises `nanoshell.platform`, and
-that a profile containing a legacy source identity is rejected. This is source
-metadata verification only; the artifact, target installation and live platform
-remain separate release gates.
+that a profile containing a legacy source identity is rejected. The NanoShell
+upgrade additionally verifies capability discovery, compatibility metadata and
+fail-closed handling of incomplete profiles. This is source metadata
+verification only; the artifact, target installation and live platform remain
+separate release gates.

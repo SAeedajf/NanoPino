@@ -27,6 +27,8 @@ export function buildThemeConfig(manifest) {
       name: platform.name,
       contract: platform.contract,
       version: platform.version,
+      capabilities: [...platform.capabilities],
+      compatibility: { ...platform.compatibility },
     },
     font: {
       sans: 'Vazir, Vazirmatn, Inter, system-ui, sans-serif',

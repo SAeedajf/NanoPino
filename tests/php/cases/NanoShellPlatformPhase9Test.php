@@ -14,6 +14,22 @@ return [
         np_assert_same('nanoshell-platform-v1', $profile['contract']);
         np_assert_true($profile['standalone']);
         np_assert_same('NanoPino', $profile['product']);
+        np_assert_same([
+            'auth.rbac',
+            'content.editorial',
+            'storage.native',
+            'theme.native',
+            'builder.native',
+            'extensions.signed',
+            'recovery.safe-mode',
+        ], $profile['capabilities']);
+        np_assert_same([
+            'contract' => 'nanoshell-platform-v1',
+            'minimum_version' => 1,
+            'host_bindings' => 'pinoox-native',
+        ], $profile['compatibility']);
+        np_assert_true(NanoShellPlatform::supports('builder.native'));
+        np_assert_false(NanoShellPlatform::supports('legacy.theme-loader'));
         np_assert_same($profile, CmsRuntimeServices::nanoShellPlatform());
         np_assert_false(str_contains(strtolower(json_encode($profile, JSON_THROW_ON_ERROR)), 'wordpress'));
     },
@@ -53,6 +69,24 @@ return [
             static fn () => NanoShellPlatform::assertProfile($invalid),
             InvalidArgumentException::class,
             'legacy source identity',
+        );
+    },
+
+    'phase 9 rejects incompatible NanoShell capability metadata' => static function (): void {
+        $incompatible = NanoShellPlatform::profile();
+        $incompatible['compatibility']['host_bindings'] = 'foreign-runtime';
+        np_assert_throws(
+            static fn () => NanoShellPlatform::assertCompatible($incompatible),
+            InvalidArgumentException::class,
+            'incompatible',
+        );
+
+        $incompatible = NanoShellPlatform::profile();
+        unset($incompatible['compatibility']['minimum_version']);
+        np_assert_throws(
+            static fn () => NanoShellPlatform::assertCompatible($incompatible),
+            InvalidArgumentException::class,
+            'incompatible',
         );
     },
 ];

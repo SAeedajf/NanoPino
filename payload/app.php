@@ -79,6 +79,20 @@ return [
             'version' => 1,
             'standalone' => true,
             'product' => 'NanoPino',
+            'capabilities' => [
+                'auth.rbac',
+                'content.editorial',
+                'storage.native',
+                'theme.native',
+                'builder.native',
+                'extensions.signed',
+                'recovery.safe-mode',
+            ],
+            'compatibility' => [
+                'contract' => 'nanoshell-platform-v1',
+                'minimum_version' => 1,
+                'host_bindings' => 'pinoox-native',
+            ],
             'runtime' => [
                 'execution' => 'native-only',
                 'document' => 'block-document-v1',

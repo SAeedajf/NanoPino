@@ -57,7 +57,8 @@ performed by this service.
 executing PHP, shortcodes or dynamic blocks. WordPress core shorthand such as
 `wp:paragraph` is normalized to `core/paragraph`; namespaced blocks remain
 namespaced. Paragraph, heading and button blocks map directly to canonical
-NanoPino nodes, including bounded text, safe URLs and selected style values.
+NanoPino nodes, including bounded text, safe URLs, nested JSON attributes and
+selected style values.
 Other blocks become warning-bearing structural `core/section` wrappers so their
 children remain available for later specialized adapters. Malformed nesting,
 invalid attributes and parser budget violations fail closed.

@@ -12,7 +12,9 @@ final class WordPressBlockMarkupParser
     // Core blocks are serialized as wp:paragraph, while registered third-party
     // blocks normally carry wp:vendor/name. Both forms become core/... or the
     // original namespaced identifier in the canonical document.
-    private const TOKEN = '~<!--\s*(/?)wp:([a-z0-9_-]+(?:/[a-z0-9_-]+)?)(?:\s+(\{.*?\}))?\s*(/?)\s*-->~is';
+    // Capture the complete comment body first. JSON attributes may contain
+    // nested objects, so a non-greedy `{...}` regex is not a valid parser.
+    private const TOKEN = '~<!--\s*(/?)wp:([a-z0-9_-]+(?:/[a-z0-9_-]+)?)(.*?)-->~is';
     private const MAX_BYTES = 2_097_152;
     private const MAX_DEPTH = 128;
     private const MAX_NODES = 10_000;
@@ -56,9 +58,16 @@ final class WordPressBlockMarkupParser
 
             $closing = ((string)$match[1][0]) === '/';
             $name = $this->canonicalName((string)$match[2][0]);
-            $json = (string)($match[3][0] ?? '');
-            $selfClosing = ((string)($match[4][0] ?? '')) === '/';
-            $attributes = $this->attributes($json, $name);
+            $body = trim((string)($match[3][0] ?? ''));
+            $selfClosing = !$closing && str_ends_with($body, '/');
+            if ($selfClosing) $body = trim(substr($body, 0, -1));
+            if ($closing && $body !== '') {
+                throw new WordPressBlockMarkupException(
+                    'WordPress Block Markup has attributes on a closing boundary for ' . $name . '.',
+                    ['markup.invalid_closing_boundary'],
+                );
+            }
+            $attributes = $this->attributes($body, $name);
 
             if ($closing) {
                 if ($selfClosing || $stack === [] || $stack[array_key_last($stack)]['name'] !== $name) {

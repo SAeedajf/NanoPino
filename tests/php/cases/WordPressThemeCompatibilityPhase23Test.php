@@ -106,7 +106,7 @@ return [
     },
 
     'phase 3 maps nested WordPress Block Markup to canonical NanoPino nodes' => static function (): void {
-        $markup = '<!-- wp:group {"className":"hero"} --><div class="wp-block-group">'
+        $markup = '<!-- wp:group {"className":"hero","layout":{"type":"constrained"}} --><div class="wp-block-group">'
             . '<!-- wp:heading {"level":2,"align":"center"} --><h2>سلام <em>دنیا</em></h2><!-- /wp:heading -->'
             . '<!-- wp:paragraph --><p>متن <strong>ایمن</strong></p><!-- /wp:paragraph -->'
             . '</div><!-- /wp:group -->'

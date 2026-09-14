@@ -95,6 +95,7 @@ use App\com_pinoox_cms\Cms\Theme\ThemeView;
 use App\com_pinoox_cms\Cms\Theme\Design\DesignSchemaValidator;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateHierarchyResolver;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressClassicThemeConversionWorker;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeAssetPipeline;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityMutationGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxUserLookup;
@@ -170,6 +171,7 @@ final class CmsRuntimeServices
     private static ?SemanticCache $semanticCache = null;
     private static ?PublicRenderCacheInvalidator $renderCacheInvalidator = null;
     private static ?ThemeEngine $themeEngine = null;
+    private static ?WordPressClassicThemeConversionWorker $wordpressClassicThemeWorker = null;
     private static ?WordPressThemeAssetPipeline $wordpressAssetPipeline = null;
     private static ?FileQueueRepository $queueRepository = null;
     private static ?QueueWorker $queueWorker = null;
@@ -532,6 +534,15 @@ final class CmsRuntimeServices
     public static function wordpressAssetPipeline(): WordPressThemeAssetPipeline
     {
         return self::$wordpressAssetPipeline ??= new WordPressThemeAssetPipeline();
+    }
+
+    /**
+     * Return the static Classic Theme conversion boundary. It reads source as
+     * text and never runs WordPress PHP, hooks, plugins or template functions.
+     */
+    public static function wordpressClassicThemeWorker(): WordPressClassicThemeConversionWorker
+    {
+        return self::$wordpressClassicThemeWorker ??= new WordPressClassicThemeConversionWorker();
     }
 
     /**

@@ -141,6 +141,32 @@ for the native runtime, but it remains an intake/inspection service: it does not
 bundle, publish, enqueue or execute theme assets, and it does not activate a
 WordPress theme.
 
+## Phase 8 isolated Classic Theme conversion
+
+`WordPressClassicThemeConversionWorker` is the Classic/Hybrid conversion
+boundary. It reads candidate root templates and `template-parts/*.php` as
+bounded text, removes PHP regions from the conversion input, converts safe
+static HTML (`section`, headings, paragraphs, links and structural containers)
+to native blocks, and reuses the Block Markup parser when serialized WordPress
+blocks are present. The worker can optionally validate every resulting document
+against the native Block Registry.
+
+The worker has no WordPress runtime dependency: it never calls `include`,
+`require`, `eval`, hooks, plugins or template functions. Its report explicitly
+records `isolation_mode: static-no-execution`, source metadata, candidate and
+converted template counts, and a structured unsupported-feature list. Findings
+cover PHP runtime, template tags, hooks, shortcodes, plugin dependencies,
+dynamic includes, images, inline styles, unmapped HTML and active markup such
+as scripts, forms and iframes. Each finding carries a category, severity,
+occurrence count and a concrete adapter recommendation.
+
+Active markup, parser failures and resource violations are blockers. Ordinary
+WordPress runtime behavior is reported as a warning and therefore does not make
+the static document itself executable. `safe_to_use` means only that the static
+conversion result may proceed to review/Builder preview; it does not mean that
+the original Classic Theme is activation-ready or that plugin/PHP behavior is
+supported.
+
 ## Planned implementation phases
 
 1. Scanner and compatibility report.
@@ -158,8 +184,8 @@ WordPress theme.
 9. Plugin adapters, preview, cache invalidation and activation rollback.
 10. Fixture corpus, browser/WCAG, security, performance and Canary gates.
 
-Phases 1–7 deliberately stop before theme installation, activation and public
-runtime execution. Classic PHP templates, asset bundling/enqueueing, and plugin
-behavior remain later adapters. GitHub and deployment changes
+Phases 1–8 deliberately stop before theme installation, activation and public
+runtime execution. Asset bundling/enqueueing and plugin behavior remain later
+adapters. GitHub and deployment changes
 remain deferred until the complete compatibility implementation has passed its
 local and target gates.

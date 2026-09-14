@@ -74,6 +74,32 @@ custom CSS and other behavior-heavy fields are reported as deferred warnings;
 they are not silently treated as implemented. Compiled output is validated by
 the existing NanoPino design schema before later theme stages can consume it.
 
+## Phase 5 template and Builder bridge
+
+`WordPressThemeStructureConverter` reads the bounded static structure of a
+Block Theme: `templates/*.html`, `parts/*.{html,htm}` and
+`patterns/*.{html,htm,php}`. It converts serialized block markup through the
+Phase 3 parser and validates the result against the native Block Registry when
+a validator is supplied. Pattern headers (`Title`, `Slug` and `Categories`)
+are extracted as text metadata. PHP pattern files are never included or
+executed; dynamic PHP is reported as a deferred warning and only static block
+markup is eligible for conversion.
+
+`WordPressTemplateHierarchyResolver` implements the WordPress-specific
+specific-to-generic order for front page, home, page, single, archive,
+taxonomy, author, date, search, 404 and part requests. It returns logical
+template keys and sanitizes request variables, so filesystem paths never cross
+the hierarchy boundary.
+
+`WordPressBuilderTemplateBridge` creates a non-persistent catalog of
+`BuilderTarget` objects for converted templates and parts and exposes converted
+patterns directly to the existing pattern insertion contract. This is the
+preview/import boundary: it does not create revisions, publish content or
+activate a theme. The existing Builder approval and persistence services
+remain the only write path. Unsupported blocks stay warning-bearing structural
+sections, and malformed markup, unsafe names, duplicate pattern IDs and
+resource-limit violations fail closed.
+
 ## Planned implementation phases
 
 1. Scanner and compatibility report.
@@ -91,6 +117,8 @@ the existing NanoPino design schema before later theme stages can consume it.
 9. Plugin adapters, preview, cache invalidation and activation rollback.
 10. Fixture corpus, browser/WCAG, security, performance and Canary gates.
 
-Phases 1–3 deliberately stop before theme installation, activation and public
-runtime execution. GitHub and deployment changes remain deferred until the
-complete compatibility implementation has passed its local and target gates.
+Phases 1–5 deliberately stop before theme installation, activation and public
+runtime execution. Classic PHP templates, query/data binding, asset execution
+and plugin behavior remain later adapters. GitHub and deployment changes
+remain deferred until the complete compatibility implementation has passed its
+local and target gates.

@@ -16,6 +16,7 @@ Start here:
 - [Runtime API](api/index.md)
 - [Latest phase audit](audit/2026-09-11-capability-selection-public-navigation.md)
 - [NanoShell upgrade audit](audit/2026-09-15-nanoshell-upgrade.md)
+- [NanoShell performance audit](audit/2026-09-15-nanoshell-performance.md)
 - [Canonical Phase Matrix](audit/2026-09-12-phase-matrix.md)
 - [Canonical Service Registry](../resources/release/service-registry-parity-v1.json)
 - [Latest release candidate audit](audit/2026-09-14-phase-21-final-release-candidate.md)

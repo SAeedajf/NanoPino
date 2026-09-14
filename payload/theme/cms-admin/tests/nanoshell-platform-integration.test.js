@@ -26,6 +26,8 @@ test('NanoShell identity is exposed to theme configuration and extension hosts',
   assert.match(theme, /platform:\s*\{/)
   assert.match(registry, /platform: cmsPlatform\(\)/)
   assert.match(registry, /platformSupports: cmsPlatformSupports/)
+  assert.match(registry, /deferredLumaComponent/)
+  assert.match(registry, /@pinooxhq\/luma\/ui\/l-page\.vue/)
 })
 
 test('direct runtime modules use the same NanoShell contract and System Center displays it', () => {

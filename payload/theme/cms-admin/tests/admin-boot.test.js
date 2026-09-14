@@ -11,6 +11,7 @@ test('Admin boot awaits Luma and emits explicit lifecycle signals', () => {
   assert.match(main, /pinoox-cms:boot-ready/)
   assert.match(main, /pinoox-cms:boot-failed/)
   assert.match(main, /cms\.admin\.runtime_boot_failed/)
+  assert.match(main, /defineAsyncComponent\(\(\) => import\('@pinooxhq\/luma\/layouts\/RootShell\.vue'\)\)/)
 })
 
 test('SPA route changes move focus to the new main content without stealing scroll', () => {

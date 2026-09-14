@@ -1,7 +1,25 @@
-import { h } from 'vue'
+import { defineAsyncComponent, h } from 'vue'
 import { cmsBrand, cmsDirection, cmsI18nContext, cmsLocale, createScopedTranslator, t } from '../i18n/index.js'
 import { cmsPlatform, cmsPlatformSupports } from '../services/nanoshell-platform.js'
-import { LBadge, LButton, LIcon, LPage, LPanel, LStatCard } from '@pinooxhq/luma/ui'
+
+const lumaComponentLoaders = Object.freeze({
+  LBadge: () => import('@pinooxhq/luma/ui/l-badge.vue'),
+  LButton: () => import('@pinooxhq/luma/ui/l-button.vue'),
+  LIcon: () => import('@pinooxhq/luma/ui/l-icon.vue'),
+  LPage: () => import('@pinooxhq/luma/ui/l-page.vue'),
+  LPanel: () => import('@pinooxhq/luma/ui/l-panel.vue'),
+  LStatCard: () => import('@pinooxhq/luma/ui/l-stat-card.vue'),
+})
+const deferredLumaComponent = (name) => defineAsyncComponent({
+  loader: lumaComponentLoaders[name],
+  suspensible: false,
+})
+const LBadge = deferredLumaComponent('LBadge')
+const LButton = deferredLumaComponent('LButton')
+const LIcon = deferredLumaComponent('LIcon')
+const LPage = deferredLumaComponent('LPage')
+const LPanel = deferredLumaComponent('LPanel')
+const LStatCard = deferredLumaComponent('LStatCard')
 
 const HOST_API = Object.freeze({
   version: 'v1',

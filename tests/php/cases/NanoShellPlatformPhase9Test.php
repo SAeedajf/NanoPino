@@ -33,7 +33,9 @@ return [
 
         $adminController = (string)file_get_contents(NANOPINO_ROOT . '/payload/Controller/AdminController.php');
         np_assert_true(str_contains($adminController, "'platform' => CmsRuntimeServices::nanoShellPlatform(),"));
-        np_assert_true(substr_count($adminController, "'platform' => CmsRuntimeServices::nanoShellPlatform(),") >= 3);
+        np_assert_same(1, substr_count($adminController, "'platform' => CmsRuntimeServices::nanoShellPlatform(),"));
+        np_assert_false(str_contains($adminController, "'data' => [\n                        'platform'"));
+        np_assert_false(str_contains($adminController, "'runtime' => [\n                            'platform'"));
     },
 
     'phase 9 rejects legacy source names from the NanoShell platform profile' => static function (): void {

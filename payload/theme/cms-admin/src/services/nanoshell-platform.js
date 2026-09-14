@@ -19,6 +19,9 @@ function bootPlatform() {
   return window.__PINOOX__?.cmsAdmin?.platform || null
 }
 
+let cachedInput = undefined
+let cachedPlatform = null
+
 function isNanoShellPlatform(value) {
   return Boolean(value && typeof value === 'object'
     && value.id === FALLBACK_PLATFORM.id
@@ -36,14 +39,21 @@ function isNanoShellPlatform(value) {
 
 export function cmsPlatform() {
   const value = bootPlatform()
-  if (!isNanoShellPlatform(value)) return FALLBACK_PLATFORM
+  if (value === cachedInput && cachedPlatform) return cachedPlatform
+  if (!isNanoShellPlatform(value)) {
+    cachedInput = value
+    cachedPlatform = FALLBACK_PLATFORM
+    return cachedPlatform
+  }
 
-  return Object.freeze({
+  cachedInput = value
+  cachedPlatform = Object.freeze({
     ...FALLBACK_PLATFORM,
     ...value,
     runtime: Object.freeze({ ...FALLBACK_PLATFORM.runtime, ...value.runtime }),
     source_adapters: Object.freeze([...value.source_adapters]),
   })
+  return cachedPlatform
 }
 
 export function applyNanoShellIdentity() {

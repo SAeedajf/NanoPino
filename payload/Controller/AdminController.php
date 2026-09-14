@@ -513,7 +513,6 @@ final class AdminController extends Controller
                     'telemetry' => $telemetry,
                     'frontend' => $adminFrontend->toArray(),
                     'data' => [
-                        'platform' => CmsRuntimeServices::nanoShellPlatform(),
                         'extensions' => $extensions,
                         'extensionCenter' => [
                             'api' => ExtensionApiContract::routes(),
@@ -764,7 +763,6 @@ final class AdminController extends Controller
                         'recoveryPoints' => CmsRuntimeServices::recoveryPoints(),
                         'health' => $healthRows,
                         'runtime' => [
-                            'platform' => CmsRuntimeServices::nanoShellPlatform(),
                             'php' => PHP_VERSION,
                             'pinoox' => $runtimeKernel->version ?? 'unknown',
                             'pincoreCode' => $runtimeKernel->code,

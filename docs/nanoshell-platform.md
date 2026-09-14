@@ -16,6 +16,10 @@ The registration is present in all source metadata boundaries:
 - `CmsRuntimeServices::nanoShellPlatform()`;
 - `NanoShellPlatform::profile()` as the canonical code contract.
 
+The Admin bootstrap emits this profile once under `cmsAdmin.platform`.
+Canonical Vue consumers, extension hosts and direct runtime modules reuse that
+single value; fallback normalization is cached and rejects malformed identities.
+
 ## Platform boundary
 
 NanoShell owns the native block-document, CMS API, authorization, storage,

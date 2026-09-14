@@ -13,6 +13,7 @@ test('NanoShell identity is consumed by the Admin boot and document shell', () =
   assert.match(platform, /dataset\.cmsPlatform/)
   assert.match(platform, /dataset\.cmsPlatformContract/)
   assert.match(platform, /nanoshell-platform-v1/)
+  assert.match(platform, /cachedPlatform/)
 })
 
 test('NanoShell identity is exposed to theme configuration and extension hosts', () => {
@@ -29,6 +30,7 @@ test('direct runtime modules use the same NanoShell contract and System Center d
   const provider = read('src/services/admin-provider.js')
   assert.match(common, /export function platform\(\)/)
   assert.match(common, /nanoshell-platform-v1/)
+  assert.match(common, /cachedPlatformValue/)
   assert.match(system, /platform\}/)
   assert.match(system, /current\.contract/)
   assert.match(provider, /contract: 'nanoshell-platform-v1'/)

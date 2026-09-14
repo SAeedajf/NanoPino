@@ -85,6 +85,7 @@ build_upgrade_base() {
   PHP_BIN="$PHP_BIN" \
     NANOPINO_SOURCE_ROOT="$BASE_ROOT" \
     NANOPINO_TOOL_ROOT="$ROOT" \
+    NANOPINO_VERIFY_PROFILE=historical \
     "$ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$BASE_OUTPUT"
   [[ -s "$BASE_OUTPUT" ]] || fail "Upgrade-base PINX output was not created."
 }

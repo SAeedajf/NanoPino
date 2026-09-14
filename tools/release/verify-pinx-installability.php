@@ -12,6 +12,8 @@ $path = $argv[1];
 $maxPinxBytes = 16 * 1024 * 1024;
 $maxUncompressedBytes = 64 * 1024 * 1024;
 $maxEntries = 5000;
+$profile = getenv('NANOPINO_VERIFY_PROFILE') ?: 'current';
+$historicalProfile = $profile === 'historical';
 
 // PINX verification runs outside the native Pinoox bootstrap. Keep the
 // payload metadata read compatible with the platform env() contract without
@@ -104,11 +106,13 @@ try {
         'manifest.json',
         'payload/app.php',
         'payload/lifecycle.php',
-        'payload/database/migrations/2026_09_01_000000_preflight_nanopino_environment.php',
-        'payload/theme/cms-admin/dist/.vite/manifest.json',
-        'payload/theme/cms-admin/dist/.cms-build.json',
-        'payload/resources/release/release-metadata-v1.json',
     ];
+    if (!$historicalProfile) {
+        $requiredEntries[] = 'payload/database/migrations/2026_09_01_000000_preflight_nanopino_environment.php';
+        $requiredEntries[] = 'payload/theme/cms-admin/dist/.vite/manifest.json';
+        $requiredEntries[] = 'payload/theme/cms-admin/dist/.cms-build.json';
+        $requiredEntries[] = 'payload/resources/release/release-metadata-v1.json';
+    }
 
     foreach ($requiredEntries as $required) {
         if (!isset($entries[$required])) {
@@ -233,7 +237,7 @@ try {
     ));
     sort($migrationEntries, SORT_STRING);
     $expectedFirstMigration = 'payload/database/migrations/2026_09_01_000000_preflight_nanopino_environment.php';
-    if (($migrationEntries[0] ?? null) !== $expectedFirstMigration) {
+    if (!$historicalProfile && ($migrationEntries[0] ?? null) !== $expectedFirstMigration) {
         $fail('Installability preflight is not the first NanoPino migration.');
     }
 
@@ -251,9 +255,11 @@ try {
         'payload/theme/cms-admin/repair-existing-builder.sh',
         'payload/theme/cms-admin/README-FA.md',
     ];
-    foreach ($forbiddenExact as $forbidden) {
-        if (isset($entries[$forbidden])) {
-            $fail('Development-only PINX entry must be excluded: ' . $forbidden);
+    if (!$historicalProfile) {
+        foreach ($forbiddenExact as $forbidden) {
+            if (isset($entries[$forbidden])) {
+                $fail('Development-only PINX entry must be excluded: ' . $forbidden);
+            }
         }
     }
 
@@ -266,11 +272,13 @@ try {
         'payload/.git/',
         'payload/.github/',
     ];
-    foreach (array_keys($entries) as $name) {
-        foreach ($forbiddenPrefixes as $prefix) {
-            if (str_starts_with($name, $prefix)) {
-                $fail('Development-only PINX tree must be excluded: ' . $prefix);
-                break;
+    if (!$historicalProfile) {
+        foreach (array_keys($entries) as $name) {
+            foreach ($forbiddenPrefixes as $prefix) {
+                if (str_starts_with($name, $prefix)) {
+                    $fail('Development-only PINX tree must be excluded: ' . $prefix);
+                    break;
+                }
             }
         }
     }

@@ -29,6 +29,9 @@ NanoPino now registers `NanoShell` as its independent platform identity:
 - `payload/app.php`, `manifest.json` and `payload/manifest.json` project the same profile into application and package metadata.
 - `nanoshell.platform` is declared in the CMS capability list.
 - `docs/nanoshell-platform.md` defines the boundary and migration rules.
+- `payload/theme/cms-admin/main.twig` publishes the identity before JavaScript boot.
+- The canonical Admin shell consumes the profile for document identity, theme configuration and extension host context.
+- The direct runtime fallback consumes the same contract and System Center displays its id, contract and version.
 
 The Phase 9 test requires the runtime profile and all metadata projections to be exactly equal. It also verifies that a legacy source identity cannot be accepted as a NanoShell profile.
 
@@ -42,11 +45,12 @@ NanoShell currently owns the native block document, CMS API, authentication/sess
 
 - PHP lint: `866/866` files pass.
 - PHP tests: `65/65` pass.
-- Frontend tests: `235/235` pass.
+- Frontend tests: `238/238` pass.
 - Release verification: PASS.
-- Source/dist parity: PASS.
-- Runtime parity: PASS.
+- Source/dist parity: PASS (`37c1b26fc41be5219d83bb4cfaeeaa563f862c324150ff0a350715d937c3d4e5`, 51 source files).
+- Runtime parity: PASS (`2d287c1b6447c259feec955e71977a140cd8b7145a98a354f5d0a2b16153a880`, 17 runtime files).
 - Production asset verification: `62` assets pass.
+- Performance budgets: PASS; total emitted JavaScript/CSS remained within configured budgets.
 - The release metadata `app_sha256` was refreshed after the bootstrap metadata change.
 
 ## Remaining gates

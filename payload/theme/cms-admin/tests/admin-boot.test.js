@@ -24,6 +24,8 @@ test('server shell resolves locale/direction dynamically and never returns an em
   const twig = read('main.twig')
   assert.match(twig, /lang="\{\{ bootstrap\.locale\|default\('fa'\) \}\}"/)
   assert.match(twig, /dir="\{\{ bootstrap\.direction\|default\('rtl'\) \}\}"/)
+  assert.match(twig, /data-cms-platform="nanoshell"/)
+  assert.match(twig, /data-cms-platform-contract="nanoshell-platform-v1"/)
   assert.match(twig, /<div id="app">[\s\S]+<\/div>/)
   assert.match(twig, /cms\.admin\.javascript_disabled/)
 })

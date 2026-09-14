@@ -7,6 +7,7 @@ import { mergeComponentRegistries } from './registry/admin-components.js'
 import { buildThemeConfig } from './registry/theme-config.js'
 import './styles/admin.scss'
 import { applyCmsDocumentLocale, t } from './i18n/index.js'
+import { applyNanoShellIdentity } from './services/nanoshell-platform.js'
 import { configureTelemetry, installUnhandledErrorCapture, trackPage } from './services/telemetry.js'
 
 const signal = (name, detail = {}) => {
@@ -42,6 +43,7 @@ function focusMainContent() {
 }
 
 async function bootAdmin() {
+  applyNanoShellIdentity()
   applyCmsDocumentLocale()
   document.documentElement.dataset.cmsBoot = 'booting'
   signal('pinoox-cms:boot-start')

@@ -24,6 +24,9 @@ export function tr(key,fallback='',replace={}){
   return text
 }
 export function brandName(){return String(boot().cmsAdmin?.brand?.name||tr('brand.name','NanoPino'))}
+const FALLBACK_PLATFORM={id:'nanoshell',name:'NanoShell',contract:'nanoshell-platform-v1',version:1,standalone:true,product:'NanoPino',runtime:{execution:'native-only',document:'block-document-v1',api:'cms-api-v1',identity_source:'nanoshell-platform-contract'},source_adapters:['static-theme-import','static-asset-intake']}
+export function platform(){const value=boot().cmsAdmin?.platform;if(!value||typeof value!=='object'||value.id!==FALLBACK_PLATFORM.id||value.name!==FALLBACK_PLATFORM.name||value.contract!==FALLBACK_PLATFORM.contract||Number(value.version)!==FALLBACK_PLATFORM.version||value.runtime?.execution!==FALLBACK_PLATFORM.runtime.execution||value.runtime?.api!==FALLBACK_PLATFORM.runtime.api)return FALLBACK_PLATFORM;return value}
+export function platformName(){return String(platform().name||FALLBACK_PLATFORM.name)}
 export function publicSiteUrl(){const b=boot(),configured=b.cmsAdmin?.publicSiteUrl;if(typeof configured==='string'&&configured.startsWith('/')&&!configured.startsWith('//'))return configured;const mount=String(b.cmsAdmin?.mountPath||'/').replace(/^\/+|\/+$/g,'');return`${mount?`/${mount}`:''}/site`}
 export function apiBase(){
   const b=boot()

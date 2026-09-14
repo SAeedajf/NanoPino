@@ -2,6 +2,16 @@ import { readApiResponse } from '../../runtime/api-response.mjs'
 import { t } from '../i18n/index.js'
 
 const fallback = {
+  platform: {
+    id: 'nanoshell',
+    name: 'NanoShell',
+    contract: 'nanoshell-platform-v1',
+    version: 1,
+    standalone: true,
+    product: 'NanoPino',
+    runtime: { execution: 'native-only', document: 'block-document-v1', api: 'cms-api-v1', identity_source: 'nanoshell-platform-contract' },
+    source_adapters: ['static-theme-import', 'static-asset-intake'],
+  },
   extensions: [],
   extensionCenter: {
     api: [],

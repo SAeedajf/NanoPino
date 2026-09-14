@@ -100,6 +100,24 @@ remain the only write path. Unsupported blocks stay warning-bearing structural
 sections, and malformed markup, unsafe names, duplicate pattern IDs and
 resource-limit violations fail closed.
 
+## Phase 6 native data-binding bridge
+
+`CoreDataBindingResolver` executes only registered, bounded expressions for
+`content`, `taxonomy`, `media`, `navigation` and `pagination`. Content queries
+default to published records in the current site and locale; taxonomy output
+is limited to registered public taxonomies; media output is limited to ready
+assets with a public URL; and navigation is read from the validated native
+site setting. The resolver returns public-safe arrays, never model instances or
+metadata/native storage identifiers.
+
+List bindings expose deterministic `page`, `per_page`, `offset`, `returned`,
+`total`, `total_pages`, `has_next` and `has_previous` metadata. A pagination
+binding consumes the caller-provided context from the corresponding list
+query. Limits, offsets, identifiers, locales, statuses and media kinds are
+validated before repository calls. Raw SQL and unsupported registered sources
+are rejected, while `CmsRuntimeServices::dataBinding()` provides the native
+Pinoox repository wiring for later public/template render integration.
+
 ## Planned implementation phases
 
 1. Scanner and compatibility report.

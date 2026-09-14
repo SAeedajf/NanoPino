@@ -107,6 +107,27 @@ final class PinooxMediaRepository implements MediaRepositoryInterface
         return (int)$builder->count();
     }
 
+    public function countPublic(int $siteId, ?MediaKind $kind = null, ?string $query = null): int
+    {
+        $builder = MediaAssetModel::query()
+            ->where('site_id', $siteId)
+            ->where('status', MediaStatus::Ready->value)
+            ->whereNotNull('url')
+            ->where('url', '!=', '');
+        if ($kind !== null) $builder->where('kind', $kind->value);
+        $needle = SearchTerm::contains($query);
+        if ($needle !== null) {
+            $builder->where(function ($nested) use ($needle): void {
+                $nested->where('title', 'like', $needle)
+                    ->orWhere('original_name', 'like', $needle)
+                    ->orWhere('alt', 'like', $needle)
+                    ->orWhere('caption', 'like', $needle)
+                    ->orWhere('mime', 'like', $needle);
+            });
+        }
+        return (int)$builder->count();
+    }
+
     public function summary(int $siteId): array
     {
         $base = MediaAssetModel::query()

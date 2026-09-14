@@ -24,6 +24,8 @@ use App\com_pinoox_cms\Cms\Block\Migration\BlockMigrationEngine;
 use App\com_pinoox_cms\Cms\Block\Render\BlockDocumentRenderer;
 use App\com_pinoox_cms\Cms\Builder\BuilderService;
 use App\com_pinoox_cms\Cms\Builder\BuilderPublishedResolver;
+use App\com_pinoox_cms\Cms\Builder\Binding\BindingExpressionValidator;
+use App\com_pinoox_cms\Cms\Builder\Binding\CoreDataBindingResolver;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockReferenceExpander;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockService;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\PinooxGlobalBlockRepository;
@@ -147,6 +149,7 @@ final class CmsRuntimeServices
     private static ?SettingsService $settings = null;
     private static ?MediaService $media = null;
     private static ?BuilderService $builder = null;
+    private static ?CoreDataBindingResolver $dataBinding = null;
     private static ?BuilderPreviewService $builderPreview = null;
     private static ?BuilderApiFacade $builderApi = null;
     private static ?PinooxGlobalBlockRepository $globalBlockRepository = null;
@@ -264,6 +267,23 @@ final class CmsRuntimeServices
             self::audit(),
             new PinooxBuilderTransaction(),
             self::renderCacheInvalidator(),
+        );
+    }
+
+    /**
+     * Public/template data binding is read-only and intentionally does not
+     * require an editor actor. Callers still receive only published content,
+     * public taxonomy terms, ready media and validated site navigation.
+     */
+    public static function dataBinding(): CoreDataBindingResolver
+    {
+        return self::$dataBinding ??= new CoreDataBindingResolver(
+            new PinooxContentRepository(),
+            new PinooxTermRepository(),
+            new PinooxMediaRepository(),
+            self::settingsRepository(),
+            self::kernel()->taxonomies,
+            new BindingExpressionValidator(self::kernel()->builderDataSources),
         );
     }
 

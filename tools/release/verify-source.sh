@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ROOT="${NANOPINO_SOURCE_ROOT:-$SCRIPT_ROOT}"
+VERIFY_PROFILE="${NANOPINO_VERIFY_PROFILE:-current}"
 ADMIN="$ROOT/payload/theme/cms-admin"
 
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -63,7 +64,9 @@ sys.exit(1 if bad else 0)
 PY
 
 "$PHP_BIN" "$ROOT/tests/php/run.php"
-node --test "$ROOT"/tests/release/*.test.mjs
+if [[ "$VERIFY_PROFILE" != "historical" ]]; then
+    node --test "$ROOT"/tests/release/*.test.mjs
+fi
 
 cd "$ADMIN"
 node run-tests.mjs

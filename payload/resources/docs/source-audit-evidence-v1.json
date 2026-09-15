@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "status": "passed",
-  "release_version": "0.23.90",
-  "release_version_code": 2390,
-  "documentation_manifest_sha256": "f39d4812a2312dccd1d4e2dad5919df3a5c262ea953ea59093e7616dcf0da709",
+  "release_version": "0.23.93",
+  "release_version_code": 2393,
+  "documentation_manifest_sha256": "65dcc164f374f22c4422702b135a43b7cb4e20b4e10696ca6a129bfa4d0cdb0e",
   "required_docs": 33,
   "machine_contracts": 25,
   "adr_count": 2,
   "markdown_files": 67,
   "internal_links": 38,
   "source_audit_completed_at": "2026-09-14T09:10:54Z",
-  "reason": "Source documentation audit passed for the 0.23.90 ZIP theme-install candidate after integrating automatic server-side inspection on ZIP selection, bounded local pattern expansion, semantic structural block conversion, safe style preservation, localized compatibility guidance, privacy-safe operation failure diagnostics, stable WordPress-derived version codes, explicit install-versus-update projection with file-level change summary, downgrade blocking before mutation, persistent NanoShell converter signing identity with recoverable one-time legacy trust-chain rotation, idempotent same-source reinstall handling, correct CMS extension history identity, and explicit-button fallback for runtimes without native confirm dialogs. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
+  "reason": "Source documentation audit passed for the 0.23.93 release after isolating the public theme context from the NanoPino management shell and registering authenticated HTML5-history entrypoints before the generic public taxonomy route. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
 }

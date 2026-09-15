@@ -38,10 +38,11 @@ final class ThemeRuntimeApiController extends ApiController
             foreach($definitions as $theme){
                 $item=$theme->toArray();
                 $package=(string)($item['package']??'');
+                $context=$package==='com_pinoox_cms'?'site':null;
                 if($package!==''&&!isset($active[$package])){
-                    try{$active[$package]=$gateway->stack($package)->activeName;}catch(\Throwable){}
+                    try{$active[$package]=$gateway->stack($package,$context)->activeName;}catch(\Throwable){}
                 }
-                $inspection=$service->inspect($theme);
+                $inspection=$service->inspect($theme,$context);
                 $item['compatibility']=$inspection['compatibility'];
                 $item['inheritance']=$inspection['inheritance'];
                 $item['active']=($package!==''&&($active[$package]??null)===(string)($item['name']??''));
@@ -80,7 +81,7 @@ final class ThemeRuntimeApiController extends ApiController
             }
 
             $native = new PinooxNativeThemeGateway();
-            $stack = $native->stack($package);
+            $stack = $native->stack($package, $package === 'com_pinoox_cms' ? 'site' : null);
             $profile = (new CmsThemeProfileFactory())->fromNativeMeta($definition->raw);
             $patterns = (new ThemePatternLoader())->discover(
                 $stack->paths,
@@ -273,6 +274,7 @@ final class ThemeRuntimeApiController extends ApiController
             $package=trim((string)($data['package']??''));
             $theme=trim((string)($data['theme']??''));
             $context=isset($data['context'])&&$data['context']!==null?trim((string)$data['context']):null;
+            if(($context===null||$context==='')&&$package==='com_pinoox_cms')$context='site';
             if(
                 preg_match('/^[a-z0-9][a-z0-9._-]{1,127}$/',$package)!==1
                 ||preg_match('/^[a-z0-9][a-z0-9._-]{0,127}$/',$theme)!==1

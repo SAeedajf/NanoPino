@@ -470,8 +470,9 @@ final class AdminController extends Controller
                 $themeRows[] = $themeDefinition->toArray();
                 if (!isset($activeThemesByPackage[$themeDefinition->package])) {
                     try {
+                        $context = $themeDefinition->package === $siteThemePackage ? 'site' : null;
                         $activeThemesByPackage[$themeDefinition->package] =
-                            $nativeThemes->stack($themeDefinition->package)->activeName;
+                            $nativeThemes->stack($themeDefinition->package, $context)->activeName;
                     } catch (\Throwable) {}
                 }
             }

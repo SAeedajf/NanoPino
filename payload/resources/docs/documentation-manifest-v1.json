@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "documentation_version": "0.23.90",
+  "documentation_version": "0.23.93",
   "freeze_state": "candidate",
   "authoritative_entry": "docs/index.md",
   "policy": "docs/documentation/freeze-policy.md",

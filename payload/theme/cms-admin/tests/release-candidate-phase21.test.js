@@ -27,9 +27,9 @@ test('Phase 21 RC keeps package metadata and signed lifecycle boundaries explici
   const gate = readPayload('Cms/Release/ProductionReleaseGate.php')
 
   assert.match(manifest, /com_pinoox_cms/)
-  assert.match(manifest, /0\.23\.96/)
-  assert.match(app, /'version-name' => '0\.23\.96'/)
-  assert.match(app, /'version-code' => 2396/)
+  assert.match(manifest, /0\.23\.97/)
+  assert.match(app, /'version-name' => '0\.23\.97'/)
+  assert.match(app, /'version-code' => 2397/)
   assert.match(gate, /verifyReleaseMetadata/)
   assert.match(gate, /declared_release_blockers_present|release\.declared_blockers_present/)
   assert.equal(evidence.release.signed, true)

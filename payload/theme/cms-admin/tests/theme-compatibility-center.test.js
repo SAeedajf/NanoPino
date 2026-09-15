@@ -39,7 +39,6 @@ test('canonical Vue Theme Center mirrors compatibility and safe activation contr
   assert.match(page, /wordpressPreview/)
   assert.match(page, /accept="\.zip,application\/zip"/)
   assert.match(page, /wordpressInstall/)
-  assert.match(page, /wordpress_install_confirm/)
 })
 
 test('Theme Center hydrates from the server boot payload before refreshing its API data', () => {
@@ -67,11 +66,14 @@ test('selecting an original ZIP automatically starts inspection before installat
   assert.match(runtime, /wordpress_retry/)
 })
 
-test('theme install remains usable when the host browser has no native confirm dialog', () => {
+test('theme install is a single explicit action and does not depend on native confirm dialogs', () => {
   const page = read('src/pages/appearance/page-appearance.vue')
   const runtime = read('runtime/appearance.mjs')
-  assert.match(page, /typeof window!==['"]undefined['"]&&typeof window\.confirm===['"]function['"]&&!confirm/)
-  assert.match(runtime, /typeof window!==['"]undefined['"]&&typeof window\.confirm===['"]function['"]&&!confirmFa/)
+  assert.doesNotMatch(page, /wordpress_install_confirm/)
+  assert.doesNotMatch(runtime, /wordpress_install_confirm/)
+  assert.match(page, /themeApi\.wordpressInstall\(wordpressFile\.value\)/)
+  assert.match(runtime, /form\.append\('approved','true'\)/)
+  assert.match(runtime, /form\.append\('confirmation','INSTALL'\)/)
 })
 
 test('Theme Center exposes install versus update details and keeps downgrade messaging visible', () => {

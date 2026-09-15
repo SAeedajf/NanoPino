@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "status": "passed",
-  "release_version": "0.23.96",
-  "release_version_code": 2396,
-  "documentation_manifest_sha256": "46a69183e19877d6a229ed910cd29c2794e74dbe7a54c8b4d469060f6c47dc2e",
+  "release_version": "0.23.97",
+  "release_version_code": 2397,
+  "documentation_manifest_sha256": "6269e95d22a181fed0ad93673c3220862423ef8a1ec0893bcc483e8f7b360e69",
   "required_docs": 33,
   "machine_contracts": 25,
   "adr_count": 2,
   "markdown_files": 67,
   "internal_links": 38,
-  "source_audit_completed_at": "2026-09-15T05:41:50Z",
-  "reason": "Source documentation audit passed for the 0.23.96 release after isolating the public theme context from the NanoPino management shell, hardening authenticated HTML5-history entrypoints, exposing effective active-theme design data to the site editor without executing source PHP, reducing design API work by skipping unrelated template/pattern resolution with invalidation-aware caching and making semantic cache reads fail open when the native backend or tag clock is temporarily unavailable. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
+  "source_audit_completed_at": "2026-09-15T07:24:51Z",
+  "reason": "Source documentation audit passed for the 0.23.97 release after isolating the public theme context from the NanoPino management shell, hardening authenticated HTML5-history entrypoints, exposing effective active-theme design data to the site editor without executing source PHP, reducing design API work by skipping unrelated template/pattern resolution with invalidation-aware caching, making semantic cache reads fail open when the native backend or tag clock is temporarily unavailable and removing the fragile native-confirm dependency from the explicit converted-theme install action. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
 }

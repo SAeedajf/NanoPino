@@ -10,14 +10,14 @@
     "description": {}
   },
   "developer": "NanoPino Project",
-  "version_name": "0.23.74",
-  "version_code": 2374,
+  "version_name": "0.23.97",
+  "version_code": 2397,
   "minpin": 232,
   "depends": {},
   "target_app": null,
   "theme_name": null,
   "theme_meta": null,
-  "built_at": "2026-09-14T16:04:24Z",
+  "built_at": "2026-09-15T07:24:51Z",
   "pinoox_version_name": "3.14.0+",
   "pinoox_version_code": 232,
   "cms": {
@@ -35,7 +35,8 @@
     "provides": [
       "cms.kernel",
       "cms.extension-platform",
-      "cms.admin-platform"
+      "cms.admin-platform",
+      "nanoshell.platform"
     ],
     "replaces": [],
     "permissions": [],
@@ -326,6 +327,38 @@
       "legacy_package": "com_pinoox_cms",
       "compatibility_mode": "non-breaking-brand-rename",
       "evidence": "resources/release/nanopino-brand-compatibility-v1.json"
+    },
+    "platform": {
+      "id": "nanoshell",
+      "name": "NanoShell",
+      "contract": "nanoshell-platform-v1",
+      "version": 1,
+      "standalone": true,
+      "product": "NanoPino",
+      "capabilities": [
+        "auth.rbac",
+        "content.editorial",
+        "storage.native",
+        "theme.native",
+        "builder.native",
+        "extensions.signed",
+        "recovery.safe-mode"
+      ],
+      "compatibility": {
+        "contract": "nanoshell-platform-v1",
+        "minimum_version": 1,
+        "host_bindings": "pinoox-native"
+      },
+      "runtime": {
+        "execution": "native-only",
+        "document": "block-document-v1",
+        "api": "cms-api-v1",
+        "identity_source": "nanoshell-platform-contract"
+      },
+      "source_adapters": [
+        "static-theme-import",
+        "static-asset-intake"
+      ]
     },
     "runtime_api_completeness": {
       "machine_contract_routes": 77,

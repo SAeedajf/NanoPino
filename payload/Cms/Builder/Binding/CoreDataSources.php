@@ -18,6 +18,8 @@ final class CoreDataSources
             ['setting', 'Setting', ['settings.read']],
             ['user', 'User', ['users.read']],
             ['query', 'Query', ['content.read']],
+            ['navigation', 'Navigation', []],
+            ['pagination', 'Pagination', []],
         ] as [$id, $label, $capabilities]) {
             $registry->register(new DataSourceDefinition(
                 $id,

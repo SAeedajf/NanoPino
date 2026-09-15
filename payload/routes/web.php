@@ -18,6 +18,18 @@ get('/page/{slug}', [PublicContentController::class, 'page'])
 get('/post/{slug}', [PublicContentController::class, 'post'])
     ->name('cms.public.post');
 
+// These are real HTML5-history entrypoints for the authenticated Admin SPA.
+// They must precede the generic public taxonomy route, otherwise
+// /appearance/site-editor and /extensions/updates are interpreted as a
+// public taxonomy request and fail before Vue can boot.
+get('/appearance/site-editor', [AdminController::class, 'index'])
+    ->permission('cms.admin')
+    ->name('cms.admin.site-editor-entry');
+
+get('/extensions/updates', [AdminController::class, 'index'])
+    ->permission('cms.admin')
+    ->name('cms.admin.updates-entry');
+
 get('/{taxonomy}/{termSlug}', [PublicContentController::class, 'taxonomy'])
     ->filters(['taxonomy' => '[a-z][a-z0-9_-]{1,63}', 'termSlug' => '[^/]{1,160}'])
     ->name('cms.public.taxonomy');
@@ -40,6 +52,10 @@ get('/__cms/extensions/{package}/admin/{asset}', [ExtensionAdminAssetController:
     ->permission('cms.admin')
     ->name('cms.admin.extension-module');
 
-get('*', [AdminController::class, 'index'])
+// The admin frontend is an HTML5-history SPA. Use an explicit catch-all
+// parameter so direct loads and browser refreshes keep working on nested
+// routes such as /extensions/updates and /appearance/site-editor.
+get('/{path*}', [AdminController::class, 'index'])
+    ->filters(['path' => '.+'])
     ->permission('cms.admin')
     ->name('cms.admin');

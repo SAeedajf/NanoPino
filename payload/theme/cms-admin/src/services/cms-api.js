@@ -96,7 +96,10 @@ export const userApi={
 
 export const themeApi={
   list:()=>cmsRequest('/themes'),
+  design:(siteId=1)=>cmsRequest(`/themes/design?site_id=${encodeURIComponent(siteId)}`),
   patterns:(packageName,themeName)=>cmsRequest(`/themes/${encodeURIComponent(packageName)}/${encodeURIComponent(themeName)}/patterns`),
+  wordpressPreview:file=>{const form=new FormData();form.append('file',file);return cmsRequest('/themes/wordpress/preview',{method:'POST',body:form})},
+  wordpressInstall:file=>{const form=new FormData();form.append('file',file);form.append('approved','true');form.append('confirmation','INSTALL');return cmsRequest('/themes/wordpress/install',{method:'POST',body:form})},
   activate:(packageName,themeName,context=null)=>cmsRequest('/themes/activate',{method:'POST',body:{package:packageName,theme:themeName,context}}),
 }
 export const developerApi={

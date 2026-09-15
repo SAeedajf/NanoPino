@@ -29,6 +29,7 @@ test('phase 2 keeps the native Luma shell configured and responsive', () => {
   assert.match(theme, /topbarHeight: '64px'/)
   assert.match(theme, /pageMaxWidth: '1440px'/)
   assert.doesNotMatch(theme, /primary:\s*'/)
+  assert.match(routes, /defineAsyncComponent\(\(\) => import\('@pinooxhq\/luma\/layouts\/PageLayout\.vue'\)\)/)
   assert.match(routes, /component: PageLayout/)
   assert.match(styles, /\.px-layout__content > \*\s*\{/)
   assert.match(styles, /@media \(max-width: 30rem\)/)

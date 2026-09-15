@@ -62,4 +62,34 @@ final class ThemeEngine
 
         return new ThemeView($definition, $stack, $template, $design, $patterns);
     }
+
+    /**
+     * Resolve only the design contract for read-heavy editor/API surfaces.
+     * Template lookup and pattern discovery are intentionally skipped because
+     * those values are not needed to render effective Design Tokens.
+     *
+     * @param array<string,mixed> $runtimeDesignOverrides
+     */
+    public function resolveDesign(
+        string $package,
+        string $themeName,
+        ?string $context = null,
+        ?string $styleVariation = null,
+        array $runtimeDesignOverrides = [],
+    ): ThemeView {
+        $definition = $this->themes->byReference($package, $themeName)
+            ?? throw new ThemeInheritanceException('Theme is not registered.');
+
+        $stack = $this->inheritance->resolve($package, $themeName, $context);
+        $profile = $this->profiles->fromNativeMeta($definition->raw);
+        $design = $this->design->resolve(
+            $stack->paths,
+            $profile->designFile,
+            $profile->variationDirectory,
+            $styleVariation,
+            $runtimeDesignOverrides,
+        );
+
+        return new ThemeView($definition, $stack, null, $design, []);
+    }
 }

@@ -13,6 +13,10 @@ BASE_OUTPUT="${RUNNER_TEMP:-/tmp}/NanoPino-upgrade-base.pinx"
 FAULT_ROOT="${RUNNER_TEMP:-/tmp}/nanopino-fault-injection"
 FAULT_OUTPUT="${RUNNER_TEMP:-/tmp}/NanoPino-fault-injection.pinx"
 FAULT_INJECTION="${NANOPINO_FAULT_INJECTION:-0}"
+SIGNED_LIFECYCLE="${NANOPINO_SIGNED_LIFECYCLE:-0}"
+SIGN_KEY="${RUNNER_TEMP:-/tmp}/nanopino-lifecycle-sign.key.json"
+SIGN_CONFIG=""
+SIGN_CONFIG_CREATED=0
 FAULT_MIGRATION="2099_12_31_235959_ci_fault_injection"
 
 : "${DB_HOST:?DB_HOST is required}"
@@ -25,6 +29,11 @@ FAULT_MIGRATION="2099_12_31_235959_ci_fault_injection"
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 cleanup() {
+  if [[ "$SIGN_CONFIG_CREATED" == 1 && -n "$SIGN_CONFIG" ]]; then
+    rm -f -- "$SIGN_CONFIG"
+    rmdir --ignore-fail-on-non-empty "$(dirname "$SIGN_CONFIG")" 2>/dev/null || true
+  fi
+  rm -f -- "$SIGN_KEY" "$SIGN_KEY.public"
   if git -C "$ROOT" worktree list --porcelain 2>/dev/null | grep -Fq "worktree $BASE_ROOT"; then
     git -C "$ROOT" worktree remove --force "$BASE_ROOT" >/dev/null 2>&1 || true
   fi
@@ -33,6 +42,52 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+prepare_signed_lifecycle() {
+  case "$SIGNED_LIFECYCLE" in
+    0) return 0 ;;
+    1) ;;
+    *) fail "NANOPINO_SIGNED_LIFECYCLE must be 0 or 1." ;;
+  esac
+
+  "$PHP_BIN" -r '
+    require $argv[1] . "/vendor/autoload.php";
+    $key = \Pinoox\Component\Package\Pinx\PinxSignKey::generate("com_pinoox_cms", "nanopino-ci:ephemeral");
+    \Pinoox\Component\Package\Pinx\PinxSignKey::save($key, $argv[2]);
+    echo $key["public_key"];
+  ' "$PINOX_ROOT" "$SIGN_KEY" >"$SIGN_KEY.public"
+
+  SIGN_CONFIG="$PINOX_ROOT/config/pinx.config.php"
+  [[ ! -e "$SIGN_CONFIG" ]] || fail "Refusing to overwrite an existing Pinoox pinx config in lifecycle root."
+  mkdir -p "$(dirname "$SIGN_CONFIG")"
+  cat >"$SIGN_CONFIG" <<'PHP'
+<?php
+
+return [
+    'verify' => true,
+    'require_signature' => true,
+    'trusted_keys' => [
+        'com_pinoox_cms' => getenv('NANOPINO_TRUSTED_PUBLIC_KEY') ?: '',
+    ],
+];
+PHP
+  SIGN_CONFIG_CREATED=1
+  export PINX_REQUIRE_SIGNATURE=1
+  export NANOPINO_TRUSTED_PUBLIC_KEY="$(<"$SIGN_KEY.public")"
+  rm -f -- "$SIGN_KEY.public"
+  printf 'signed_lifecycle=enabled key_id=nanopino-ci:ephemeral\n'
+}
+
+sign_artifact() {
+  local unsigned="$1" signed="${1}.signed"
+  if [[ "$SIGNED_LIFECYCLE" != 1 ]]; then
+    return 0
+  fi
+  rm -f -- "$signed"
+  "$PHP_BIN" "$ROOT/tools/release/sign-pinx.php" \
+    "$PINOX_ROOT" "$unsigned" "$SIGN_KEY" "$signed"
+  mv -fT -- "$signed" "$unsigned"
+}
 
 [[ -f "$PINOX_ROOT/pinoox" ]] || fail "Invalid Pinoox root."
 [[ -f "$ROOT/manifest.json" ]] || fail "NanoPino manifest missing."
@@ -66,10 +121,12 @@ file_put_contents(getenv("NANOPINO_INSTALL_CONFIG"),"<?php\nreturn ".var_export(
 cd "$PINOX_ROOT"
 "$PHP_BIN" pinoox install-platform check --file=.pinoox/install-platform.php
 "$PHP_BIN" pinoox install-platform run --file=.pinoox/install-platform.php --remove
+prepare_signed_lifecycle
 
 build_current() {
   cd "$ROOT"
   PHP_BIN="$PHP_BIN" "$ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$OUTPUT"
+  sign_artifact "$OUTPUT"
   [[ -s "$OUTPUT" ]] || fail "Current PINX output was not created."
 }
 
@@ -87,6 +144,7 @@ build_upgrade_base() {
     NANOPINO_TOOL_ROOT="$ROOT" \
     NANOPINO_VERIFY_PROFILE=historical \
     "$ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$BASE_OUTPUT"
+  sign_artifact "$BASE_OUTPUT"
   [[ -s "$BASE_OUTPUT" ]] || fail "Upgrade-base PINX output was not created."
 }
 
@@ -191,6 +249,7 @@ return new class extends MigrationBase
 PHP
 
   PHP_BIN="$PHP_BIN" "$FAULT_ROOT/tools/release/build-pinx.sh" "$PINOX_ROOT" "$FAULT_OUTPUT"
+  sign_artifact "$FAULT_OUTPUT"
   [[ -s "$FAULT_OUTPUT" ]] || fail "Fault-injection PINX output was not created."
 }
 

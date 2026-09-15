@@ -35,7 +35,21 @@ final readonly class PinooxPinxPackageInspector implements ExtensionPackageInspe
         try {
             $native = $reader->manifest();
             $security = $this->preflight->inspectReader($reader);
-            $manifest = $this->factory->fromPinxArray($native->toArray());
+            // PinxManifest::toArray() is the native transport projection and
+            // intentionally omits extension-owned profiles such as `cms`.
+            // The CMS manifest factory must consume the verified raw JSON so
+            // package inspection does not reject otherwise valid packages.
+            $raw = json_decode($reader->manifestJson(), true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($raw)) throw new \RuntimeException('PINX manifest JSON must be an object.');
+            // Official Pincore builds normalize the root transport manifest
+            // and keep NanoPino's CMS profile in payload/manifest.json.
+            // Prefer that verified payload profile for app packages when the
+            // root transport projection has no extension-owned `cms` field.
+            if (!isset($raw['cms']) && $reader->zip()->hasEntry('payload/manifest.json')) {
+                $payloadRaw = json_decode($reader->zip()->getEntryContents('payload/manifest.json'), true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($payloadRaw) && isset($payloadRaw['cms'])) $raw = $payloadRaw;
+            }
+            $manifest = $this->factory->fromPinxArray($raw);
             $signature = $reader->signature();
             $signaturePresent = $signature !== null;
             $signatureVerified = false;

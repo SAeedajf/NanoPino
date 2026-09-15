@@ -59,8 +59,8 @@ test('R4 machine contracts cover every public runtime route bidirectionally', ()
 
   assert.equal(files.length, 16)
   assert.ok(files.includes('developer-v1.json'))
-  assert.equal(runtime.size, 81)
-  assert.equal(contracts.size, 81)
+  assert.equal(runtime.size, 84)
+  assert.equal(contracts.size, 84)
   assert.deepEqual([...contracts.keys()].filter((key) => !runtime.has(key)), [])
   assert.deepEqual([...runtime.keys()].filter((key) => !contracts.has(key)), [])
 

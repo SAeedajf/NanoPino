@@ -50,15 +50,18 @@ This closes the previous “PHP lint only” gap for framework-independent NanoP
 
 ## R14 native PINX lifecycle gate
 
-> **Historical workflow note:** the native Pinoox/MySQL lifecycle described in
-> the R14/R15 sections was validated in historical branch workflows. The
-> current checkout's `.github/workflows/nanopino-quality.yml` runs source
-> verification, PHP contracts, frontend tests and the production build; it does
-> not currently provision MySQL or execute native install/update/uninstall.
+The native Pinoox/MySQL lifecycle is executed by `.github/workflows/validate.yml`
+after source and production-dist verification. The separate quality workflow
+continues to provide the fast source/frontend gate.
 
-The historical R14 workflow required a clean Pinoox + MySQL lifecycle after source verification. Under that workflow a candidate could not pass unless native platform installation, PINX build, fresh install, force-update and uninstall all completed successfully and the CMS table count remained stable across update and returned to zero after uninstall.
+The current R14 workflow requires a clean Pinoox + MySQL lifecycle after source verification. A candidate cannot pass unless native platform installation, PINX build, fresh install, versioned update and uninstall all complete successfully and the CMS table count remains stable across update and returns to zero after uninstall. The test matrix runs both Pincore 3.14.0 and 3.14.4, and fault injection is enabled on the latter.
 
-The historical results materially closed the previous “no real Pinoox/DB package lifecycle” gap for unsigned packages in that branch workflow. Signed trust-chain validation, fault-injected recovery and target-host/browser E2E remain separate Stable gates.
+The lifecycle creates an ephemeral Ed25519 publisher key, registers the public
+key in the isolated Pinoox trust configuration, signs the current, upgrade-base
+and fault-injection packages, and requires signature verification during native
+installation. This closes the repository-level signed lifecycle gate while
+target trust-store continuity and target-host/browser E2E remain separate Stable
+gates.
 
 
 ## R15 installability and versioned-upgrade gate

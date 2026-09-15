@@ -27,6 +27,43 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/cms/themes/design",
+      "capability": "themes.read",
+      "response": [
+        "site_id",
+        "active",
+        "theme",
+        "design",
+        "overrides",
+        "runtime_boundary"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/themes/wordpress/preview",
+      "capability": "themes.install",
+      "rate_limit": "cms.upload.extension",
+      "response": [
+        "workflow",
+        "install_supported",
+        "ready_for_review",
+        "intake",
+        "scan",
+        "conversion",
+        "assets",
+        "next_actions"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/themes/wordpress/install",
+      "capability": "themes.install",
+      "rate_limit": "cms.upload.extension",
+      "body": ["file", "approved", "confirmation"],
+      "response": ["operation", "mode", "theme", "source", "signature"]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/cms/themes/activate",
       "capability": "themes.activate",
@@ -40,6 +77,8 @@
   "errors": [
     "THEME_REFERENCE_INVALID",
     "THEME_ACTIVATION_FAILED",
+    "THEME_DESIGN_UNAVAILABLE",
+    "THEME_DESIGN_FAILED",
     "FORBIDDEN",
     "THEME_PATTERN_INVALID",
     "THEME_PATTERN_LIST_FAILED"

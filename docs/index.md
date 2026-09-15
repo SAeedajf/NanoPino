@@ -6,6 +6,7 @@ This directory documents the current NanoPino source contract.
 
 Start here:
 - [Architecture](architecture/overview.md)
+- [NanoShell Platform](nanoshell-platform.md)
 - [Compatibility](compatibility/matrix.md)
 - [SDK](sdk/architecture.md)
 - [Extension lifecycle](extensions/developer-lifecycle.md)
@@ -14,9 +15,12 @@ Start here:
 - [Builder](builder/architecture.md)
 - [Runtime API](api/index.md)
 - [Latest phase audit](audit/2026-09-11-capability-selection-public-navigation.md)
+- [NanoShell upgrade audit](audit/2026-09-15-nanoshell-upgrade.md)
+- [NanoShell performance audit](audit/2026-09-15-nanoshell-performance.md)
 - [Canonical Phase Matrix](audit/2026-09-12-phase-matrix.md)
 - [Canonical Service Registry](../resources/release/service-registry-parity-v1.json)
 - [Latest release candidate audit](audit/2026-09-14-phase-21-final-release-candidate.md)
+- [NanoShell platform identity audit](audit/2026-09-15-phase-9-nanoshell-platform-identity.md)
 - [Live Pinoox test environment audit](audit/2026-09-12-phase-10-real-pinoox-test-environment.md)
 - [Auth, Session and Role E2E audit](audit/2026-09-12-phase-11-auth-session-role-e2e.md)
 - [Database lifecycle and migration audit](audit/2026-09-12-phase-12-database-lifecycle-migration.md)

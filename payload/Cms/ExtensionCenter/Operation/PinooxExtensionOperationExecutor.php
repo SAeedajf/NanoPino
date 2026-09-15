@@ -15,6 +15,7 @@ use App\com_pinoox_cms\Cms\Recovery\SafeModeManager;
 use App\com_pinoox_cms\Cms\Security\Package\PinooxPinxPackagePreflight;
 use Pinoox\Portal\App\AppEngine;
 use Pinoox\Portal\Pinx;
+use Pinoox\Component\Package\Pinx\PinxIdentity;
 
 final readonly class PinooxExtensionOperationExecutor implements ExtensionOperationExecutorInterface
 {
@@ -97,6 +98,12 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
             ? 'Filesystem and migration recovery point created.'
             : 'Filesystem recovery point created.');
 
+        // The original NanoShell converter generated an ephemeral signing key
+        // for every import. Rotate only that legacy identity, after the
+        // recovery point exists, so the native installer can perform its
+        // normal strict trust-chain check. Any failure restores the snapshot.
+        $this->rotateLegacyConverterIdentity($native, $destination);
+
         $installer = Pinx::installer()->onStep(
             static function (string $step, string $status, string $message) use ($progress): void {
                 $progress('pinx.' . $step, $status, $message);
@@ -143,6 +150,23 @@ final readonly class PinooxExtensionOperationExecutor implements ExtensionOperat
                 $error->getMessage(),
                 $progress,
             );
+        }
+    }
+
+    private function rotateLegacyConverterIdentity(\Pinoox\Component\Package\Pinx\PinxManifest $manifest, string $destination): void
+    {
+        if (!$manifest->isTheme() || !in_array($manifest->developer(), ['nanoshell-local-converter', 'NanoShell Local Converter'], true)) return;
+
+        $identityPath = rtrim($destination, '/\\') . '/' . PinxIdentity::FILE;
+        if (!is_file($identityPath)) return;
+        $identity = PinxIdentity::read($destination);
+        if (!is_array($identity)) {
+            throw new \RuntimeException('Existing theme trust identity is invalid; update was stopped safely.');
+        }
+        if ((string)($identity['key_id'] ?? '') === 'nanoshell-local-converter-v2') return;
+
+        if (is_link($identityPath) || !is_file($identityPath) || !unlink($identityPath)) {
+            throw new \RuntimeException('Legacy converter trust identity could not be rotated safely.');
         }
     }
 

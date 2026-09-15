@@ -1,4 +1,5 @@
 import { cmsBrand, cmsDirection, t } from '../i18n/index.js'
+import { cmsPlatform } from '../services/nanoshell-platform.js'
 import { navigationSections } from './admin-manifest.js'
 
 export function buildThemeConfig(manifest) {
@@ -14,11 +15,20 @@ export function buildThemeConfig(manifest) {
   )
 
   const brand = cmsBrand()
+  const platform = cmsPlatform()
 
   return {
     brand: {
       title: brand.name,
       subtitle: brand.subtitle,
+    },
+    platform: {
+      id: platform.id,
+      name: platform.name,
+      contract: platform.contract,
+      version: platform.version,
+      capabilities: [...platform.capabilities],
+      compatibility: { ...platform.compatibility },
     },
     font: {
       sans: 'Vazir, Vazirmatn, Inter, system-ui, sans-serif',

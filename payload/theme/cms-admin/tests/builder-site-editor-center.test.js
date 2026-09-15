@@ -85,6 +85,7 @@ test('full site editor exposes template inventory and global style override oper
 test('canonical Vue and API sources preserve the new builder and site-editor contracts', () => {
   const builderPage = read('src/pages/builder/page-builder.vue')
   const sitePage = read('src/pages/site-editor/page-site-editor.vue')
+  const runtime = read('runtime/site-editor.mjs')
   const api = read('src/services/cms-api.js')
   assert.match(builderPage, /builderApi\.list/)
   assert.match(builderPage, /Object\.values\(attrs\)/)
@@ -93,6 +94,9 @@ test('canonical Vue and API sources preserve the new builder and site-editor con
   assert.match(sitePage, /builderApi\.list/)
   assert.match(sitePage, /theme\.design\.overrides/)
   assert.match(api, /list:\(params=\{\}\)=>\{const q=new URLSearchParams/)
+  assert.match(api, /design:\(siteId=1\)=>cmsRequest\(`\/themes\/design\?site_id=/)
+  assert.match(sitePage, /themeApi\.design\(siteId\.value\)/)
+  assert.match(runtime, /\/themes\/design\?site_id=/)
 })
 
 test('nested runtime navigation resolves registered paths from the active admin mount', () => {

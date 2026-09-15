@@ -1,4 +1,9 @@
-import { PageLayout } from '@pinooxhq/luma/layouts'
+import { defineAsyncComponent } from 'vue'
+
+// Page chrome is shared by every route but is not needed until the shell has
+// mounted. Keep it out of the synchronous entry graph and preserve the same
+// layout component contract for the router.
+const PageLayout = defineAsyncComponent(() => import('@pinooxhq/luma/layouts/PageLayout.vue'))
 
 export const coreComponentRegistry = Object.freeze({
   'core:dashboard': () => import('../pages/dashboard/page-dashboard-final.vue'),

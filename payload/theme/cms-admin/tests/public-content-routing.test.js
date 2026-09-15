@@ -4,12 +4,16 @@ import { readFileSync } from 'node:fs'
 
 const read = (file) => readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8')
 
-test('published page and post URLs are registered before the admin wildcard', () => {
+test('published page and post URLs are registered before the admin catch-all', () => {
   const routes = read('routes/web.php')
   assert.match(routes, /get\('\/site', \[PublicContentController::class, 'site'\]\)/)
   assert.match(routes, /get\('\/page\/\{slug\}'\, \[PublicContentController::class, 'page'\]\)/)
   assert.match(routes, /get\('\/post\/\{slug\}'\, \[PublicContentController::class, 'post'\]\)/)
-  assert.ok(routes.indexOf("get('/page/{slug}'") < routes.indexOf("get('*'"))
+  assert.ok(routes.indexOf("get('/appearance/site-editor'") < routes.indexOf("get('/{taxonomy}/{termSlug}'"))
+  assert.ok(routes.indexOf("get('/extensions/updates'") < routes.indexOf("get('/{taxonomy}/{termSlug}'"))
+  assert.ok(routes.indexOf("get('/page/{slug}'") < routes.indexOf("get('/{path*}'"))
+  assert.match(routes, /get\('\/\{path\*\}'\, \[AdminController::class, 'index'\]\)/)
+  assert.match(routes, /->filters\(\['path' => '\.\+'\]\)/)
 })
 
 test('dashboard exposes a mount-aware public-site link instead of routing to the control plane', () => {

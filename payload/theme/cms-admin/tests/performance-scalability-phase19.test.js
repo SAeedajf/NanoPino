@@ -32,6 +32,8 @@ test('Phase 19 build enforces bounded JavaScript and CSS payloads', () => {
   assert.match(budget, /totalCssBytes: 300_000/)
   assert.match(budget, /largestJsBytes: 750_000/)
   assert.match(budget, /largestCssBytes: 150_000/)
+  assert.match(budget, /initialJsBytes: 1_200_000/)
+  assert.match(budget, /visitInitialChunk/)
 })
 
 test('Phase 19 retains bounded backend performance budgets and query telemetry', () => {

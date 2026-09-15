@@ -31,6 +31,9 @@ interface MediaRepositoryInterface
 
     public function count(int $siteId, ?MediaKind $kind = null, ?string $query = null): int;
 
+    /** Count only ready assets with a public URL for template rendering. */
+    public function countPublic(int $siteId, ?MediaKind $kind = null, ?string $query = null): int;
+
     /** @return array{total:int,image:int,video:int,audio:int,document:int,missing_alt:int,total_bytes:int} */
     public function summary(int $siteId): array;
 

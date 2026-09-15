@@ -72,6 +72,7 @@ final class PublicContentController extends Controller
             $theme = CmsRuntimeServices::publicThemeView(
                 new TemplateRequest('taxonomy', ['taxonomy' => $taxonomy, 'term' => $termSlug]),
                 $context->siteId,
+                'site',
             );
             $html = (new PublicTaxonomyRenderer(themeDesign: $theme?->design))->render(
                 $term,
@@ -106,6 +107,7 @@ final class PublicContentController extends Controller
                 $theme = CmsRuntimeServices::publicThemeView(
                     new TemplateRequest('home'),
                     $context->siteId,
+                    'site',
                 );
                 $renderer = new PublicSiteHomeRenderer();
                 if ($theme !== null) {
@@ -146,6 +148,7 @@ final class PublicContentController extends Controller
                 $theme = CmsRuntimeServices::publicThemeView(
                     new TemplateRequest('single', ['type' => $type, 'slug' => $slug]),
                     $context->siteId,
+                    'site',
                 );
                 return (new PublicPageRenderer(
                     blockLoader: CmsRuntimeServices::blockLoader(),

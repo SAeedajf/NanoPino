@@ -24,6 +24,8 @@ use App\com_pinoox_cms\Cms\Block\Migration\BlockMigrationEngine;
 use App\com_pinoox_cms\Cms\Block\Render\BlockDocumentRenderer;
 use App\com_pinoox_cms\Cms\Builder\BuilderService;
 use App\com_pinoox_cms\Cms\Builder\BuilderPublishedResolver;
+use App\com_pinoox_cms\Cms\Builder\Binding\BindingExpressionValidator;
+use App\com_pinoox_cms\Cms\Builder\Binding\CoreDataBindingResolver;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockReferenceExpander;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\GlobalBlockService;
 use App\com_pinoox_cms\Cms\Builder\GlobalBlock\PinooxGlobalBlockRepository;
@@ -93,6 +95,10 @@ use App\com_pinoox_cms\Cms\Theme\ThemeView;
 use App\com_pinoox_cms\Cms\Theme\Design\DesignSchemaValidator;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateHierarchyResolver;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressClassicThemeConversionWorker;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeAssetPipeline;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeImportPreviewService;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeNativePackageBuilder;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityMutationGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxUserLookup;
 use App\com_pinoox_cms\Cms\Identity\UserAdministrationService;
@@ -136,6 +142,7 @@ use App\com_pinoox_cms\Cms\UpdatePolicy\FileExtensionUpdatePolicyRepository;
 use App\com_pinoox_cms\Cms\UpdatePolicy\UpdateCandidateSelector;
 use App\com_pinoox_cms\Cms\UpdateHistory\FileUpdateHistoryRepository;
 use App\com_pinoox_cms\Cms\Recovery\RecoveryCatalogService;
+use App\com_pinoox_cms\Cms\Platform\NanoShellPlatform;
 use Pinoox\Portal\App\AppEngine;
 use Pinoox\Support\SystemConfig;
 
@@ -147,6 +154,7 @@ final class CmsRuntimeServices
     private static ?SettingsService $settings = null;
     private static ?MediaService $media = null;
     private static ?BuilderService $builder = null;
+    private static ?CoreDataBindingResolver $dataBinding = null;
     private static ?BuilderPreviewService $builderPreview = null;
     private static ?BuilderApiFacade $builderApi = null;
     private static ?PinooxGlobalBlockRepository $globalBlockRepository = null;
@@ -166,6 +174,10 @@ final class CmsRuntimeServices
     private static ?SemanticCache $semanticCache = null;
     private static ?PublicRenderCacheInvalidator $renderCacheInvalidator = null;
     private static ?ThemeEngine $themeEngine = null;
+    private static ?WordPressClassicThemeConversionWorker $wordpressClassicThemeWorker = null;
+    private static ?WordPressThemeAssetPipeline $wordpressAssetPipeline = null;
+    private static ?WordPressThemeImportPreviewService $wordpressThemeImportPreview = null;
+    private static ?WordPressThemeNativePackageBuilder $wordpressThemeNativePackageBuilder = null;
     private static ?FileQueueRepository $queueRepository = null;
     private static ?QueueWorker $queueWorker = null;
     private static ?QueueDispatcher $queueDispatcher = null;
@@ -179,6 +191,12 @@ final class CmsRuntimeServices
     private static ?int $actorContextId = null;
 
     public static function kernel(): CmsKernel { return CmsKernel::instance(); }
+
+    /** @return array<string,mixed> */
+    public static function nanoShellPlatform(): array
+    {
+        return NanoShellPlatform::profile();
+    }
 
     public static function actorId(): ?int
     {
@@ -264,6 +282,23 @@ final class CmsRuntimeServices
             self::audit(),
             new PinooxBuilderTransaction(),
             self::renderCacheInvalidator(),
+        );
+    }
+
+    /**
+     * Public/template data binding is read-only and intentionally does not
+     * require an editor actor. Callers still receive only published content,
+     * public taxonomy terms, ready media and validated site navigation.
+     */
+    public static function dataBinding(): CoreDataBindingResolver
+    {
+        return self::$dataBinding ??= new CoreDataBindingResolver(
+            new PinooxContentRepository(),
+            new PinooxTermRepository(),
+            new PinooxMediaRepository(),
+            self::settingsRepository(),
+            self::kernel()->taxonomies,
+            new BindingExpressionValidator(self::kernel()->builderDataSources),
         );
     }
 
@@ -502,6 +537,56 @@ final class CmsRuntimeServices
     }
 
     /**
+     * Return the read-only WordPress asset intake service.
+     *
+     * The service only builds a bounded manifest; it never evaluates PHP
+     * sidecars, executes JavaScript, fetches remote assets or publishes files.
+     */
+    public static function wordpressAssetPipeline(): WordPressThemeAssetPipeline
+    {
+        return self::$wordpressAssetPipeline ??= new WordPressThemeAssetPipeline();
+    }
+
+    /**
+     * Return the static Classic Theme conversion boundary. It reads source as
+     * text and never runs WordPress PHP, hooks, plugins or template functions.
+     */
+    public static function wordpressClassicThemeWorker(): WordPressClassicThemeConversionWorker
+    {
+        return self::$wordpressClassicThemeWorker ??= new WordPressClassicThemeConversionWorker();
+    }
+
+    /**
+     * Return the bounded, non-persistent WordPress archive preview service.
+     *
+     * A preview is intentionally not an install operation. Native packaging,
+     * signing and activation remain separate approval-boundary operations.
+     */
+    public static function wordpressThemeImportPreview(): WordPressThemeImportPreviewService
+    {
+        return self::$wordpressThemeImportPreview ??= new WordPressThemeImportPreviewService(
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeIntakeService(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeScanner(),
+            self::wordpressClassicThemeWorker(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeStructureConverter(),
+            self::wordpressAssetPipeline(),
+            self::storageRoot() . '/themes/wordpress-converter-sign.key.json',
+        );
+    }
+
+    public static function wordpressThemeNativePackageBuilder(): WordPressThemeNativePackageBuilder
+    {
+        return self::$wordpressThemeNativePackageBuilder ??= new WordPressThemeNativePackageBuilder(
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeIntakeService(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeScanner(),
+            self::wordpressClassicThemeWorker(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeStructureConverter(),
+            self::wordpressAssetPipeline(),
+            self::storageRoot() . '/themes/wordpress-converter-sign.key.json',
+        );
+    }
+
+    /**
      * Resolve the active native theme for public rendering.
      *
      * Public requests receive only validated design data here. Theme template
@@ -546,6 +631,59 @@ final class CmsRuntimeServices
                 $package,
                 $stack->activeName,
                 $request,
+                $context,
+                $styleVariation,
+                $overrides,
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolve only the effective public design for editor/API consumers.
+     * Unlike publicThemeView(), this does not scan templates or patterns.
+     *
+     * @param array<string,mixed>|null $runtimeDesignOverrides
+     */
+    public static function publicThemeDesign(
+        int $siteId = 1,
+        ?string $context = null,
+        ?string $styleVariation = null,
+        ?array $runtimeDesignOverrides = null,
+    ): ?ThemeView {
+        if ($siteId < 1) return null;
+
+        try {
+            self::discoverThemes();
+            $package = 'com_pinoox_cms';
+            $native = new PinooxNativeThemeGateway();
+            $stack = $native->stack($package, $context);
+            $definition = self::kernel()->themes->byReference($package, $stack->activeName);
+            if ($definition === null) return null;
+
+            $overrides = $runtimeDesignOverrides;
+            if ($overrides === null) {
+                $overrides = [];
+                try {
+                    $record = self::settingsRepository()->find(
+                        'theme.design.overrides',
+                        new SettingScope(ScopeType::Site, $siteId),
+                    );
+                    if (is_array($record?->value)) {
+                        $overrides = (new DesignSchemaValidator())->validate([
+                            'schema' => 1,
+                            'tokens' => $record->value,
+                        ])->tokens;
+                    }
+                } catch (\Throwable) {
+                    $overrides = [];
+                }
+            }
+
+            return self::themeEngine()->resolveDesign(
+                $package,
+                $stack->activeName,
                 $context,
                 $styleVariation,
                 $overrides,

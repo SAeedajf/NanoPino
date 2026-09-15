@@ -470,8 +470,9 @@ final class AdminController extends Controller
                 $themeRows[] = $themeDefinition->toArray();
                 if (!isset($activeThemesByPackage[$themeDefinition->package])) {
                     try {
+                        $context = $themeDefinition->package === $siteThemePackage ? 'site' : null;
                         $activeThemesByPackage[$themeDefinition->package] =
-                            $nativeThemes->stack($themeDefinition->package)->activeName;
+                            $nativeThemes->stack($themeDefinition->package, $context)->activeName;
                     } catch (\Throwable) {}
                 }
             }
@@ -495,6 +496,7 @@ final class AdminController extends Controller
                 'direction' => $adminDirection,
                 'csrf' => $csrfToken,
                 'cmsAdmin' => [
+                    'platform' => CmsRuntimeServices::nanoShellPlatform(),
                     'brand' => [
                         'name' => AdminI18n::text('brand.name', locale: $adminLocale),
                         'subtitle' => AdminI18n::text('brand.subtitle', locale: $adminLocale),

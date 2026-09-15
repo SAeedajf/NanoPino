@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_from": "Phase 22 source",
+  "generated_from": "Phase 6 source",
   "capability_count": 57,
   "extension_types": [
     "core-module",
@@ -29,7 +29,7 @@
     "blocks": 5,
     "block_migrations": 1,
     "block_renderers": 4,
-    "builder_data_sources": 8,
+    "builder_data_sources": 10,
     "filters": 0,
     "health_checks": 0,
     "extension_permissions": 27,

@@ -84,6 +84,23 @@ final class InMemoryMediaRepository implements MediaRepositoryInterface
         ));
     }
 
+    public function countPublic(int $siteId, ?MediaKind $kind = null, ?string $query = null): int
+    {
+        return count(array_filter(
+            $this->assets,
+            function (MediaAsset $asset) use ($siteId, $kind, $query): bool {
+                if ($asset->siteId !== $siteId || $asset->status !== MediaStatus::Ready || $asset->url === null || $asset->url === '') return false;
+                if ($kind !== null && $asset->kind !== $kind) return false;
+                if ($query !== null && trim($query) !== '') {
+                    $needle = strtolower(trim($query));
+                    $haystack = implode(' ', [$asset->title, $asset->originalName, $asset->alt, $asset->caption, $asset->mime]);
+                    if (!str_contains(strtolower($haystack), $needle)) return false;
+                }
+                return true;
+            },
+        ));
+    }
+
     public function summary(int $siteId): array
     {
         $assets = array_values(array_filter(

@@ -1,6 +1,8 @@
 # Theme Architecture
 
-NanoPino themes use the native Pinoox theme stack. Theme discovery, inheritance and activation remain Pinoox-backed.
+NanoPino themes use the NanoShell theme contract on top of the native host theme stack. Theme discovery, inheritance and activation remain host-backed, while NanoShell owns the CMS theme profile, Builder-facing capabilities and public rendering contract.
+
+The package key `com_pinoox_cms` is retained only as an installation and transport compatibility identifier. It is not the platform identity. Source-format import readers are bounded intake adapters and cannot rename or redefine NanoShell.
 
 NanoPino adds CMS theme profile parsing, compatibility checks, template/part/pattern discovery, design-token/global-style overrides and Builder integration.
 

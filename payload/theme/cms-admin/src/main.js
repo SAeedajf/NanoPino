@@ -1,5 +1,5 @@
 import { createApp } from '@pinooxhq/luma'
-import { RootShell } from '@pinooxhq/luma/layouts'
+import { defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import { coreComponentRegistry, buildAdminRoutes } from './registry/admin-routes.js'
 import { resolveAdminManifest } from './registry/admin-manifest.js'
@@ -7,7 +7,13 @@ import { mergeComponentRegistries } from './registry/admin-components.js'
 import { buildThemeConfig } from './registry/theme-config.js'
 import './styles/admin.scss'
 import { applyCmsDocumentLocale, t } from './i18n/index.js'
+import { applyNanoShellIdentity } from './services/nanoshell-platform.js'
 import { configureTelemetry, installUnhandledErrorCapture, trackPage } from './services/telemetry.js'
+
+// Keep the initial entry focused on boot/auth/router work. The shell is loaded
+// after the runtime contract is ready, so Luma's visual dependencies do not
+// block the first application paint.
+const RootShell = defineAsyncComponent(() => import('@pinooxhq/luma/layouts/RootShell.vue'))
 
 const signal = (name, detail = {}) => {
   window.dispatchEvent(new CustomEvent(name, { detail }))
@@ -42,6 +48,7 @@ function focusMainContent() {
 }
 
 async function bootAdmin() {
+  applyNanoShellIdentity()
   applyCmsDocumentLocale()
   document.documentElement.dataset.cmsBoot = 'booting'
   signal('pinoox-cms:boot-start')

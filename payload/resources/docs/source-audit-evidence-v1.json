@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "status": "passed",
-  "release_version": "0.23.93",
-  "release_version_code": 2393,
-  "documentation_manifest_sha256": "65dcc164f374f22c4422702b135a43b7cb4e20b4e10696ca6a129bfa4d0cdb0e",
+  "release_version": "0.23.94",
+  "release_version_code": 2394,
+  "documentation_manifest_sha256": "b5b7580f6473f4ae63b55bc6181ec4f72a85e1b18d5c694b16c3ffbc50eb979d",
   "required_docs": 33,
   "machine_contracts": 25,
   "adr_count": 2,
   "markdown_files": 67,
   "internal_links": 38,
   "source_audit_completed_at": "2026-09-14T09:10:54Z",
-  "reason": "Source documentation audit passed for the 0.23.93 release after isolating the public theme context from the NanoPino management shell and registering authenticated HTML5-history entrypoints before the generic public taxonomy route. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
+  "reason": "Source documentation audit passed for the 0.23.94 release after isolating the public theme context from the NanoPino management shell, hardening authenticated HTML5-history entrypoints and exposing effective active-theme design data to the site editor without executing source PHP. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
 }

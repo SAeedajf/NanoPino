@@ -14,6 +14,7 @@ use App\com_pinoox_cms\Cms\Theme\CmsThemeProfileFactory;
 use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePattern;
 use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePatternLoader;
 use App\com_pinoox_cms\Cms\Theme\PinooxNativeThemeGateway;
+use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeRelease;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
 use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
@@ -112,6 +113,86 @@ final class ThemeRuntimeApiController extends ApiController
                 'Theme patterns could not be loaded.',
                 500,
                 ['operation' => 'themes.patterns'],
+            );
+        }
+    }
+
+    /**
+     * Return the effective site design without exposing theme filesystem paths.
+     * The response separates theme defaults from site overrides so the editor
+     * can render the real active theme after a reset instead of falling back to
+     * hard-coded UI defaults.
+     */
+    public function design(Request $request): JsonResponse
+    {
+        try {
+            $siteId = max(1, (int) $request->query->get('site_id', 1));
+            CmsRuntimeServices::authorization()->authorize(new AuthorizationRequest(
+                'themes.read',
+                CmsRuntimeServices::actorId(),
+                ScopeType::Site,
+                $siteId,
+                'theme_design',
+                'com_pinoox_cms',
+            ));
+
+            $view = CmsRuntimeServices::publicThemeView(
+                new TemplateRequest('home'),
+                $siteId,
+                'site',
+            );
+            if ($view === null) {
+                return CmsApiResponse::error('THEME_DESIGN_UNAVAILABLE', 'The active site theme design is unavailable.', 404);
+            }
+
+            $record = CmsRuntimeServices::settingsRepository()->find(
+                'theme.design.overrides',
+                new \App\com_pinoox_cms\Cms\Settings\SettingScope(ScopeType::Site, $siteId),
+            );
+            $overrides = is_array($record?->value) ? $record->value : [];
+            $themeProfile = is_array($view->theme->cms['theme'] ?? null)
+                ? $view->theme->cms['theme']
+                : [];
+            $features = is_array($themeProfile['features'] ?? null) ? $themeProfile['features'] : [];
+
+            return CmsApiResponse::ok([
+                'site_id' => $siteId,
+                'active' => [
+                    'package' => $view->theme->package,
+                    'name' => $view->theme->name,
+                    'title' => $view->theme->title,
+                    'version' => $view->theme->version,
+                    'context' => 'site',
+                ],
+                'theme' => [
+                    'reference' => $view->theme->reference(),
+                    'description' => $view->theme->description,
+                    'features' => $features,
+                ],
+                'design' => [
+                    'effective' => $view->design->tokens,
+                    'sources' => array_map(static fn (string $source): string => basename($source), $view->design->sources),
+                    'variation' => $view->design->variation,
+                ],
+                'overrides' => [
+                    'value' => $overrides,
+                    'version' => $record?->version,
+                ],
+                'runtime_boundary' => [
+                    'source_php_executed' => false,
+                    'static_conversion_only' => ($features['runtime_boundary'] ?? null) === 'static-only',
+                    'theme_files_mutated_by_editor' => false,
+                ],
+            ]);
+        } catch (AuthorizationDeniedException) {
+            return CmsApiResponse::error('FORBIDDEN', 'Theme design is not permitted.', 403);
+        } catch (\Throwable $e) {
+            return CmsRuntimeErrorReporter::response(
+                $e,
+                'THEME_DESIGN_FAILED',
+                'Theme design could not be loaded.',
+                500,
+                ['operation' => 'themes.design'],
             );
         }
     }

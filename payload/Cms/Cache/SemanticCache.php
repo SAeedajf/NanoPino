@@ -22,7 +22,24 @@ final readonly class SemanticCache
     public function get(CacheLayer $layer,string $key,array $tags=[],mixed $default=null): mixed
     {
         $sentinel=new \stdClass();
-        $value=$this->store->get($this->physicalKey($layer,$key,$tags),$sentinel);
+        try {
+            $physicalKey=$this->physicalKey($layer,$key,$tags);
+        } catch (\InvalidArgumentException $error) {
+            throw $error;
+        } catch (\Throwable) {
+            // Cache metadata is an optimization. A broken tag clock must not
+            // take a read path down with it.
+            $this->effectiveness?->miss();
+            return $default;
+        }
+        try {
+            $value=$this->store->get($physicalKey,$sentinel);
+        } catch (\Throwable) {
+            // Fail open when the native cache backend is temporarily down;
+            // callers can continue from the authoritative source.
+            $this->effectiveness?->miss();
+            return $default;
+        }
         if ($value===$sentinel) {
             $this->effectiveness?->miss();
             return $default;
@@ -34,7 +51,18 @@ final readonly class SemanticCache
     /** @param list<string> $tags */
     public function set(CacheLayer $layer,string $key,mixed $value,?int $ttlSeconds=null,array $tags=[]): bool
     {
-        $stored=$this->store->set($this->physicalKey($layer,$key,$tags),$value,$ttlSeconds);
+        try {
+            $physicalKey=$this->physicalKey($layer,$key,$tags);
+        } catch (\InvalidArgumentException $error) {
+            throw $error;
+        } catch (\Throwable) {
+            return false;
+        }
+        try {
+            $stored=$this->store->set($physicalKey,$value,$ttlSeconds);
+        } catch (\Throwable) {
+            return false;
+        }
         if ($stored) $this->effectiveness?->write();
         return $stored;
     }
@@ -42,7 +70,18 @@ final readonly class SemanticCache
     /** @param list<string> $tags */
     public function delete(CacheLayer $layer,string $key,array $tags=[]): bool
     {
-        return $this->store->delete($this->physicalKey($layer,$key,$tags));
+        try {
+            $physicalKey=$this->physicalKey($layer,$key,$tags);
+        } catch (\InvalidArgumentException $error) {
+            throw $error;
+        } catch (\Throwable) {
+            return false;
+        }
+        try {
+            return $this->store->delete($physicalKey);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function invalidateTag(string $tag): int

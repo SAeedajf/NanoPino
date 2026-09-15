@@ -171,9 +171,15 @@ final class WordPressThemeScanner
         $hasBlockTemplates = in_array('templates/index.html', $files, true)
             || in_array('block-templates/index.html', $files, true)
             || $this->contains($contents, '/<!--\s*\/?wp:[a-z0-9_-]+(?:\/[a-z0-9_-]+)?(?:\s[^>]*)?\s*-->/i');
+        // Block themes may keep PHP pattern sources under patterns/. Those
+        // files contain static block markup and must not turn a block theme
+        // into a hybrid/classic conversion path.
         $hasClassicTemplates = in_array('index.php', $files, true)
             || in_array('functions.php', $files, true)
-            || count(array_filter($files, static fn (string $file): bool => preg_match('/^(single|page|archive|404|header|footer|sidebar)(-[^\/]+)?\.php$/', basename($file)) === 1)) > 0;
+            || count(array_filter($files, static fn (string $file): bool =>
+                !str_starts_with($file, 'patterns/')
+                && preg_match('/^(single|page|archive|404|header|footer|sidebar)(-[^\/]+)?\.php$/', basename($file)) === 1
+            )) > 0;
 
         $phpFiles = array_values(array_filter($files, static fn (string $file): bool => strtolower(pathinfo($file, PATHINFO_EXTENSION)) === 'php'));
         $htmlFiles = array_values(array_filter($files, static fn (string $file): bool => in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['html', 'htm'], true)));

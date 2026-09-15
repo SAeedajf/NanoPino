@@ -38,10 +38,31 @@ return [
             np_assert_false(is_file($marker), 'PHP pattern source must never be executed.');
             $codes = array_column($report->issues, 'code');
             np_assert_true(in_array('structure.php_runtime_deferred', $codes, true));
-            np_assert_true(in_array('markup.unbound_html', $codes, true));
+            np_assert_false(in_array('markup.unbound_html', $codes, true));
             $catalog = (new WordPressBuilderTemplateBridge())->prepare($report, 9);
             np_assert_same(1, count($catalog->patterns));
             np_assert_same('hero-banner', $catalog->patterns[0]->id);
+        } finally {
+            wp_phase5_remove($root);
+        }
+    },
+
+    'WordPress structure converter expands local pattern references into bounded static documents' => static function (): void {
+        $root = sys_get_temp_dir() . '/nanopino-wp-pattern-expand-' . bin2hex(random_bytes(6));
+        mkdir($root . '/templates', 0777, true);
+        mkdir($root . '/patterns', 0777, true);
+        file_put_contents($root . '/templates/index.html', '<!-- wp:pattern {"slug":"hero-banner"} /-->');
+        file_put_contents($root . '/patterns/hero.php', "/**\n * Title: Hero\n * Slug: hero-banner\n */\n<!-- wp:heading {\"level\":1} --><h1>Hero</h1><!-- /wp:heading -->");
+
+        try {
+            $registry = new BlockRegistry();
+            CoreBlocks::register($registry);
+            $report = (new WordPressThemeStructureConverter(validator: new BlockDocumentValidator($registry)))->convert($root);
+            np_assert_true($report->safeToUse());
+            np_assert_same('core/heading', $report->templates[0]->document->blocks[0]->type);
+            np_assert_same('Hero', $report->templates[0]->document->blocks[0]->attributes['text']);
+            $codes = array_column($report->issues, 'code');
+            np_assert_false(in_array('markup.block_mapped_to_section', $codes, true));
         } finally {
             wp_phase5_remove($root);
         }

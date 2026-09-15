@@ -18,6 +18,18 @@ final class WordPressBlockMarkupParser
     private const MAX_BYTES = 2_097_152;
     private const MAX_DEPTH = 128;
     private const MAX_NODES = 10_000;
+    /** @var list<string> */
+    private const STRUCTURAL_BLOCKS = [
+        'core/group', 'core/columns', 'core/column', 'core/cover',
+        'core/media-text', 'core/row', 'core/stack', 'core/buttons',
+        'core/navigation', 'core/template-part', 'core/query',
+        'core/post-template', 'core/query-pagination',
+        'core/query-pagination-next', 'core/query-pagination-previous',
+        'core/query-pagination-numbers', 'core/comments', 'core/comment-template',
+        'core/comments-pagination', 'core/comments-pagination-next',
+        'core/comments-pagination-previous', 'core/comments-pagination-numbers',
+        'core/spacer', 'core/separator',
+    ];
 
     /** @var list<array{code:string,severity:string,message:string,block?:string}> */
     private array $issues = [];
@@ -31,8 +43,10 @@ final class WordPressBlockMarkupParser
         private readonly int $maxNodes = self::MAX_NODES,
     ) {}
 
-    public function parse(string $markup): WordPressBlockMarkupParseResult
+    /** @param array<string,string> $patterns */
+    public function parse(string $markup, array $patterns = []): WordPressBlockMarkupParseResult
     {
+        if ($patterns !== []) $markup = $this->expandPatterns($markup, $patterns);
         if ($this->maxBytes < 1 || strlen($markup) > $this->maxBytes) {
             throw new WordPressBlockMarkupException('WordPress Block Markup exceeds the parser byte limit.');
         }
@@ -48,7 +62,7 @@ final class WordPressBlockMarkupParser
             $offset = (int)$match[0][1];
             $rawToken = (string)$match[0][0];
             $between = substr($markup, $cursor, $offset - $cursor);
-            if (trim($between) !== '') {
+            if (trim($between) !== '' && !$this->ignorableSource($between)) {
                 if ($stack === []) {
                     $this->issues[] = $this->issue('markup.unbound_html', 'warning', 'HTML outside a WordPress block boundary was ignored.');
                 } else {
@@ -97,7 +111,7 @@ final class WordPressBlockMarkupParser
         }
 
         $tail = substr($markup, $cursor);
-        if (trim($tail) !== '') {
+        if (trim($tail) !== '' && !$this->ignorableSource($tail)) {
             if ($stack === []) {
                 $this->issues[] = $this->issue('markup.unbound_html', 'warning', 'HTML outside a WordPress block boundary was ignored.');
             } else {
@@ -117,6 +131,42 @@ final class WordPressBlockMarkupParser
             array_values(array_unique($this->unsupported)),
             hash('sha256', $markup),
         );
+    }
+
+    /** @param array<string,string> $patterns */
+    private function expandPatterns(string $markup, array $patterns): string
+    {
+        $lookup = [];
+        foreach ($patterns as $key => $source) {
+            $normalized = strtolower(trim($key));
+            if ($normalized === '' || $source === '') continue;
+            $lookup[$normalized] = $source;
+            $lookup[basename(str_replace('\\', '/', $normalized))] ??= $source;
+        }
+
+        for ($depth = 0; $depth < 3; $depth++) {
+            $changed = false;
+            $expanded = preg_replace_callback(
+                '~<!--\s*wp:pattern\s+(\{[\s\S]*?\})\s*/\s*-->~i',
+                function (array $match) use ($lookup, &$changed): string {
+                    try {
+                        $attributes = json_decode((string)$match[1], true, 16, JSON_THROW_ON_ERROR);
+                    } catch (\Throwable) {
+                        return (string)$match[0];
+                    }
+                    if (!is_array($attributes)) return (string)$match[0];
+                    $slug = strtolower(trim((string)($attributes['slug'] ?? '')));
+                    $replacement = $lookup[$slug] ?? ($lookup[basename(str_replace('\\', '/', $slug))] ?? null);
+                    if (!is_string($replacement) || $replacement === '') return (string)$match[0];
+                    $changed = true;
+                    return $replacement;
+                },
+                $markup,
+            );
+            if (!is_string($expanded) || !$changed) break;
+            $markup = $expanded;
+        }
+        return $markup;
     }
 
     /** @param list<BlockNode> $children @param list<array{name:string,attributes:array<string,mixed>,html:string,children:list<BlockNode>}> $stack @param list<BlockNode> $root */
@@ -175,6 +225,10 @@ final class WordPressBlockMarkupParser
             ], $styles);
         }
 
+        if (in_array($name, self::STRUCTURAL_BLOCKS, true)) {
+            return $this->structural($id, $name, $attributes, $html, $children, $styles);
+        }
+
         $this->unsupported[] = $name;
         $this->issues[] = $this->issue(
             'markup.block_mapped_to_section',
@@ -202,6 +256,41 @@ final class WordPressBlockMarkupParser
             'core/section',
             1,
             ['tag' => $this->wrapperTag($name), 'className' => $className],
+            $styles,
+            [],
+            $wrapperChildren,
+        );
+    }
+
+    /** @param array<string,mixed> $attributes @param list<BlockNode> $children @param array<string,string> $styles */
+    private function structural(string $id, string $name, array $attributes, string $html, array $children, array $styles): BlockNode
+    {
+        $wrapperChildren = $children;
+        $plainText = $this->text($html);
+        if ($plainText !== '') {
+            $wrapperChildren[] = new BlockNode(
+                $id . '-text',
+                'core/paragraph',
+                1,
+                ['text' => $plainText],
+                $styles,
+            );
+        }
+
+        if ($name === 'core/spacer') {
+            $height = $this->cssValue($attributes['height'] ?? '', 'dimension');
+            if ($height !== '') $styles['minHeight'] = $height;
+        }
+
+        $className = 'wp-block-' . str_replace('/', '-', $name);
+        if (is_string($attributes['className'] ?? null)) {
+            $className .= ' ' . trim(substr($attributes['className'], 0, 180));
+        }
+        return new BlockNode(
+            $id,
+            'core/section',
+            1,
+            ['tag' => $this->wrapperTag($name, $attributes), 'className' => $className],
             $styles,
             [],
             $wrapperChildren,
@@ -242,7 +331,7 @@ final class WordPressBlockMarkupParser
             return 'var(--wp--preset--' . strtolower($match[1]) . '--' . strtolower($match[2]) . ')';
         }
         if ($group === 'color' && preg_match('/^(?:#[0-9a-f]{3,8}|rgba?\([^;<>]{1,100}\)|hsla?\([^;<>]{1,100}\))$/i', $value) === 1) return $value;
-        if ($group === 'font-size' && preg_match('/^(?:[0-9]+(?:\.[0-9]+)?)(?:px|rem|em|%|vw|vh)$/i', $value) === 1) return $value;
+        if (in_array($group, ['font-size', 'dimension'], true) && preg_match('/^(?:[0-9]+(?:\.[0-9]+)?)(?:px|rem|em|%|vw|vh)$/i', $value) === 1) return $value;
         return '';
     }
 
@@ -257,13 +346,23 @@ final class WordPressBlockMarkupParser
         return count(array_filter($parts, static fn (string $part): bool => $part !== '')) === 4 ? implode(' ', $parts) : '';
     }
 
-    private function wrapperTag(string $name): string
+    /** @param array<string,mixed> $attributes */
+    private function wrapperTag(string $name, array $attributes = []): string
     {
         return match ($name) {
-            'core/navigation', 'core/template-part' => 'header',
+            'core/navigation' => 'nav',
+            'core/template-part' => str_contains(strtolower((string)($attributes['slug'] ?? '')), 'footer') ? 'footer' : 'header',
             'core/cover' => 'section',
             default => 'div',
         };
+    }
+
+    private function ignorableSource(string $source): bool
+    {
+        $value = preg_replace('/<\\?(?:php|=|xml)?[\\s\\S]*?\\?>/i', '', $source) ?? $source;
+        $value = preg_replace('/\\/\\*[\\s\\S]*?\\*\\//', '', $value) ?? $value;
+        $value = preg_replace('/<!--([\\s\\S]*?)-->/', '', $value) ?? $value;
+        return trim(strip_tags($value)) === '';
     }
 
     private function text(string $html): string

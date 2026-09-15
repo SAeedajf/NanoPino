@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "status": "passed",
-  "release_version": "0.23.74",
-  "release_version_code": 2374,
-  "documentation_manifest_sha256": "26c9cdb4baf52a6640ad864c717ff2e4263c5b5b81488226d912e66ebfa0b081",
+  "release_version": "0.23.90",
+  "release_version_code": 2390,
+  "documentation_manifest_sha256": "f39d4812a2312dccd1d4e2dad5919df3a5c262ea953ea59093e7616dcf0da709",
   "required_docs": 33,
   "machine_contracts": 25,
   "adr_count": 2,
   "markdown_files": 67,
   "internal_links": 38,
   "source_audit_completed_at": "2026-09-14T09:10:54Z",
-  "reason": "Source documentation audit passed for the 0.23.74 candidate after fixing the response CSP nonce boundary exposed by live Pinoox Manager app-view verification. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
+  "reason": "Source documentation audit passed for the 0.23.90 ZIP theme-install candidate after integrating automatic server-side inspection on ZIP selection, bounded local pattern expansion, semantic structural block conversion, safe style preservation, localized compatibility guidance, privacy-safe operation failure diagnostics, stable WordPress-derived version codes, explicit install-versus-update projection with file-level change summary, downgrade blocking before mutation, persistent NanoShell converter signing identity with recoverable one-time legacy trust-chain rotation, idempotent same-source reinstall handling, correct CMS extension history identity, and explicit-button fallback for runtimes without native confirm dialogs. Full local source, build, parity, metadata, security preflight and package evidence is recorded; target trust-chain registration, authenticated target lifecycle, target database/recovery/browser/security/performance evidence and the remaining Stable blockers remain declared boundaries."
 }

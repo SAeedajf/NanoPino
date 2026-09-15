@@ -29,7 +29,7 @@ final class CoreBlocks
                         'tag',
                         BlockAttributeType::String,
                         default: 'section',
-                        rules: ['enum' => ['section', 'div', 'main', 'article', 'aside', 'header', 'footer']]
+                        rules: ['enum' => ['section', 'div', 'main', 'article', 'aside', 'header', 'footer', 'nav']]
                     ),
                     'className' => new BlockAttributeDefinition(
                         'className',

@@ -28,6 +28,30 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/cms/themes/wordpress/preview",
+      "capability": "themes.install",
+      "rate_limit": "cms.upload.extension",
+      "response": [
+        "workflow",
+        "install_supported",
+        "ready_for_review",
+        "intake",
+        "scan",
+        "conversion",
+        "assets",
+        "next_actions"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/themes/wordpress/install",
+      "capability": "themes.install",
+      "rate_limit": "cms.upload.extension",
+      "body": ["file", "approved", "confirmation"],
+      "response": ["operation", "mode", "theme", "source", "signature"]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/cms/themes/activate",
       "capability": "themes.activate",
       "body": {

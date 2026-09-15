@@ -5,7 +5,10 @@ use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressBlockMarkupException;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressBlockMarkupParser;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressBlockMarkupParseResult;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeIntakeService;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeImportPreviewService;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeProvenance;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressClassicThemeConversionWorker;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeRelease;
 use App\com_pinoox_cms\Cms\Block\BlockRegistry;
 use App\com_pinoox_cms\Cms\Block\Core\CoreBlocks;
 use App\com_pinoox_cms\Cms\Block\Document\BlockDocumentValidator;
@@ -53,6 +56,7 @@ return [
         $zip = new ZipArchive();
         np_assert_same(true, $zip->open($archive, ZipArchive::CREATE));
         $zip->addFromString('aurora/style.css', "/* Theme Name: Aurora ZIP\nLicense: MIT */");
+        $zip->addFromString('aurora/assets/css/style.css', '/* Secondary stylesheet */');
         $zip->addFromString('aurora/theme.json', '{"version":3,"settings":{"color":{}}}');
         $zip->addFromString('aurora/templates/index.html', '<!-- wp:paragraph --><p>ZIP</p><!-- /wp:paragraph -->');
         $zip->close();
@@ -128,7 +132,7 @@ return [
         np_assert_same('core/button', $document['blocks'][1]['type']);
         np_assert_same('/contact', $document['blocks'][1]['attributes']['url']);
         np_assert_true($document['blocks'][1]['attributes']['newTab']);
-        np_assert_true(in_array('core/group', $result->unsupportedBlocks, true));
+        np_assert_false(in_array('core/group', $result->unsupportedBlocks, true));
         np_assert_true(!$result->hasBlockers());
         np_assert_same($result->document->toArray(), $parser->parse($markup)->document->toArray());
     },
@@ -153,6 +157,62 @@ return [
             WordPressBlockMarkupException::class,
             'invalid closing boundary',
         );
+    },
+
+    'classic conversion accepts valid PHP tails and recognizes GNU GPL metadata' => static function (): void {
+        $root = sys_get_temp_dir() . '/nanopino-wp-classic-tail-' . bin2hex(random_bytes(6));
+        mkdir($root, 0777, true);
+        file_put_contents($root . '/style.css', "/* Theme Name: Twenty Fixture\nLicense: GNU General Public License v2 or later */");
+        file_put_contents($root . '/index.php', "<?php get_header(); ?>\n<main><h1>Fixture</h1></main>\n<?php get_footer();");
+
+        try {
+            $intake = (new WordPressThemeIntakeService())->inspectDirectory($root);
+            np_assert_true($intake->safeToConvert());
+            np_assert_false(in_array('license.unverified', array_column($intake->issues, 'code'), true));
+
+            $converted = (new WordPressClassicThemeConversionWorker())->convert($root);
+            np_assert_false($converted->hasBlockers());
+            np_assert_true($converted->safeToUse());
+            np_assert_true(count($converted->templates) === 1);
+        } finally {
+            wp_compat_remove($root);
+        }
+    },
+
+    'WordPress archive preview converts in a private sandbox and reports install readiness' => static function (): void {
+        $root = sys_get_temp_dir() . '/nanopino-wp-preview-' . bin2hex(random_bytes(6));
+        mkdir($root, 0777, true);
+        $archive = $root . '/preview.zip';
+        $zip = new ZipArchive();
+        np_assert_same(true, $zip->open($archive, ZipArchive::CREATE));
+        $zip->addFromString('aurora/style.css', "/* Theme Name: Preview Aurora\nVersion: 1.0.0\nLicense: GPL-2.0-or-later */");
+        $zip->addFromString('aurora/index.php', "<?php get_header(); ?>\n<main><h1>Preview</h1></main>\n<?php get_footer();");
+        $zip->close();
+        $before = glob(sys_get_temp_dir() . '/nanopino-wp-import-*', GLOB_ONLYDIR) ?: [];
+
+        try {
+            $preview = (new WordPressThemeImportPreviewService())->preview($archive)->toArray();
+            np_assert_same('wordpress-theme-preview-v1', $preview['workflow'] ?? null);
+            np_assert_true((bool)($preview['install_supported'] ?? false));
+            np_assert_true((bool)($preview['install_requires_confirmation'] ?? false));
+            np_assert_true((bool)($preview['ready_for_review'] ?? false));
+            np_assert_same(true, $preview['intake']['safe_to_convert'] ?? false);
+            np_assert_same(true, $preview['conversion']['safe_to_use'] ?? false);
+            np_assert_same(true, $preview['assets']['safe_to_use'] ?? false);
+            np_assert_same('[private-sandbox]', $preview['scan']['root'] ?? null);
+            np_assert_false(str_contains(json_encode($preview, JSON_THROW_ON_ERROR), $root));
+            np_assert_same($before, glob(sys_get_temp_dir() . '/nanopino-wp-import-*', GLOB_ONLYDIR) ?: []);
+        } finally {
+            wp_compat_remove($root);
+        }
+    },
+
+    'converted WordPress releases use stable monotonic version codes' => static function (): void {
+        np_assert_same('1.7', WordPressThemeRelease::normalizeVersion('1.7'));
+        np_assert_same('0.1.0', WordPressThemeRelease::normalizeVersion('not-a-version'));
+        np_assert_true(WordPressThemeRelease::versionCode('1.8.0') > WordPressThemeRelease::versionCode('1.7'));
+        np_assert_true(WordPressThemeRelease::versionCode('2.0.0') > WordPressThemeRelease::versionCode('1.99.99'));
+        np_assert_same(WordPressThemeRelease::versionCode('1.7'), WordPressThemeRelease::versionCode('1.7.0'));
     },
 ];
 

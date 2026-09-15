@@ -136,6 +136,17 @@ final class WordPressThemeIntakeService
             }
 
             $styleCandidates = array_values(array_filter($entries, static fn (array $entry): bool => basename($entry['path']) === 'style.css'));
+            // A real WordPress theme may ship secondary style.css files under
+            // assets or vendor-like directories. The root stylesheet is the
+            // metadata authority; nested styles must not make a valid archive
+            // ambiguous. Multiple root-level candidates still fail closed.
+            $rootStyleCandidates = array_values(array_filter(
+                $styleCandidates,
+                static fn (array $entry): bool => substr_count($entry['path'], '/') <= 1,
+            ));
+            if (count($rootStyleCandidates) === 1) {
+                $styleCandidates = $rootStyleCandidates;
+            }
             $themeRoot = null;
             $metadata = [];
             if (count($styleCandidates) === 1) {
@@ -200,7 +211,7 @@ final class WordPressThemeIntakeService
     {
         $license = strtolower(trim((string)($metadata['license'] ?? '')));
         if ($license === '') return [$this->issue('license.missing', 'warning', 'Theme license metadata is missing; legal compatibility requires manual review.')];
-        if (preg_match('/\b(?:gpl|mit|apache|bsd|isc)\b/i', $license) === 1) return [];
+        if (preg_match('/\b(?:gpl|gnu\s+general\s+public\s+license|general\s+public\s+license|mit|apache|bsd|isc)\b/i', $license) === 1) return [];
         if (preg_match('/\b(?:proprietary|all rights reserved|no license)\b/i', $license) === 1) {
             return [$this->issue('license.incompatible', 'blocker', 'Theme license metadata is not accepted for conversion without legal approval.')];
         }

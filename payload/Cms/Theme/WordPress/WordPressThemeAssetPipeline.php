@@ -297,7 +297,10 @@ final class WordPressThemeAssetPipeline
             && !str_contains($relative, "\0")
             && !str_contains($relative, '\\')
             && !in_array('..', explode('/', $relative), true)
-            && preg_match('/^[A-Za-z0-9][A-Za-z0-9._\/-]{0,254}$/', $relative) === 1;
+            // Commas are valid in real WordPress asset filenames (for example
+            // variable-font files); traversal and control-character guards
+            // above remain the security boundary.
+            && preg_match('/^[A-Za-z0-9][A-Za-z0-9._,\/-]{0,254}$/', $relative) === 1;
     }
 
     private function inside(string $root, string $file): bool

@@ -27,12 +27,20 @@ test('Phase 21 RC keeps package metadata and signed lifecycle boundaries explici
   const gate = readPayload('Cms/Release/ProductionReleaseGate.php')
 
   assert.match(manifest, /com_pinoox_cms/)
-  assert.match(manifest, /0\.23\.74/)
-  assert.match(app, /'version-name' => '0\.23\.74'/)
-  assert.match(app, /'version-code' => 2374/)
+  assert.match(manifest, /0\.23\.90/)
+  assert.match(app, /'version-name' => '0\.23\.90'/)
+  assert.match(app, /'version-code' => 2390/)
   assert.match(gate, /verifyReleaseMetadata/)
   assert.match(gate, /declared_release_blockers_present|release\.declared_blockers_present/)
   assert.equal(evidence.release.signed, true)
+})
+
+test('package inspector preserves CMS profile metadata from raw verified manifest JSON', () => {
+  const inspector = readPayload('Cms/ExtensionCenter/Package/PinooxPinxPackageInspector.php')
+  assert.match(inspector, /json_decode\(\$reader->manifestJson\(\), true, 512, JSON_THROW_ON_ERROR\)/)
+  assert.match(inspector, /fromPinxArray\(\$raw\)/)
+  assert.match(inspector, /toArray\(\) is the native transport projection/)
+  assert.match(inspector, /payload\/manifest\.json/)
 })
 
 test('Phase 21 RC records all local integrity and parity gates', () => {

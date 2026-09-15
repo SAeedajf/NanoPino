@@ -97,6 +97,8 @@ use App\com_pinoox_cms\Cms\Theme\Template\TemplateHierarchyResolver;
 use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressClassicThemeConversionWorker;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeAssetPipeline;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeImportPreviewService;
+use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeNativePackageBuilder;
 use App\com_pinoox_cms\Cms\Identity\PinooxIdentityMutationGateway;
 use App\com_pinoox_cms\Cms\Identity\PinooxUserLookup;
 use App\com_pinoox_cms\Cms\Identity\UserAdministrationService;
@@ -174,6 +176,8 @@ final class CmsRuntimeServices
     private static ?ThemeEngine $themeEngine = null;
     private static ?WordPressClassicThemeConversionWorker $wordpressClassicThemeWorker = null;
     private static ?WordPressThemeAssetPipeline $wordpressAssetPipeline = null;
+    private static ?WordPressThemeImportPreviewService $wordpressThemeImportPreview = null;
+    private static ?WordPressThemeNativePackageBuilder $wordpressThemeNativePackageBuilder = null;
     private static ?FileQueueRepository $queueRepository = null;
     private static ?QueueWorker $queueWorker = null;
     private static ?QueueDispatcher $queueDispatcher = null;
@@ -550,6 +554,36 @@ final class CmsRuntimeServices
     public static function wordpressClassicThemeWorker(): WordPressClassicThemeConversionWorker
     {
         return self::$wordpressClassicThemeWorker ??= new WordPressClassicThemeConversionWorker();
+    }
+
+    /**
+     * Return the bounded, non-persistent WordPress archive preview service.
+     *
+     * A preview is intentionally not an install operation. Native packaging,
+     * signing and activation remain separate approval-boundary operations.
+     */
+    public static function wordpressThemeImportPreview(): WordPressThemeImportPreviewService
+    {
+        return self::$wordpressThemeImportPreview ??= new WordPressThemeImportPreviewService(
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeIntakeService(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeScanner(),
+            self::wordpressClassicThemeWorker(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeStructureConverter(),
+            self::wordpressAssetPipeline(),
+            self::storageRoot() . '/themes/wordpress-converter-sign.key.json',
+        );
+    }
+
+    public static function wordpressThemeNativePackageBuilder(): WordPressThemeNativePackageBuilder
+    {
+        return self::$wordpressThemeNativePackageBuilder ??= new WordPressThemeNativePackageBuilder(
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeIntakeService(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeScanner(),
+            self::wordpressClassicThemeWorker(),
+            new \App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeStructureConverter(),
+            self::wordpressAssetPipeline(),
+            self::storageRoot() . '/themes/wordpress-converter-sign.key.json',
+        );
     }
 
     /**

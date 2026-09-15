@@ -164,8 +164,10 @@ final class WordPressClassicThemeConversionWorker
     {
         $phpTags = preg_match_all('/<\?(?:php|=)?/i', $content, $matches) ?: 0;
         if ($phpTags > 0) {
-            $closed = preg_match_all('/\?>/', $content, $matches) ?: 0;
-            if ($closed < $phpTags) $issues[] = $this->issue('classic.php_unclosed', 'blocker', 'Classic template contains an unclosed PHP boundary.', $relative);
+            // A PHP-only tail without a closing tag is valid PHP and is common in
+            // production WordPress templates. The converter strips it as
+            // untrusted text; treating it as an unclosed boundary incorrectly
+            // blocked standard themes such as Twenty Seventeen.
             $unsupported[] = new WordPressClassicUnsupportedFeature(
                 'classic.php_runtime',
                 'php-runtime',

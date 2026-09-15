@@ -79,6 +79,24 @@ return [
             wp_scanner_remove($root);
         }
     },
+
+    'WordPress Block Theme scanner ignores PHP pattern sources when classifying the theme' => static function (): void {
+        $root = sys_get_temp_dir() . '/nanopino-wp-block-patterns-' . bin2hex(random_bytes(6));
+        mkdir($root . '/templates', 0777, true);
+        mkdir($root . '/patterns', 0777, true);
+        file_put_contents($root . '/style.css', "/* Theme Name: Pattern Block */");
+        file_put_contents($root . '/templates/index.html', '<!-- wp:paragraph --><p>Home</p><!-- /wp:paragraph -->');
+        file_put_contents($root . '/patterns/footer-default.php', "<?php\n/* Title: Footer */\n?>\n<!-- wp:paragraph --><p>Footer</p><!-- /wp:paragraph -->");
+
+        try {
+            $result = (new WordPressThemeScanner())->scan($root);
+            np_assert_same(WordPressThemeType::Block, $result->type);
+            np_assert_true($result->safeToImport);
+            np_assert_false((bool)$result->features['classic_templates']);
+        } finally {
+            wp_scanner_remove($root);
+        }
+    },
 ];
 
 function wp_scanner_remove(string $path): void

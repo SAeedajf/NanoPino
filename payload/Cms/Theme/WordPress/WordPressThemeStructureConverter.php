@@ -41,15 +41,16 @@ final class WordPressThemeStructureConverter
         }
 
         $issues = [];
-        $templates = $this->convertFiles($root, 'templates', ['html', 'htm'], 'template', $issues);
-        $parts = $this->convertFiles($root, 'parts', ['html', 'htm'], 'part', $issues);
+        $patterns = $this->patternSources($root, $issues);
+        $templates = $this->convertFiles($root, 'templates', ['html', 'htm'], 'template', $issues, $patterns);
+        $parts = $this->convertFiles($root, 'parts', ['html', 'htm'], 'part', $issues, $patterns);
         $patterns = $this->convertPatterns($root, $issues);
 
         return new WordPressThemeStructureReport($root, $templates, $parts, $patterns, $issues);
     }
 
-    /** @param list<string> $extensions @param list<array{code:string,severity:string,message:string,path?:string}> $issues @return list<WordPressConvertedTemplate> */
-    private function convertFiles(string $root, string $directory, array $extensions, string $kind, array &$issues): array
+    /** @param list<string> $extensions @param list<array{code:string,severity:string,message:string,path?:string}> $issues @param array<string,string> $patterns @return list<WordPressConvertedTemplate> */
+    private function convertFiles(string $root, string $directory, array $extensions, string $kind, array &$issues, array $patterns = []): array
     {
         $files = $this->files($root, $directory, $extensions, $issues);
         $result = [];
@@ -57,7 +58,7 @@ final class WordPressThemeStructureConverter
             $logical = strtolower(pathinfo($file, PATHINFO_FILENAME));
             $relative = $this->relative($root, $file);
             try {
-                $document = $this->parseFile($file, $kind, $relative, $issues);
+                $document = $this->parseFile($file, $kind, $relative, $issues, $patterns);
                 $result[] = new WordPressConvertedTemplate($kind, $logical, $relative, $document, []);
             } catch (Throwable $error) {
                 $issues[] = [
@@ -148,16 +149,32 @@ final class WordPressThemeStructureConverter
         return $files;
     }
 
-    private function parseFile(string $file, string $kind, string $relative, array &$issues): \App\com_pinoox_cms\Cms\Block\Document\BlockDocument
+    /** @param array<string,string> $patterns */
+    private function parseFile(string $file, string $kind, string $relative, array &$issues, array $patterns = []): \App\com_pinoox_cms\Cms\Block\Document\BlockDocument
     {
         $content = $this->read($file);
         if ($kind === 'part' && (str_contains($content, '<?php') || str_contains($content, '?>'))) {
             $issues[] = ['code' => 'structure.php_runtime_deferred', 'severity' => 'warning', 'message' => 'PHP in template part source was not executed; only static block markup was converted.', 'path' => $relative];
         }
-        $parsed = $this->parser->parse($content);
+        $parsed = $this->parser->parse($content, $patterns);
         $this->validator?->validate($parsed->document);
         foreach ($parsed->issues as $issue) $issues[] = $this->withPath($issue, $relative);
         return $parsed->document;
+    }
+
+    /** @param list<array{code:string,severity:string,message:string,path?:string}> $issues @return array<string,string> */
+    private function patternSources(string $root, array &$issues): array
+    {
+        $sources = [];
+        foreach ($this->files($root, 'patterns', ['php', 'html', 'htm'], $issues) as $file) {
+            $content = $this->read($file);
+            $metadata = $this->patternMetadata($content);
+            $key = strtolower((string)($metadata['slug'] ?? pathinfo($file, PATHINFO_FILENAME)));
+            $static = preg_replace('/<\?(?:php|=|xml)?[\s\S]*?\?>/i', '', $content) ?? $content;
+            $static = preg_replace('/\/\*[\s\S]*?\*\//', '', $static) ?? $static;
+            if ($key !== '' && trim($static) !== '') $sources[$key] = $static;
+        }
+        return $sources;
     }
 
     /** @return array{title?:string,slug?:string,categories?:list<string>} */

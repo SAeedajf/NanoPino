@@ -45,7 +45,7 @@ final class CoreBlockRenderers implements BlockRendererInterface
     private function section(BlockNode $node, array $children): RenderedBlock
     {
         $tag = (string)($node->attributes['tag'] ?? 'section');
-        if (!in_array($tag, ['section', 'div', 'main', 'article', 'aside', 'header', 'footer'], true)) {
+        if (!in_array($tag, ['section', 'div', 'main', 'article', 'aside', 'header', 'footer', 'nav'], true)) {
             $tag = 'section';
         }
 

@@ -104,6 +104,21 @@ return [
         np_assert_true($manifest->hasBlockers());
         np_assert_true(phase7_has_issue($manifest->issues, 'assets.theme_root_invalid'));
     },
+
+    'phase 7 accepts safe punctuation used by official variable-font asset names' => static function (): void {
+        $root = phase7_make_theme([
+            'assets/fonts/Inter-VariableFont_slnt,wght.ttf' => 'font-data',
+        ]);
+
+        try {
+            $manifest = (new WordPressThemeAssetPipeline())->build($root);
+            np_assert_true($manifest->safeToUse());
+            np_assert_false($manifest->hasBlockers());
+            np_assert_same('assets/fonts/Inter-VariableFont_slnt,wght.ttf', $manifest->assets[0]->path);
+        } finally {
+            phase7_remove_tree($root);
+        }
+    },
 ];
 
 /** @param array<string,string> $files */

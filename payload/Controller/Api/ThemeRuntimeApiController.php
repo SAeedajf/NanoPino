@@ -14,8 +14,10 @@ use App\com_pinoox_cms\Cms\Theme\CmsThemeProfileFactory;
 use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePattern;
 use App\com_pinoox_cms\Cms\Theme\Pattern\ThemePatternLoader;
 use App\com_pinoox_cms\Cms\Theme\PinooxNativeThemeGateway;
-use App\com_pinoox_cms\Cms\Theme\Template\TemplateRequest;
 use App\com_pinoox_cms\Cms\Theme\WordPress\WordPressThemeRelease;
+use App\com_pinoox_cms\Cms\Cache\CacheLayer;
+use App\com_pinoox_cms\Cms\Theme\Design\DesignSchemaValidator;
+use App\com_pinoox_cms\Cms\Settings\SettingScope;
 use App\com_pinoox_cms\Cms\Runtime\CmsApiResponse;
 use App\com_pinoox_cms\Cms\Runtime\CmsRequestPayload;
 use App\com_pinoox_cms\Cms\Runtime\CmsRuntimeServices;
@@ -136,26 +138,40 @@ final class ThemeRuntimeApiController extends ApiController
                 'com_pinoox_cms',
             ));
 
-            $view = CmsRuntimeServices::publicThemeView(
-                new TemplateRequest('home'),
-                $siteId,
-                'site',
-            );
-            if ($view === null) {
-                return CmsApiResponse::error('THEME_DESIGN_UNAVAILABLE', 'The active site theme design is unavailable.', 404);
+            $cacheKey = 'theme-design:site:' . $siteId;
+            $cacheTags = ['theme:site:' . $siteId];
+            $cached = CmsRuntimeServices::cache()->get(CacheLayer::Api, $cacheKey, $cacheTags);
+            if (is_array($cached)) {
+                return CmsApiResponse::ok($cached);
             }
 
             $record = CmsRuntimeServices::settingsRepository()->find(
                 'theme.design.overrides',
-                new \App\com_pinoox_cms\Cms\Settings\SettingScope(ScopeType::Site, $siteId),
+                new SettingScope(ScopeType::Site, $siteId),
             );
-            $overrides = is_array($record?->value) ? $record->value : [];
+            $overrides = [];
+            if (is_array($record?->value)) {
+                try {
+                    $overrides = (new DesignSchemaValidator())->validate([
+                        'schema' => 1,
+                        'tokens' => $record->value,
+                    ])->tokens;
+                } catch (\Throwable) {
+                    $overrides = [];
+                }
+            }
+
+            $view = CmsRuntimeServices::publicThemeDesign($siteId, 'site', null, $overrides);
+            if ($view === null) {
+                return CmsApiResponse::error('THEME_DESIGN_UNAVAILABLE', 'The active site theme design is unavailable.', 404);
+            }
+
             $themeProfile = is_array($view->theme->cms['theme'] ?? null)
                 ? $view->theme->cms['theme']
                 : [];
             $features = is_array($themeProfile['features'] ?? null) ? $themeProfile['features'] : [];
 
-            return CmsApiResponse::ok([
+            $response = [
                 'site_id' => $siteId,
                 'active' => [
                     'package' => $view->theme->package,
@@ -183,7 +199,9 @@ final class ThemeRuntimeApiController extends ApiController
                     'static_conversion_only' => ($features['runtime_boundary'] ?? null) === 'static-only',
                     'theme_files_mutated_by_editor' => false,
                 ],
-            ]);
+            ];
+            CmsRuntimeServices::cache()->set(CacheLayer::Api, $cacheKey, $response, 30, $cacheTags);
+            return CmsApiResponse::ok($response);
         } catch (AuthorizationDeniedException) {
             return CmsApiResponse::error('FORBIDDEN', 'Theme design is not permitted.', 403);
         } catch (\Throwable $e) {

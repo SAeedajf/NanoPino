@@ -640,6 +640,59 @@ final class CmsRuntimeServices
         }
     }
 
+    /**
+     * Resolve only the effective public design for editor/API consumers.
+     * Unlike publicThemeView(), this does not scan templates or patterns.
+     *
+     * @param array<string,mixed>|null $runtimeDesignOverrides
+     */
+    public static function publicThemeDesign(
+        int $siteId = 1,
+        ?string $context = null,
+        ?string $styleVariation = null,
+        ?array $runtimeDesignOverrides = null,
+    ): ?ThemeView {
+        if ($siteId < 1) return null;
+
+        try {
+            self::discoverThemes();
+            $package = 'com_pinoox_cms';
+            $native = new PinooxNativeThemeGateway();
+            $stack = $native->stack($package, $context);
+            $definition = self::kernel()->themes->byReference($package, $stack->activeName);
+            if ($definition === null) return null;
+
+            $overrides = $runtimeDesignOverrides;
+            if ($overrides === null) {
+                $overrides = [];
+                try {
+                    $record = self::settingsRepository()->find(
+                        'theme.design.overrides',
+                        new SettingScope(ScopeType::Site, $siteId),
+                    );
+                    if (is_array($record?->value)) {
+                        $overrides = (new DesignSchemaValidator())->validate([
+                            'schema' => 1,
+                            'tokens' => $record->value,
+                        ])->tokens;
+                    }
+                } catch (\Throwable) {
+                    $overrides = [];
+                }
+            }
+
+            return self::themeEngine()->resolveDesign(
+                $package,
+                $stack->activeName,
+                $context,
+                $styleVariation,
+                $overrides,
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public static function healthRunner(): HealthRunner
     {
         $kernel = self::kernel();

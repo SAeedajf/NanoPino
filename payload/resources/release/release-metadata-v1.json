@@ -1,12 +1,12 @@
 {
     "schema": 1,
     "source": "app.php",
-    "version_name": "0.23.94",
-    "version_code": 2394,
+    "version_name": "0.23.95",
+    "version_code": 2395,
     "minpin": 232,
     "min_pincore": "3.14.0",
-    "app_sha256": "2388c204595edab166352237463463cbd7e36d5746217ae53685290acf40c0eb",
-    "generated_at": "2026-09-15T05:18:11Z",
+    "app_sha256": "5ea56e9319592dcaf63de777dc097ef036f64be09249e25ff44908e36a6180bc",
+    "generated_at": "2026-09-15T05:32:58Z",
     "product_name": "NanoPino",
     "package": "com_pinoox_cms"
 }

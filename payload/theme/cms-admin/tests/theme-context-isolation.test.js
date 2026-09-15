@@ -22,6 +22,9 @@ test('theme contexts keep the panel shell isolated from the public site', () => 
   assert.equal((publicController.match(/\$context->siteId,\s*'site',/g) || []).length, 3);
   assert.match(api, /\$context=\$package==='com_pinoox_cms'\?'site':null/);
   assert.match(api, /\$context===null\|\|\$context===''\)\&\&\$package==='com_pinoox_cms'/);
+  assert.match(api, /publicThemeDesign\(\$siteId, 'site'/);
+  assert.match(api, /CacheLayer::Api/);
+  assert.match(api, /theme_files_mutated_by_editor/);
   assert.match(vue, /theme\.package===sitePackage\?'site':null/);
   assert.match(runtime, /x\.package==='com_pinoox_cms'\?'site':null/);
 });
